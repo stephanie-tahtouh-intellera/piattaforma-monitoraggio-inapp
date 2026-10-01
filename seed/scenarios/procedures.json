@@ -1,0 +1,262 @@
+{
+  "dataset": "scenarios",
+  "description": "12 procedure sintetiche P-001…P-012: oracle dei test e del DoD (guida §10). Solo fatti di input (DEC-095).",
+  "procedures": [
+    {
+      "code": "P-001", "title": "Manutenzione evolutiva piattaforma OrientaLab", "structure": "SISTEMI_INFORMATIVI",
+      "type": "DIRECT_AWARD_MEPA", "instrument": "MEPA", "programmed": "120000.00",
+      "milestones": { "MEMORY_SUBMISSION": { "forecast": "2026-10-06" } },
+      "sals": [
+        { "seq": 1, "pct": "20.00", "state": "PLANNED" },
+        { "seq": 2, "pct": "50.00", "state": "PLANNED" },
+        { "seq": 3, "pct": "30.00", "state": "PLANNED" }
+      ],
+      "lines": [
+        { "date": "2026-12-15", "amount": "24000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-03-31", "amount": "60000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-06-30", "amount": "36000.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2026, "amount": "50000.00" }, { "year": 2027, "amount": "120000.00" } ],
+      "documents": [ { "type": "MEMORIA", "subtype": "BOZZA", "file": "P-001/memoria_bozza.pdf" } ]
+    },
+    {
+      "code": "P-002", "title": "Supporto metodologico e project management", "structure": "PROGRAMMAZIONE_CONTROLLO",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "480000.00",
+      "milestones": { "MEMORY_SUBMISSION": { "forecast": "2026-09-25" } },
+      "lines": [
+        { "date": "2026-10-16", "amount": "50000.00", "anchor": "MEMORY_SUBMISSION" },
+        { "date": "2026-11-27", "amount": "150000.00", "anchor": "MEMORY_SUBMISSION" },
+        { "date": "2027-04-30", "amount": "280000.00", "anchor": "MEMORY_SUBMISSION" }
+      ],
+      "budget": [ { "year": 2026, "amount": "300000.00" }, { "year": 2027, "amount": "350000.00" } ],
+      "documents": [
+        { "type": "FABBISOGNO", "file": "P-002/scheda_fabbisogno.pdf" },
+        { "type": "MODULO_MODIFICA", "file": "P-002/modulo_modifica.pdf" }
+      ]
+    },
+    {
+      "code": "P-003", "title": "Indagine campionaria multicanale", "structure": "STUDI_ANALISI",
+      "type": "OPEN", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "720000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-09-10", "forecast": "2026-09-10" },
+        "REVIEW_COMPLETED": { "forecast": "2026-10-23" }
+      },
+      "sals": [ { "seq": 1, "pct": "70.00", "state": "PLANNED" }, { "seq": 2, "pct": "30.00", "state": "PLANNED" } ],
+      "lines": [
+        { "date": "2027-09-30", "amount": "504000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2028-03-31", "amount": "216000.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2027, "amount": "600000.00" }, { "year": 2028, "amount": "300000.00" } ],
+      "documents": [
+        { "type": "MEMORIA", "file": "P-003/memoria.pdf" },
+        { "type": "DOCUMENTO_TECNICO", "subtype": "CAPITOLATO", "file": "P-003/capitolato_tecnico.pdf" }
+      ]
+    },
+    {
+      "code": "P-004", "title": "Assistenza specialistica Data Warehouse", "structure": "SISTEMI_INFORMATIVI",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "238000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-01-12" }, "REVIEW_COMPLETED": { "actual": "2026-01-28" },
+        "INVITATION_SENT": { "actual": "2026-02-09" }, "OFFERS_DEADLINE": { "actual": "2026-03-02" },
+        "AWARD": { "actual": "2026-04-01" }, "AWARD_EFFECTIVE": { "actual": "2026-04-20" },
+        "CONTRACT_SIGNED": { "actual": "2026-05-15" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-ALFA", "net": "195081.97", "vat": "42918.03", "gross": "238000.00",
+        "signedDate": "2026-05-15", "startDate": "2026-05-20", "endDate": "2027-05-19" },
+      "sals": [
+        { "seq": 1, "pct": "20.00", "state": "PAID", "dueDate": "2026-06-30", "submittedDate": "2026-06-15", "accepted": "47600.00", "liquidated": "47600.00", "invoiceDate": "2026-06-25" },
+        { "seq": 2, "pct": "50.00", "state": "SUBMITTED", "dueDate": "2026-09-20", "submittedDate": "2026-09-21" },
+        { "seq": 3, "pct": "30.00", "state": "PLANNED", "dueDate": "2027-02-15" }
+      ],
+      "payments": [ { "sal": 1, "amount": "47600.00", "date": "2026-07-15" } ],
+      "lines": [
+        { "date": "2026-10-20", "amount": "119000.00", "anchor": "SAL2" },
+        { "date": "2027-03-31", "amount": "71400.00", "anchor": "SAL3" }
+      ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "166600.00", "year": 2026, "date": "2026-01-28" },
+        { "type": "COMMITMENT", "amount": "71400.00", "year": 2027, "date": "2026-01-28" },
+        { "type": "LIQUIDATION", "amount": "47600.00", "year": 2026, "date": "2026-07-01" },
+        { "type": "PAYMENT", "amount": "47600.00", "year": 2026, "date": "2026-07-15" }
+      ],
+      "budget": [ { "year": 2026, "amount": "200000.00" }, { "year": 2027, "amount": "100000.00" } ],
+      "documents": [
+        { "type": "DETERMINA_INDIZIONE", "file": "P-004/determina_indizione.pdf" },
+        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "P-004/contratto.pdf" },
+        { "type": "ADDENDUM", "file": "P-004/addendum_piano_sal.pdf" },
+        { "type": "VERBALE_SAL", "file": "P-004/attestazione_regolare_esecuzione_sal1.pdf" },
+        { "type": "DELIVERABLE", "file": "P-004/relazione_sal2.pdf" }
+      ]
+    },
+    {
+      "code": "P-005", "title": "Servizi cloud e continuità operativa", "structure": "SISTEMI_INFORMATIVI",
+      "type": "FRAMEWORK_AGREEMENT", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "310000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2025-09-15" }, "REVIEW_COMPLETED": { "actual": "2025-11-03" },
+        "INVITATION_SENT": { "actual": "2025-11-20" }, "OFFERS_DEADLINE": { "actual": "2026-01-08" },
+        "EVALUATION_COMPLETED": { "actual": "2026-05-05" }, "AWARD": { "actual": "2026-06-15" },
+        "AWARD_EFFECTIVE": { "actual": "2026-07-27" }, "CONTRACT_SIGNED": { "forecast": "2026-09-28" }
+      },
+      "contract": { "signed": false, "supplier": "SUP-GAMMA", "net": "254098.36", "vat": "55901.64", "gross": "310000.00" },
+      "sals": [ { "seq": 1, "pct": "20.00", "state": "PLANNED" }, { "seq": 2, "pct": "80.00", "state": "PLANNED" } ],
+      "lines": [
+        { "date": "2026-12-15", "amount": "62000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-06-30", "amount": "248000.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2026, "amount": "100000.00" }, { "year": 2027, "amount": "400000.00" } ],
+      "documents": [ { "type": "DETERMINA_AGGIUDICAZIONE", "file": "P-005/determina_aggiudicazione.pdf" } ],
+      "extractionProposals": [
+        { "document": "P-005/determina_aggiudicazione.pdf", "field": "contract.gross", "value": "310500.00", "page": 2, "excerpt": "PRESO ATTO della spesa complessiva di € 310.500,00 IVA inclusa", "confidence": "0.93" }
+      ]
+    },
+    {
+      "code": "P-006", "title": "Audit accessibilità portali", "structure": "COMUNICAZIONE",
+      "type": "DIRECT_AWARD", "instrument": "MEPA", "programmed": "39650.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-01-20" }, "REVIEW_COMPLETED": { "actual": "2026-01-27" },
+        "AWARD": { "actual": "2026-02-06" }, "AWARD_EFFECTIVE": { "actual": "2026-02-16" },
+        "CONTRACT_SIGNED": { "actual": "2026-03-02" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-DELTA", "net": "32500.00", "vat": "7150.00", "gross": "39650.00",
+        "signedDate": "2026-03-02", "startDate": "2026-03-02", "endDate": "2026-06-15" },
+      "sals": [ { "seq": 1, "pct": "100.00", "state": "PAID", "dueDate": "2026-06-15", "submittedDate": "2026-06-10", "accepted": "39650.00", "liquidated": "39650.00", "invoiceDate": "2026-06-12" } ],
+      "payments": [ { "sal": 1, "amount": "39650.00", "date": "2026-06-30" } ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "39650.00", "year": 2026, "date": "2026-01-27" },
+        { "type": "LIQUIDATION", "amount": "39650.00", "year": 2026, "date": "2026-06-20" },
+        { "type": "PAYMENT", "amount": "39650.00", "year": 2026, "date": "2026-06-30" }
+      ],
+      "budget": [ { "year": 2026, "amount": "39650.00" } ],
+      "documents": [
+        { "type": "CONTRATTO", "subtype": "TD_MEPA", "file": "P-006/documento_stipula_mepa.pdf" },
+        { "type": "CRE", "file": "P-006/certificato_regolare_esecuzione.pdf" }
+      ],
+      "events": [ { "type": "CLOSE", "date": "2026-07-31", "reason": "Saldo pagato e verifiche concluse" } ]
+    },
+    {
+      "code": "P-007", "title": "Servizi logistici eventi e seminari", "structure": "FORMAZIONE",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "146400.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-09-18" },
+        "REVIEW_COMPLETED": { "forecast": "2026-10-16" }
+      },
+      "sals": [
+        { "seq": 1, "pct": "20.00", "state": "PLANNED" }, { "seq": 2, "pct": "50.00", "state": "PLANNED" }, { "seq": 3, "pct": "30.00", "state": "PLANNED" }
+      ],
+      "lines": [
+        { "date": "2026-12-18", "amount": "29280.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-04-30", "amount": "73200.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-07-30", "amount": "43920.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2026, "amount": "50000.00" }, { "year": 2027, "amount": "150000.00" } ],
+      "documents": [ { "type": "MEMORIA", "subtype": "SCANSIONE", "file": "P-007/memoria_scansionata.pdf" } ]
+    },
+    {
+      "code": "P-008", "title": "Evoluzione piattaforma politiche attive", "structure": "INNOVAZIONE_DIGITALE",
+      "type": "OPEN", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "890000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2025-10-01" }, "REVIEW_COMPLETED": { "actual": "2025-11-20" },
+        "INVITATION_SENT": { "actual": "2025-12-05" }, "OFFERS_DEADLINE": { "actual": "2026-01-15" },
+        "EVALUATION_COMPLETED": { "actual": "2026-07-31" }, "AWARD": { "forecast": "2026-09-21" }
+      },
+      "lines": [
+        { "date": "2026-10-23", "amount": "100000.00", "anchor": "AWARD" },
+        { "date": "2026-11-20", "amount": "250000.00", "anchor": "AWARD" },
+        { "date": "2027-06-30", "amount": "400000.00", "anchor": "AWARD" },
+        { "date": "2028-03-31", "amount": "140000.00", "anchor": "AWARD" }
+      ],
+      "budget": [
+        { "year": 2026, "amount": "400000.00" },
+        { "year": 2027, "amount": "300000.00", "source": "ORDINARIO_DEMO" },
+        { "year": 2027, "amount": "250000.00", "source": "PROGETTO_UE_DEMO" },
+        { "year": 2028, "amount": "200000.00" }
+      ],
+      "documents": [
+        { "type": "DETERMINA_INDIZIONE", "file": "P-008/determina_indizione.pdf" },
+        { "type": "BANDO", "file": "P-008/bando.pdf" }
+      ]
+    },
+    {
+      "code": "P-009", "title": "Licenze software statistiche", "structure": "METODOLOGIE_STATISTICHE",
+      "type": "CENTRAL_PURCHASING_ORDER", "instrument": "CONSIP_AQ", "programmed": "305000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-05-18" }, "REVIEW_COMPLETED": { "actual": "2026-05-28" },
+        "AWARD": { "actual": "2026-06-10" }, "AWARD_EFFECTIVE": { "actual": "2026-06-22" },
+        "CONTRACT_SIGNED": { "actual": "2026-07-01" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-EPSILON", "net": "250000.00", "vat": "55000.00", "gross": "305000.00",
+        "signedDate": "2026-07-01", "startDate": "2026-07-01", "endDate": "2027-06-30" },
+      "sals": [ { "seq": 1, "pct": "100.00", "state": "LIQUIDATED", "dueDate": "2026-08-31", "submittedDate": "2026-08-25", "accepted": "305000.00", "liquidated": "305000.00", "invoiceDate": "2026-09-08" } ],
+      "lines": [ { "date": "2026-10-08", "amount": "305000.00", "anchor": "SAL1" } ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "305000.00", "year": 2026, "date": "2026-05-28" },
+        { "type": "LIQUIDATION", "amount": "305000.00", "year": 2026, "date": "2026-09-18" }
+      ],
+      "budget": [ { "year": 2026, "amount": "305000.00" } ],
+      "documents": [ { "type": "CONTRATTO", "subtype": "CONTRATTO_ESECUTIVO_AQ", "file": "P-009/ordinativo_convenzione.pdf" } ]
+    },
+    {
+      "code": "P-010", "title": "Assessment sicurezza e penetration test", "structure": "SICUREZZA_ICT",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "210000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-02-02" }, "REVIEW_COMPLETED": { "actual": "2026-02-18" },
+        "INVITATION_SENT": { "actual": "2026-03-02" }, "OFFERS_DEADLINE": { "actual": "2026-03-23" },
+        "AWARD": { "actual": "2026-06-20" }, "AWARD_EFFECTIVE": { "actual": "2026-06-29" },
+        "CONTRACT_SIGNED": { "actual": "2026-06-10" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-BETA", "net": "172131.15", "vat": "37868.85", "gross": "210000.00",
+        "signedDate": "2026-06-10", "startDate": "2026-06-15", "endDate": "2027-06-14" },
+      "sals": [
+        { "seq": 1, "pct": "30.00", "state": "PLANNED", "dueDate": "2026-09-15" },
+        { "seq": 2, "pct": "40.00", "state": "PLANNED", "dueDate": "2026-11-02" },
+        { "seq": 3, "pct": "30.00", "state": "PLANNED", "dueDate": "2027-03-16" }
+      ],
+      "lines": [
+        { "date": "2026-10-30", "amount": "63000.00", "anchor": "SAL1" },
+        { "date": "2026-12-15", "amount": "84000.00", "anchor": "SAL2" },
+        { "date": "2027-04-30", "amount": "63000.00", "anchor": "SAL3" }
+      ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "147000.00", "year": 2026, "date": "2026-02-18" },
+        { "type": "COMMITMENT", "amount": "63000.00", "year": 2027, "date": "2026-02-18" }
+      ],
+      "budget": [ { "year": 2026, "amount": "150000.00" }, { "year": 2027, "amount": "70000.00" } ],
+      "documents": [
+        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "P-010/contratto.pdf" },
+        { "type": "DETERMINA_AGGIUDICAZIONE", "file": "P-010/determina_aggiudicazione.pdf" }
+      ]
+    },
+    {
+      "code": "P-011", "title": "Traduzione e revisione linguistica", "structure": "RELAZIONI_INTERNAZIONALI",
+      "type": "DIRECT_AWARD", "instrument": "OFF_MEPA", "programmed": "75000.00",
+      "milestones": { "MEMORY_SUBMISSION": { "actual": "2026-07-01" } },
+      "movements": [ { "type": "RESERVATION", "amount": "75000.00", "year": 2026, "date": "2026-07-10" } ],
+      "budget": [ { "year": 2026, "amount": "75000.00" } ],
+      "documents": [ { "type": "DETERMINA_REVOCA", "file": "P-011/determina_revoca.pdf" } ],
+      "events": [ { "type": "CANCEL", "date": "2026-09-10", "reason": "Fabbisogno venuto meno; prenotazione da rilasciare" } ]
+    },
+    {
+      "code": "P-012", "title": "Formazione avanzata su dati e IA", "structure": "SVILUPPO_COMPETENZE",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "180000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-03-02" }, "REVIEW_COMPLETED": { "actual": "2026-03-20" },
+        "INVITATION_SENT": { "actual": "2026-04-02" }, "OFFERS_DEADLINE": { "actual": "2026-04-30" },
+        "AWARD": { "actual": "2026-09-24" }, "AWARD_EFFECTIVE": { "forecast": "2026-10-12" },
+        "CONTRACT_SIGNED": { "forecast": "2026-10-15" }
+      },
+      "contract": { "signed": false, "supplier": "SUP-ZETA", "net": "147540.98", "vat": "32459.02", "gross": "180000.00" },
+      "sals": [
+        { "seq": 1, "pct": "30.00", "state": "PLANNED" }, { "seq": 2, "pct": "40.00", "state": "PLANNED" }, { "seq": 3, "pct": "30.00", "state": "PLANNED" }
+      ],
+      "lines": [
+        { "date": "2026-12-15", "amount": "54000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-03-31", "amount": "72000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-06-30", "amount": "54000.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2026, "amount": "60000.00" }, { "year": 2027, "amount": "130000.00" } ],
+      "documents": [
+        { "type": "DETERMINA_AGGIUDICAZIONE", "file": "P-012/determina_aggiudicazione.pdf" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+# Originali dei documenti forniti dal cliente: le copie versionate stanno in seed/inapp/ (DEC-071)
+/Documenti Gara/
+/*.xlsx
+/*.pdf
+/*.docx
+
+# DB locale e dipendenze
+/.data/
+node_modules/
+.next/
+
+# Segreti e ambiente
+.env
+.env.*
+!.env.example
+
+# Build
+*.tsbuildinfo
+next-env.d.ts
+coverage/
+test-results/
+playwright-report/
+.claude/settings.local.json

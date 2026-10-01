@@ -1,0 +1,284 @@
+/* ==========================================================================
+   Piattaforma INAPP MVP — Design token (tema chiaro)
+   Fonte normativa: docs/07_design_brand_identity.md (§3). Questo file è
+   framework-agnostico: CSS custom properties pure, valori esadecimali.
+   Legenda commenti:  [R] = valore RILEVATO sul sito www.inapp.gov.it
+                      [DI] = valore di Designers Italia / Bootstrap Italia
+                      [P] = valore PROPOSTO per l'applicazione
+   Contrasti verificati (WCAG 2.1) nella tabella §3.9 del documento.
+   ========================================================================== */
+
+/* Titillium Web (SIL OFL 1.1): pesi disponibili 200, 300, 400, 600, 700, 900.
+   NON esiste il peso 500. In Next.js caricarlo con next/font/google
+   (weight: ['400','600','700'], display: 'swap', variable: '--font-titillium');
+   Roboto Mono con variable: '--font-roboto-mono'. --ds-font-sans le richiama.
+   Prefisso --ds-: evita collisioni con i namespace di Tailwind v4
+   (--color-*, --font-*, --text-*, --radius-*, --shadow-*). */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- 1. Primitivi: brand ---------- */
+  --brand-navy: #003567;            /* [R] top bar, footer, titoli, hover bottoni */
+  --brand-blue: #0059b3;            /* [R] header, bottoni, link in evidenza */
+  --brand-tint: #f4f8fb;            /* [R] box informativi, risultati di ricerca */
+  --brand-tint-border: #a9c8e0;     /* [R] bordo dei box informativi */
+  --brand-yellow: #ffd361;          /* [R, dal logo] usato solo per il banner DEMO */
+  --brand-yellow-strong: #fcc200;   /* [R, dal logo] focus su sfondi scuri */
+
+  /* ---------- 2. Primitivi: scala primaria (tinta 210°) [P] ---------- */
+  --primary-50: #f0f6fc;            /* [R] righe alterne delle tabelle */
+  --primary-100: #e0ecf8;
+  --primary-200: #c2d9f0;
+  --primary-300: #94bce3;
+  --primary-400: #5c97d1;
+  --primary-500: #2a74c2;
+  --primary-600: #0059b3;           /* = brand-blue */
+  --primary-700: #004a94;
+  --primary-800: #003567;           /* = brand-navy */
+  --primary-900: #00264a;
+  --primary-950: #001a33;
+
+  /* ---------- 3. Primitivi: neutri freddi [P] ---------- */
+  --neutral-0: #ffffff;
+  --neutral-25: #fafbfc;
+  --neutral-50: #f4f6f8;
+  --neutral-100: #ebeef2;
+  --neutral-200: #dde2e8;
+  --neutral-300: #c4ccd5;
+  --neutral-400: #9aa5b1;
+  --neutral-500: #6e7a87;
+  --neutral-600: #55606d;
+  --neutral-700: #3e4853;
+  --neutral-800: #2a323b;
+  --neutral-900: #1a1f24;
+  --neutral-950: #0e1216;
+
+  /* ---------- 4. Semantici: superfici, testo, bordi [P] ---------- */
+  --ds-color-bg-page: var(--neutral-50);
+  --ds-color-bg-surface: var(--neutral-0);         /* card, tabelle, modali */
+  --ds-color-bg-subtle: var(--brand-tint);         /* barra filtri, pannelli, hover riga */
+  --ds-color-bg-muted: var(--neutral-100);         /* intestazioni di tabella, chip di fase */
+  --ds-color-bg-zebra: var(--primary-50);
+  --ds-color-bg-selected: var(--primary-100);
+  --ds-color-bg-inverse: var(--brand-navy);        /* header applicativo */
+
+  --ds-color-text: var(--neutral-900);             /* 16.60:1 su bianco */
+  --ds-color-text-secondary: var(--neutral-700);   /*  9.31:1 */
+  --ds-color-text-muted: var(--neutral-600);       /*  6.40:1 (min. 5.50:1 su neutral-100) */
+  --ds-color-text-placeholder: #687482;            /*  4.76:1 */
+  --ds-color-text-disabled: var(--neutral-500);    /* esente da requisito di contrasto */
+  --ds-color-text-inverse: var(--neutral-0);       /* 12.32:1 su navy */
+  --ds-color-text-inverse-muted: var(--primary-200); /* 8.49:1 su navy */
+  --ds-color-link: var(--primary-600);             /*  6.82:1 */
+  --ds-color-link-hover: var(--primary-800);       /* 12.32:1 */
+
+  --ds-color-border: var(--neutral-200);           /* separatori decorativi */
+  --ds-color-border-strong: var(--neutral-300);
+  --ds-color-border-input: var(--neutral-500);     /* 4.38:1: bordi di controlli (1.4.11) */
+  --ds-color-focus: var(--primary-600);            /* anello di focus su sfondi chiari */
+  --ds-color-focus-inverse: var(--brand-yellow-strong); /* 7.54:1 su navy */
+
+  /* Azioni */
+  --ds-color-action-primary: var(--primary-600);
+  --ds-color-action-primary-hover: var(--primary-700);
+  --ds-color-action-primary-active: var(--primary-800);
+  --ds-color-action-primary-fg: var(--neutral-0);
+  --ds-color-action-secondary-fg: var(--primary-800);
+  --ds-color-action-secondary-border: var(--primary-600);
+  --ds-color-action-danger: #b3261e;               /* 6.54:1 con testo bianco */
+  --ds-color-action-danger-hover: #8e1e18;
+  --ds-color-action-danger-fg: var(--neutral-0);
+
+  /* ---------- 5. Health (VERDE / AMBRA / ROSSO / NEUTRO) [P] ----------
+     fg = testo e icona del badge; bg = fondo del badge; border = bordo;
+     solid = marcatori di grafici, Gantt, pallini (>= 3:1 su bianco).        */
+  --health-green-fg: #12663a;       /* 6.25:1 su bg */
+  --health-green-bg: #e7f5ec;
+  --health-green-border: #9fd3b0;
+  --health-green-solid: #1e7b45;    /* 5.28:1 */
+
+  --health-amber-fg: #8a4600;       /* 6.50:1 su bg */
+  --health-amber-bg: #fff4db;
+  --health-amber-border: #f2c27a;
+  --health-amber-solid: #c27c00;    /* 3.40:1 */
+
+  --health-red-fg: #9b1c1c;         /* 7.14:1 su bg */
+  --health-red-bg: #fdecec;
+  --health-red-border: #e8a3a3;
+  --health-red-solid: #9b1c1c;      /* 8.15:1 */
+
+  --health-neutral-fg: #4a5560;     /* 6.71:1 su bg */
+  --health-neutral-bg: #eef1f4;
+  --health-neutral-border: #c4ccd5;
+  --health-neutral-solid: #6e7a87;  /* 4.38:1 */
+
+  /* ---------- 6. Severità degli alert (LOW / MEDIUM / HIGH / CRITICAL) [P] ---------- */
+  --severity-low-fg: #0b4f8a;       /* 7.36:1 su bg */
+  --severity-low-bg: #e8f1fa;
+  --severity-medium-fg: #8a4600;    /* 6.50:1 su bg */
+  --severity-medium-bg: #fff4db;
+  --severity-high-fg: #9a3412;      /* 6.41:1 su bg */
+  --severity-high-bg: #fdede4;
+  --severity-critical-fg: #ffffff;  /* 6.54:1 su bg */
+  --severity-critical-bg: #b3261e;  /* badge pieno: unico livello "invertito" */
+
+  /* ---------- 7. Feedback (toast, alert inline, messaggi) [P] ---------- */
+  --feedback-success-fg: var(--health-green-fg);
+  --feedback-success-bg: var(--health-green-bg);
+  --feedback-warning-fg: var(--health-amber-fg);
+  --feedback-warning-bg: var(--health-amber-bg);
+  --feedback-error-fg: var(--health-red-fg);
+  --feedback-error-bg: var(--health-red-bg);
+  --feedback-error-text: #b3261e;   /* testo errore sotto i campi: 6.54:1 */
+  --feedback-info-fg: var(--severity-low-fg);
+  --feedback-info-bg: var(--severity-low-bg);
+
+  /* ---------- 8. Grafici [P] (validati: CVD adiacenti ΔE ≥ 9.7, 3:1 su bianco) ---------- */
+  --chart-surface: #ffffff;
+  --chart-1: #0059b3;  /* blu      — Previsione approvata */
+  --chart-2: #e0682f;  /* arancio  — Simulazione */
+  --chart-3: #1a9e77;  /* acqua    — Pagato / consuntivo */
+  --chart-4: #b88200;  /* ocra */
+  --chart-5: #c2187a;  /* magenta */
+  --chart-6: #3f8f2a;  /* verde    — evitare accanto agli stati di health */
+  --chart-7: #5b3fa8;  /* viola */
+  --chart-8: #0096d6;  /* ciano */
+  --chart-baseline-fill: #9aa5b1;   /* riferimento neutro: sempre con bordo + tratteggio */
+  --chart-baseline-stroke: #55606d; /* 6.40:1 */
+  --chart-availability: #1a1f24;    /* linea/gradino della disponibilità */
+  --chart-overflow: #9b1c1c;        /* eccedenza: bordo + tratteggio + etichetta */
+  --chart-grid: #e6e9ed;
+  --chart-axis: #55606d;
+  --chart-today: #003567;           /* linea "data di riferimento" */
+
+  /* ---------- 9. Banner DEMO [P] ---------- */
+  --demo-banner-bg: var(--brand-yellow);  /* 11.65:1 con testo neutral-900 */
+  --demo-banner-fg: var(--neutral-900);
+  --demo-banner-border: #8a6100;          /* 5.54:1 */
+
+  /* ---------- 10. Tipografia ---------- */
+  --ds-font-sans: var(--font-titillium, "Titillium Web"), "Titillium Web", "Segoe UI", Roboto, Helvetica, Arial, sans-serif; /* [R][DI] */
+  --ds-font-mono: var(--font-roboto-mono, "Roboto Mono"), "Roboto Mono", ui-monospace, "Cascadia Mono", Consolas, monospace; /* [DI] */
+
+  --ds-font-weight-regular: 400;
+  --ds-font-weight-semibold: 600;
+  --ds-font-weight-bold: 700;
+
+  /* Scala [P] (rem su base 16px; non modificare il font-size di <html>) */
+  --ds-text-xs: 0.75rem;    --ds-leading-xs: 1rem;      /* 12/16 didascalie, assi */
+  --ds-text-sm: 0.875rem;   --ds-leading-sm: 1.25rem;   /* 14/20 default UI e tabelle */
+  --ds-text-base: 1rem;     --ds-leading-base: 1.5rem;  /* 16/24 form, testo descrittivo */
+  --ds-text-lg: 1.125rem;   --ds-leading-lg: 1.75rem;   /* 18/28 titoli di sezione (h3) */
+  --ds-text-xl: 1.25rem;    --ds-leading-xl: 1.75rem;   /* 20/28 titoli di card/area (h2) */
+  --ds-text-2xl: 1.5rem;    --ds-leading-2xl: 2rem;     /* 24/32 titolo pagina (h1) */
+  --ds-text-3xl: 1.875rem;  --ds-leading-3xl: 2.25rem;  /* 30/36 valore KPI */
+
+  /* ---------- 11. Spaziature (griglia 4 px) [P][DI] ---------- */
+  --space-0: 0;
+  --space-0-5: 0.125rem; /* 2 */
+  --space-1: 0.25rem;    /* 4 */
+  --space-1-5: 0.375rem; /* 6 */
+  --space-2: 0.5rem;     /* 8 */
+  --space-3: 0.75rem;    /* 12 */
+  --space-4: 1rem;       /* 16 */
+  --space-5: 1.25rem;    /* 20 */
+  --space-6: 1.5rem;     /* 24 */
+  --space-8: 2rem;       /* 32 */
+  --space-10: 2.5rem;    /* 40 */
+  --space-12: 3rem;      /* 48 */
+  --space-16: 4rem;      /* 64 */
+
+  /* ---------- 12. Dimensioni di layout e densità [P] ---------- */
+  --layout-demo-banner-h: 2rem;     /* 32 */
+  --layout-header-h: 3.5rem;        /* 56 */
+  --layout-sidebar-w: 14.5rem;      /* 232 */
+  --layout-sidebar-w-collapsed: 4rem; /* 64 */
+  --layout-content-max-w: 100rem;   /* 1600 */
+  --layout-page-padding-x: 1.5rem;  /* 24 */
+  --control-h-sm: 2rem;             /* 32 */
+  --control-h-md: 2.25rem;          /* 36 */
+  --control-h-lg: 2.75rem;          /* 44 */
+  --table-row-h-compact: 2rem;      /* 32 */
+  --table-row-h: 2.5rem;            /* 40 */
+  --table-header-h: 2.5rem;         /* 40 */
+  --target-min: 1.5rem;             /* 24 px: area minima cliccabile */
+
+  /* ---------- 13. Raggi [R][DI][P] ---------- */
+  --ds-radius-none: 0;
+  --ds-radius-sm: 0.125rem; /* 2  [DI] */
+  --ds-radius: 0.25rem;     /* 4  [R] card del sito, [DI] default */
+  --ds-radius-md: 0.375rem; /* 6 */
+  --ds-radius-lg: 0.5rem;   /* 8  [DI] modali, popover */
+  --ds-radius-full: 9999px; /* chip e contatori */
+
+  /* ---------- 14. Ombre [P] (il sito è piatto: bordi al posto delle ombre) ---------- */
+  --ds-shadow-none: none;
+  --ds-shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.06);
+  --ds-shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.10), 0 1px 2px rgba(16, 24, 40, 0.06);
+  --ds-shadow-md: 0 4px 12px rgba(16, 24, 40, 0.12);
+  --ds-shadow-lg: 0 12px 32px rgba(16, 24, 40, 0.18);
+  --ds-shadow-focus: 0 0 0 2px var(--neutral-0), 0 0 0 4px var(--ds-color-focus);
+
+  /* ---------- 15. Movimento e livelli [P] ---------- */
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+  --z-sticky: 20;
+  --z-header: 30;
+  --z-dropdown: 40;
+  --z-overlay: 50;
+  --z-modal: 60;
+  --z-toast: 70;
+  --z-skip-link: 100;
+
+  /* ---------- 16. Alias per shadcn/ui (valori hex: Tailwind v4 / @theme inline) ---------- */
+  --background: var(--ds-color-bg-page);
+  --foreground: var(--ds-color-text);
+  --card: var(--ds-color-bg-surface);
+  --card-foreground: var(--ds-color-text);
+  --popover: var(--ds-color-bg-surface);
+  --popover-foreground: var(--ds-color-text);
+  --primary: var(--ds-color-action-primary);
+  --primary-foreground: var(--ds-color-action-primary-fg);
+  --secondary: var(--neutral-100);
+  --secondary-foreground: var(--neutral-900);
+  --muted: var(--neutral-100);
+  --muted-foreground: var(--ds-color-text-muted);
+  --accent: var(--primary-50);
+  --accent-foreground: var(--primary-800);
+  --destructive: var(--ds-color-action-danger);
+  --destructive-foreground: var(--ds-color-action-danger-fg);
+  --border: var(--ds-color-border);
+  --input: var(--ds-color-border-input);
+  --ring: var(--ds-color-focus);
+  --radius: var(--ds-radius);                   /* base dei raggi shadcn */
+  --sidebar: var(--ds-color-bg-surface);
+  --sidebar-foreground: var(--ds-color-text);
+  --sidebar-primary: var(--primary-800);
+  --sidebar-primary-foreground: var(--neutral-0);
+  --sidebar-accent: var(--primary-100);
+  --sidebar-accent-foreground: var(--primary-800);
+  --sidebar-border: var(--ds-color-border);
+  --sidebar-ring: var(--ds-color-focus);
+}
+
+/* Base minima consigliata */
+html { font-family: var(--ds-font-sans); color: var(--ds-color-text); background: var(--ds-color-bg-page); }
+body { font-size: var(--ds-text-sm); line-height: var(--ds-leading-sm); }
+.tabular, td.num, th.num { font-variant-numeric: tabular-nums; text-align: right; }
+:focus-visible { outline: 2px solid var(--ds-color-focus); outline-offset: 2px; }
+.on-inverse :focus-visible { outline-color: var(--ds-color-focus-inverse); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .badge, .kpi-card, .demo-banner { border: 1px solid CanvasText; }
+}

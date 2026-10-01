@@ -1,0 +1,220 @@
+import type { IsoDate } from "./dates";
+import type { Money } from "./money";
+
+export type Role =
+  | "STRUCTURE_USER"
+  | "PROCUREMENT_OFFICER"
+  | "FINANCE_OFFICER"
+  | "SUPPLIER"
+  | "EXECUTIVE"
+  | "VALIDATOR"
+  | "ADMIN";
+
+export const ROLES: Role[] = [
+  "STRUCTURE_USER",
+  "PROCUREMENT_OFFICER",
+  "FINANCE_OFFICER",
+  "SUPPLIER",
+  "EXECUTIVE",
+  "VALIDATOR",
+  "ADMIN",
+];
+
+/** Owner logico di una milestone (ruolo applicativo abbreviato). */
+export type OwnerRole = "STRUCTURE" | "PROCUREMENT" | "FINANCE";
+
+export type ProcedureType =
+  | "DIRECT_AWARD"
+  | "DIRECT_AWARD_MEPA"
+  | "MEPA_ORDER"
+  | "CENTRAL_PURCHASING_ORDER"
+  | "NEGOTIATED"
+  | "OPEN"
+  | "FRAMEWORK_AGREEMENT";
+
+export type AwardCriterion = "LOWEST_PRICE" | "MEAT";
+export type Instrument = "MEPA" | "OFF_MEPA" | "CONSIP_AQ";
+
+export type ProcedureStatus =
+  | "DRAFT"
+  | "MEMORY_EXPECTED"
+  | "PRELIMINARY_REVIEW"
+  | "TENDERING"
+  | "AWARDED"
+  | "CONTRACTING"
+  | "EXECUTION"
+  | "CLOSING"
+  | "CLOSED"
+  | "CANCELLED";
+
+export type Health = "GREEN" | "AMBER" | "RED" | "NEUTRAL";
+export type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+export type MilestoneState =
+  | "NOT_STARTED"
+  | "UPCOMING"
+  | "DUE_SOON"
+  | "DUE_TODAY"
+  | "OVERDUE"
+  | "COMPLETED"
+  | "SUSPENDED"
+  | "NOT_APPLICABLE"
+  | "CANCELLED";
+
+export type ManualMilestoneState = "SUSPENDED" | "NOT_APPLICABLE" | "CANCELLED";
+
+export type SalState =
+  | "PLANNED"
+  | "SUBMITTED"
+  | "UNDER_REVIEW"
+  | "ACCEPTED"
+  | "INVOICED"
+  | "LIQUIDATED"
+  | "PARTIALLY_PAID"
+  | "PAID"
+  | "REJECTED"
+  | "SUSPENDED";
+
+export type AlertPolicyCode = "MEMORY" | "BLOCKING" | "STANDARD";
+export type DocTiming = "WITH" | "BEFORE";
+
+export interface ExpectedDocument {
+  type: string;
+  timing: DocTiming;
+  severity: Severity;
+}
+
+export interface MilestoneDefinition {
+  code: string;
+  label: string;
+  phase: ProcedureStatus;
+  owner: OwnerRole;
+  mandatory: boolean;
+  blocking: boolean;
+  offsetDays: number;
+  minDurationDays: number;
+  alertPolicy: AlertPolicyCode;
+  minLeadDays: number;
+  expectedDocuments: ExpectedDocument[];
+}
+
+export interface ProcessTemplate {
+  code: string;
+  label: string;
+  illustrative: boolean;
+  durationMonths: number;
+  selection: { procedureTypes: ProcedureType[]; awardCriterion?: AwardCriterion; instrument?: Instrument };
+  /** Catena lineare: ogni milestone dipende dalla precedente. */
+  milestones: MilestoneDefinition[];
+}
+
+export interface MilestoneInstance {
+  code: string;
+  /** Data della baseline (versione 1). */
+  baselineDate: IsoDate | null;
+  /** Data della versione corrente approvata. */
+  forecastDate: IsoDate | null;
+  actualDate: IsoDate | null;
+  manualState: ManualMilestoneState | null;
+  manualBlocker: string | null;
+}
+
+export interface ContractInfo {
+  signed: boolean;
+  net: Money;
+  vat: Money;
+  gross: Money;
+  supplierName: string | null;
+  signedDate: IsoDate | null;
+  startDate: IsoDate | null;
+  endDate: IsoDate | null;
+}
+
+export interface SalInstance {
+  seq: number;
+  pctHundredths: bigint;
+  amount: Money;
+  state: SalState;
+  dueDate: IsoDate | null;
+  submittedDate: IsoDate | null;
+  reviewDueDate: IsoDate | null;
+  invoiceDate: IsoDate | null;
+  paymentDueDate: IsoDate | null;
+  accepted: Money;
+  liquidated: Money;
+  paid: Money;
+}
+
+export interface PaymentRecord {
+  salSeq: number | null;
+  amount: Money;
+  date: IsoDate;
+  valid: boolean;
+}
+
+export type AnchorType = "MILESTONE" | "SAL";
+
+export interface ForecastLine {
+  id: string;
+  date: IsoDate;
+  amount: Money;
+  anchorType: AnchorType;
+  anchorRef: string;
+  source: string | null;
+}
+
+export interface BudgetAllocation {
+  year: number;
+  source: string;
+  amount: Money;
+}
+
+export type MovementType = "RESERVATION" | "COMMITMENT" | "LIQUIDATION" | "PAYMENT" | "RELEASE" | "REVERSAL";
+
+export interface Movement {
+  type: MovementType;
+  amount: Money;
+  year: number;
+  date: IsoDate;
+}
+
+export interface ProcedureDocument {
+  type: string;
+  subtype: string | null;
+}
+
+/** Aggregato su cui lavorano le regole pure. */
+export interface ProcedureAggregate {
+  code: string;
+  title: string;
+  structureCode: string;
+  procedureType: ProcedureType;
+  awardCriterion: AwardCriterion | null;
+  instrument: Instrument | null;
+  cancelled: boolean;
+  closed: boolean;
+  programmed: Money;
+  template: ProcessTemplate;
+  milestones: MilestoneInstance[];
+  contract: ContractInfo | null;
+  sals: SalInstance[];
+  payments: PaymentRecord[];
+  forecastLines: ForecastLine[];
+  budget: BudgetAllocation[];
+  movements: Movement[];
+  documents: ProcedureDocument[];
+}
+
+export interface EngineSettings {
+  attentionWindowDays: number;
+  reminderThresholdDays: number;
+  salReviewTermDays: number;
+  paymentTermDays: number;
+}
+
+export const DEFAULT_SETTINGS: EngineSettings = {
+  attentionWindowDays: 10,
+  reminderThresholdDays: 5,
+  salReviewTermDays: 15,
+  paymentTermDays: 30,
+};

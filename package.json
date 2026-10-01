@@ -1,0 +1,71 @@
+{
+  "name": "piattaforma-inapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MVP INAPP: monitoraggio gare e contratti, riprogrammazione e controllo finanziario",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "worker": "tsx worker/main.ts",
+    "cli": "tsx cli/main.ts",
+    "db:bootstrap": "tsx cli/main.ts bootstrap",
+    "db:reset": "tsx cli/main.ts reset --yes",
+    "db:generate": "drizzle-kit generate",
+    "run-checks": "tsx cli/main.ts run-checks",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "arch": "depcruise src --config .dependency-cruiser.cjs",
+    "guards": "tsx scripts/guards.ts",
+    "openapi": "tsx scripts/openapi.ts",
+    "traceability": "tsx scripts/traceability.ts",
+    "verify": "pnpm typecheck && pnpm lint && pnpm arch && pnpm guards && pnpm test"
+  },
+  "dependencies": {
+    "@node-rs/argon2": "^2.2.1",
+    "@tanstack/react-query": "^5.90.0",
+    "better-sqlite3": "^13.0.3",
+    "croner": "^10.0.1",
+    "drizzle-orm": "^0.45.3",
+    "exceljs": "^4.4.0",
+    "lucide-react": "^0.546.0",
+    "next": "^16.3.8",
+    "nodemailer": "^10.0.13",
+    "pino": "^10.3.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "recharts": "^3.2.0",
+    "server-only": "^0.0.1",
+    "temporal-polyfill": "^1.0.5",
+    "unpdf": "^1.8.1",
+    "yaml": "^2.8.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.0",
+    "@types/nodemailer": "^6.4.17",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "dependency-cruiser": "^17.0.0",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9.36.0",
+    "eslint-config-next": "^16.3.8",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.0",
+    "vitest": "^5.0.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["@node-rs/argon2", "esbuild", "sharp", "unrs-resolver"]
+  }
+}

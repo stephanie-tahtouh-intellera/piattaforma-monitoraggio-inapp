@@ -1,0 +1,102 @@
+# Modello dimostrativo (illustrative): non sono termini di legge. Guida §9.
+code: OPEN-9M-v1
+label: "Procedura aperta in ambito europeo (9 mesi)"
+illustrative: true
+durationMonths: 9
+selection:
+  procedureTypes: [OPEN]
+milestones:
+  - code: MEMORY_SUBMISSION
+    label: "Consegna memoria al Direttore Generale"
+    phase: MEMORY_EXPECTED
+    owner: STRUCTURE
+    mandatory: true
+    blocking: true
+    offsetDays: 0
+    minDurationDays: 0
+    alertPolicy: MEMORY
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: MEMORIA, timing: WITH, severity: HIGH }
+      - { type: DOCUMENTO_TECNICO, timing: WITH, severity: MEDIUM }
+  - code: REVIEW_COMPLETED
+    label: "Determina di indizione (a contrarre)"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 45
+    minDurationDays: 15
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: DETERMINA_INDIZIONE, timing: WITH, severity: HIGH }
+  - code: INVITATION_SENT
+    label: "Avvio TD/RdO o pubblicazione del bando"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 5
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments: []
+  - code: OFFERS_DEADLINE
+    label: "Termine offerte"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 35
+    minDurationDays: 30
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments: []
+  - code: EVALUATION_COMPLETED
+    label: "Valutazione completata (commissione)"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 90
+    minDurationDays: 20
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments: []
+  - code: AWARD
+    label: "Determina di aggiudicazione"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 30
+    minDurationDays: 5
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: DETERMINA_AGGIUDICAZIONE, timing: WITH, severity: HIGH }
+  - code: AWARD_EFFECTIVE
+    label: "Adempimenti pre-stipula (garanzia, documenti, termine dilatorio)"
+    phase: AWARDED
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 35
+    minDurationDays: 32
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments: []
+  - code: CONTRACT_SIGNED
+    label: "Stipula (contratto o documento di stipula MePA)"
+    phase: CONTRACTING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 20
+    minDurationDays: 0
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: GARANZIA_DEFINITIVA, timing: BEFORE, severity: HIGH }
+      - { type: CONTRATTO, timing: WITH, severity: HIGH }

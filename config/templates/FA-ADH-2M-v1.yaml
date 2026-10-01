@@ -1,0 +1,70 @@
+# Modello dimostrativo (illustrative): non sono termini di legge. Guida §9.
+code: FA-ADH-2M-v1
+label: "Adesione / contratto esecutivo su AQ o convenzione Consip (2 mesi)"
+illustrative: true
+durationMonths: 2
+selection:
+  procedureTypes: [FRAMEWORK_AGREEMENT]
+  instrument: CONSIP_AQ
+milestones:
+  - code: MEMORY_SUBMISSION
+    label: "Consegna memoria al Direttore Generale"
+    phase: MEMORY_EXPECTED
+    owner: STRUCTURE
+    mandatory: true
+    blocking: true
+    offsetDays: 0
+    minDurationDays: 0
+    alertPolicy: MEMORY
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: MEMORIA, timing: WITH, severity: HIGH }
+      - { type: DOCUMENTO_TECNICO, timing: WITH, severity: MEDIUM }
+  - code: REVIEW_COMPLETED
+    label: "Determina di indizione (a contrarre)"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 30
+    minDurationDays: 10
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: DETERMINA_INDIZIONE, timing: WITH, severity: HIGH }
+  - code: AWARD
+    label: "Determina di aggiudicazione"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 15
+    minDurationDays: 3
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: DETERMINA_AGGIUDICAZIONE, timing: WITH, severity: HIGH }
+  - code: AWARD_EFFECTIVE
+    label: "Adempimenti pre-stipula (garanzia, documenti, termine dilatorio)"
+    phase: AWARDED
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 10
+    minDurationDays: 0
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    expectedDocuments: []
+  - code: CONTRACT_SIGNED
+    label: "Stipula (contratto o documento di stipula MePA)"
+    phase: CONTRACTING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 5
+    minDurationDays: 0
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    expectedDocuments:
+      - { type: GARANZIA_DEFINITIVA, timing: BEFORE, severity: HIGH }
+      - { type: CONTRATTO, timing: WITH, severity: HIGH }

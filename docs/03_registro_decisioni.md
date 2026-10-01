@@ -1,0 +1,81 @@
+# Registro decisioni e deviazioni
+
+Registro **append-only**: non si cancella nulla. Le correzioni si fanno con una nuova voce che rimanda a quella superata.
+
+- **DEC-001…DEC-099**: decisioni di default nella [guida §3](02_guida_sviluppo_agente.md#3-decisioni-di-default-dec), scritte prima dello sviluppo.
+- **DEC-100 e successive**: decisioni prese dall'agente durante lo sviluppo, secondo la guida §2.3.
+- **DEV-xxx**: deviazioni dalla specifica o dall'oracle, con motivazione e impatto.
+- **ADR**: le scelte irreversibili vanno anche in `docs/adr/NNNN-titolo.md`.
+
+Formato:
+
+```
+### DEC-1xx | DEV-xxx — Titolo
+- Data: AAAA-MM-GG · Autore: agente | nome
+- Contesto: cosa era ambiguo o in conflitto (rif. spec §, US-, CR-)
+- Decisione: cosa si fa
+- Alternative scartate: …
+- Configurabile: sì (chiave `…`) | no
+- Stato: DA VALIDARE | VALIDATA (da chi, quando) | SUPERATA da …
+- Impatto su test/oracle: …
+```
+
+---
+
+### DEV-001 — Conteggi del seed diversi dai minimi della §7.1
+- Data: 2026-10-01 · Autore: analisi preliminare
+- Contesto: la §7.1 chiede 8 strutture, almeno 8 contratti e almeno 14 SAL; il portafoglio della §7.2/7.3 implica 10 strutture, 6 contratti e 21 SAL (CR-12).
+- Decisione: prevale il portafoglio, cioè 10 strutture, 6 contratti (P-004, P-005 in bozza, P-006, P-009, P-010, P-012 in bozza) e 21 SAL (contrattuali + piani pre-contratto).
+- Alternative scartate: inventare contratti aggiuntivi, che altererebbero le fasi della tabella 7.2.
+- Configurabile: no (dato seed) · Stato: DA VALIDARE
+- Impatto: nessuno sul DoD.
+
+### DEV-002 — P-001 senza contratto, riparto su 120.000
+- Data: 2026-10-01 · Autore: analisi preliminare
+- Contesto: la §7.3 attribuisce a P-001 (fase Memoria) un "contratto €119.560" e un riparto 23.912 / 95.648, mentre il programmato è 120.000 e S-01 usa 120.000 (CR-13).
+- Decisione: nessun contratto in MEMORY_EXPECTED; riparto 20/50/30 su 120.000 → 2026: 24.000; 2027: 96.000; residuo 120.000.
+- Alternative scartate: mantenere 119.560 come "importo stimato" (genererebbe un'anomalia `AMOUNTS_NOT_RECONCILED` non prevista).
+- Configurabile: no · Stato: DA VALIDARE
+- Impatto: riga P-001 della tabella 7.3 diversa; DoD invariato.
+
+### DEV-003 — Righe di previsione di P-002 e P-008 ancorate alla milestone in ritardo
+- Data: 2026-10-01 · Autore: analisi preliminare
+- Contesto: i totali annui della §7.3 per P-002 e P-008 non sono compatibili con i modelli temporali (pagamenti nel 2026 prima dell'aggiudicazione) (CR-02, CR-32).
+- Decisione: righe datate ancorate a `MEMORY_SUBMISSION` (P-002) e ad `AWARD` (P-008), scelte in modo che le regole producano esattamente €150.000 / €80.000 e €250.000 / €100.000.
+- Stato: DA VALIDARE (se INAPP vuole dati realistici, cambiano anche i valori attesi del DoD).
+
+### DEV-004 — Stack Next.js fullstack + SQLite al posto di FastAPI + PostgreSQL
+- Data: 2026-10-01 · Autore: riprogettazione su richiesta del cliente
+- Contesto: la specifica §4.1/§4.4/§11.3 indica Python/FastAPI, PostgreSQL, worker Python, Pytest e mypy; il cliente chiede un solo stack Next.js (TypeScript) con SQLite (CR-37).
+- Decisione: Next.js 16 fullstack, SQLite (better-sqlite3 + Drizzle), worker Node con lo stesso codebase, Vitest + Playwright. Principi §2.4, API §10, NFR e oracle invariati. Dettagli in docs/06_architettura_nextjs_sqlite.md e ADR-0001.
+- Alternative scartate: mantenere FastAPI/PostgreSQL (rifiutato dal cliente); Next.js + PostgreSQL (più robusto, ma richiede un servizio DB in più e non rispetta la richiesta).
+- Configurabile: no · Stato: DA VALIDARE (presa d'atto di INAPP dei limiti della §2.11 e del criterio di migrazione della §2.12)
+- Impatto su test/oracle: nessuno sui valori attesi; cambiano strumenti e layout dei test (DEC-093).
+
+### DEV-005 — P-002 resta procedura negoziata pur essendo sopra la soglia UE
+- Data: 2026-10-01 · Autore: integrazione di 05/08
+- Contesto: P-002 vale ≈ 393.000 € netti, sopra la soglia UE sub-centrale di 216.000 € (CR-31, [08 §4](08_risposte_criticita.md)). Una procedura negoziata senza bando non è plausibile.
+- Decisione: opzione B, cioè la tipologia `NEGOTIATED` (NEG-4M) resta. Passare a `OPEN` porterebbe `date_changes` di S-02 da 7 a 8, contro la specifica §10.4.
+- Alternative scartate: opzione A, `OPEN`/OPEN-9M, più realistica; si adotta se INAPP lo chiede, aggiornando l'oracle.
+- Configurabile: no · Stato: DA VALIDARE
+- Impatto su test/oracle: nessuno. L'anomalia `PROCEDURE_TYPE_THRESHOLD_MISMATCH` resta disattivata nel seed.
+
+### DEV-006 — Adeguamento a documenti reali e normativa (guida v1.1)
+- Data: 2026-10-01 · Autore: integrazione di 05/06/07/08
+- Contesto: l'analisi del workbook e degli atti reali ([05](05_analisi_documenti_reali.md)) e la verifica normativa ([08](08_risposte_criticita.md)) correggono diversi default della guida v1.0.
+- Decisione:
+  - **Modelli di procedura** (guida §9): scelta per tipologia, criterio di aggiudicazione e strumento. `OPEN-7M` diventa `OPEN-9M`; nascono `NEG-7M` e `FA-ADH-2M`. I minimi rispettano gli artt. 18 e 71; i codici delle milestone restano invariati, le etichette diventano quelle reali; la garanzia definitiva è richiesta in tutti i modelli; si aggiungono le determine fra i documenti attesi.
+  - **Tipologie del dataset**: P-004 `DIRECT_AWARD` → `NEGOTIATED`; P-009 `MEPA_ORDER` → `CENTRAL_PURCHASING_ORDER`.
+  - **Documenti seed**: da 18 a 22, con layout reale, e `procedures.xlsx` con le intestazioni del workbook INAPP.
+  - **Modelli**: da 4 a 6. Per i conteggi questo aggiorna DEV-001.
+  - **Nuove DEC**: 014, 015, 026, 034–037, 071, 081, 082.
+- Verifica: ricalcolo a mano e con script delle simulazioni con i nuovi modelli. S-02 dà `date_changes` 7, S-04 1, S-05 3. Importi, overflow, health, alert (9), notifiche (17 in-app / 19 e-mail), anomalie (3) e KPI sono invariati.
+- Stato: DA VALIDARE (circolare INAPP del 26/04/2022, modalità dell'accordo quadro)
+- Impatto su test/oracle: **nessuno** sui valori della guida §10.3–10.6.
+
+### DEV-007 — Dati reali INAPP e logo ufficiale nella demo
+- Data: 2026-10-01 · Autore: indicazione del cliente
+- Contesto: la guida v1.1 vietava i dati reali (DEC-071) e il logo ufficiale (07 §5.1). Il cliente chiede di usare i dati forniti, che giudica realistici e privi di problemi di privacy, e il logo e i colori INAPP.
+- Decisione: i dati reali sono copiati in `seed/inapp/` e importati con `DEMO_DATASET=inapp` (default della demo). Le 12 procedure sintetiche (`DEMO_DATASET=scenarios`) restano l'oracle di test e DoD. Il logo bianco ufficiale si usa nell'header e nel login.
+- Stato: VALIDATA dal cliente (01/10/2026). Supera DEC-071 v1.1 e 07 §5.1.
+- Impatto su test/oracle: nessuno sull'oracle (profilo `scenarios`). Per il profilo `inapp` si verificano il report di import e gli invarianti, non valori attesi puntuali.
