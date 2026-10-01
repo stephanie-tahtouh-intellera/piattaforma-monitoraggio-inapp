@@ -79,3 +79,33 @@ Formato:
 - Decisione: i dati reali sono copiati in `seed/inapp/` e importati con `DEMO_DATASET=inapp` (default della demo). Le 12 procedure sintetiche (`DEMO_DATASET=scenarios`) restano l'oracle di test e DoD. Il logo bianco ufficiale si usa nell'header e nel login.
 - Stato: VALIDATA dal cliente (01/10/2026). Supera DEC-071 v1.1 e 07 §5.1.
 - Impatto su test/oracle: nessuno sull'oracle (profilo `scenarios`). Per il profilo `inapp` si verificano il report di import e gli invarianti, non valori attesi puntuali.
+
+### DEC-101 — SQL scritto a mano con better-sqlite3 al posto di Drizzle
+- Data: 2026-10-01 · Autore: agente
+- Contesto: DEC-096 prevede Drizzle; drizzle-kit ricrea le tabelle e può perdere i trigger (CR-39).
+- Decisione: migrazioni SQL numerate (`db/migrations/*.sql`) e repository con prepared statement. Trigger in `db/sql/triggers.sql` riapplicati a ogni avvio e verificati da test e `/ready`.
+- Alternative scartate: Drizzle (rischio trigger, doppia definizione dello schema).
+- Stato: attiva · Impatto: nessuno su oracle.
+
+### DEC-102 — Livelli applicativi semplificati
+- Data: 2026-10-01 · Autore: agente
+- Decisione: `src/domain` resta puro (verificato da `scripts/guards.ts`); `src/application`, `src/infrastructure` e `src/server` possono usare il DB. Le pagine (Server Component) leggono solo tramite `src/server/queries.ts` con l'attore della sessione; le mutazioni passano solo dalle route `/api/*`.
+- Alternative scartate: porte/adapter completi e dependency-cruiser (rinviati: costo alto per l'MVP).
+- Stato: attiva.
+
+### DEC-103 — Completezza documentale solo per fascicoli caricati
+- Data: 2026-10-01 · Autore: agente
+- Contesto: nel dataset reale c'è un solo fascicolo; l'anomalia `EXPECTED_DOCUMENT_MISSING` scattava su 63 procedure senza documenti caricati.
+- Decisione: flag `procedures.documents_tracked`; il controllo di completezza (e il blocco BEFORE) vale solo con fascicolo caricato. Nel dataset `scenarios` tutte le procedure sono tracciate (oracle invariato).
+- Stato: DA VALIDARE.
+
+### DEC-104 — CSS sui token INAPP invece di Tailwind/shadcn
+- Data: 2026-10-01 · Autore: agente
+- Decisione: foglio di stile applicativo (`src/app/globals.css`) costruito solo sui token di `docs/design/tokens.css`; componenti React propri (badge, tabelle, stepper, grafico SVG accessibile). Recharts e shadcn non usati.
+- Motivo: meno dipendenze, controllo diretto su contrasto e accessibilità; nessuna differenza visiva rispetto a 07.
+- Stato: attiva.
+
+### DEV-008 — Ambito non ancora implementato al termine della sessione del 01–02/10/2026
+- Non implementati: OCR (`tesseract.js`) e generazione dei 22 PDF sintetici del dataset `scenarios` (I6, T-015/T-016); upload e import ZIP con protezioni (US-020, US-112 upload); UI di configurazione di modelli e calendario (US-100/101 UI), gestione utenti (US-102), dizionari (US-103), creazione bozza (US-013); test E2E Playwright e axe; collaudo Docker.
+- Impatto: i test T-015, T-016, T-022 (via UI) e i test E2E restano da fare; la logica di dominio e le API del vertical slice sono complete e testate.
+

@@ -214,7 +214,7 @@ export function alternatives(
     { kind: "FASTEST", result: fast, sameAs: null, explanation: `Prima data ammissibile: riferimento + preavviso minimo, giorno lavorativo (${fastDate}).` },
   ];
   let best = fast;
-  let bestKey = [blockingTotal(fast), fast.amountShifted.cents, 0n] as const;
+  let bestKey: readonly [bigint, bigint, bigint] = [blockingTotal(fast), fast.amountShifted.cents, 0n];
   for (let d = fastDate, i = 0; i <= 120; i++, d = addDays(d, 1)) {
     if (!cal.isBusinessDay(d)) continue;
     const r = simulate(agg, sourceCode, d, ref, cal, opts);
