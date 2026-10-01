@@ -15,7 +15,8 @@ export function cancelProcedureTx(db: Db, procedureId: number, reason: string, a
   if (p.cancelled_at) throw new DomainError("INVALID_TRANSITION", "Procedura già annullata", 409);
   const sum = (type: string) =>
     Money.ofCents(BigInt((db.prepare("SELECT COALESCE(SUM(amount_cents),0) AS s FROM financial_movements WHERE procedure_id = ? AND type = ?").get(procedureId, type) as { s: number }).s));
-  const release = sum("RESERVATION").sub(sum("COMMITMENT")).sub(sum("RELEASE"));
+  const raw = sum("RESERVATION").sub(sum("COMMITMENT")).sub(sum("RELEASE"));
+  const release = raw.isNegative() ? Money.ZERO : raw;
   const now = clock.nowIso();
   if (release.gt(Money.ZERO)) {
     db.prepare(
