@@ -1,0 +1,32 @@
+{
+  "structures": [
+    { "code": "SISTEMI_INFORMATIVI", "name": "Sistemi informativi" },
+    { "code": "PROGRAMMAZIONE_CONTROLLO", "name": "Programmazione e controllo" },
+    { "code": "STUDI_ANALISI", "name": "Studi e analisi" },
+    { "code": "COMUNICAZIONE", "name": "Comunicazione" },
+    { "code": "FORMAZIONE", "name": "Formazione" },
+    { "code": "INNOVAZIONE_DIGITALE", "name": "Innovazione digitale" },
+    { "code": "METODOLOGIE_STATISTICHE", "name": "Metodologie statistiche" },
+    { "code": "SICUREZZA_ICT", "name": "Sicurezza ICT" },
+    { "code": "RELAZIONI_INTERNAZIONALI", "name": "Relazioni internazionali" },
+    { "code": "SVILUPPO_COMPETENZE", "name": "Sviluppo competenze" },
+    { "code": "PN_GDL", "name": "PN Giovani, Donne e Lavoro (da assegnare)" }
+  ],
+  "suppliers": [
+    { "code": "SUP-ALFA", "name": "Fornitore Demo Alfa S.r.l." },
+    { "code": "SUP-BETA", "name": "Fornitore Demo Beta S.r.l." },
+    { "code": "SUP-GAMMA", "name": "Fornitore Demo Gamma S.p.A." },
+    { "code": "SUP-DELTA", "name": "Fornitore Demo Delta S.r.l." },
+    { "code": "SUP-EPSILON", "name": "Fornitore Demo Epsilon S.p.A." },
+    { "code": "SUP-ZETA", "name": "Fornitore Demo Zeta S.r.l." }
+  ],
+  "users": [
+    { "login": "struttura.si", "name": "Responsabile Struttura Sistemi informativi", "role": "STRUCTURE_USER", "structureScope": "SISTEMI_INFORMATIVI" },
+    { "login": "gare", "name": "Ufficio Gare (RUP)", "role": "PROCUREMENT_OFFICER", "structureScope": "*" },
+    { "login": "amministrazione", "name": "Amministrazione e Contabilità", "role": "FINANCE_OFFICER", "structureScope": "*" },
+    { "login": "fornitore.alfa", "name": "Fornitore Demo Alfa S.r.l.", "role": "SUPPLIER", "structureScope": "*", "supplier": "SUP-ALFA" },
+    { "login": "dirigente", "name": "Direttore Generale (demo)", "role": "EXECUTIVE", "structureScope": "*" },
+    { "login": "validatore", "name": "Validatore / Operatore di monitoraggio", "role": "VALIDATOR", "structureScope": "*" },
+    { "login": "admin", "name": "Amministratore piattaforma", "role": "ADMIN", "structureScope": "*" }
+  ]
+}

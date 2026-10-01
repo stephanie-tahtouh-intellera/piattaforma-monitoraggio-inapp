@@ -94,7 +94,7 @@ export function evaluateAnomalies(
   // Documenti attesi (§8.7): BEFORE sulla milestone attiva vicina o scaduta; WITH sull'ultima completata.
   let lastCompleted: MilestoneEvaluation | null = null;
   for (const m of ms) if (m.state === "COMPLETED") lastCompleted = m;
-  for (const m of ms) {
+  for (const m of agg.documentsTracked ? ms : []) {
     for (const e of m.def.expectedDocuments) {
       if (docTypes.has(e.type)) continue;
       const before =
@@ -144,7 +144,7 @@ export function evaluateAnomalies(
     out.push({ rule: "AMOUNTS_NOT_RECONCILED", target: "CONTRACT", severity: "HIGH", message: "Netto + IVA diverso dal lordo del contratto" });
   }
   const planned = Money.sum(agg.forecastLines.map((l) => effectiveLineAmount(agg, l))).add(totalPaid(agg));
-  const base = agg.contract?.signed ? agg.contract.gross : agg.programmed;
+  const base = agg.contract?.signed ? agg.contract.gross.add(agg.costComponents) : agg.programmed;
   if (agg.forecastLines.length + agg.payments.length > 0 && !planned.eq(base)) {
     out.push({
       rule: "AMOUNTS_NOT_RECONCILED",

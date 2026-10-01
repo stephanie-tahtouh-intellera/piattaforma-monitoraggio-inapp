@@ -194,6 +194,8 @@ export interface ProcedureAggregate {
   cancelled: boolean;
   closed: boolean;
   programmed: Money;
+  /** Componenti di costo fuori contratto incluse negli impegni (contributo ANAC, DEC-035). */
+  costComponents: Money;
   template: ProcessTemplate;
   milestones: MilestoneInstance[];
   contract: ContractInfo | null;
@@ -203,6 +205,8 @@ export interface ProcedureAggregate {
   budget: BudgetAllocation[];
   movements: Movement[];
   documents: ProcedureDocument[];
+  /** Fascicolo caricato: solo allora si verifica la completezza documentale (DEC-103). */
+  documentsTracked: boolean;
 }
 
 export interface EngineSettings {

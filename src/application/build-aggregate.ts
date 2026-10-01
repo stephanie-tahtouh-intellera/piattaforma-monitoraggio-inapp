@@ -83,6 +83,7 @@ export function buildAggregateFromSeed(
     cancelled: p.events.some((e) => e.type === "CANCEL"),
     closed: p.events.some((e) => e.type === "CLOSE"),
     programmed: Money.parse(p.programmed),
+    costComponents: p.anacFee ? Money.parse(p.anacFee) : Money.ZERO,
     template,
     milestones,
     contract: p.contract
@@ -103,5 +104,6 @@ export function buildAggregateFromSeed(
     budget: p.budget.map((b) => ({ year: b.year, source: b.source ?? "ORDINARIO_DEMO", amount: Money.parse(b.amount) })),
     movements: p.movements.map((m) => ({ type: m.type, amount: Money.parse(m.amount), year: m.year, date: isoDate(m.date) })),
     documents: p.documents.map((x) => ({ type: x.type, subtype: x.subtype ?? null })),
+    documentsTracked: p.documentsTracked ?? true,
   };
 }

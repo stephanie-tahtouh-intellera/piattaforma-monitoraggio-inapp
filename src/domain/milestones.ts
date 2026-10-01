@@ -95,7 +95,7 @@ export function evaluateMilestones(
     const active = !done && !foundActive && !agg.cancelled && !agg.closed;
     if (active) foundActive = true;
 
-    const missingBefore = def.expectedDocuments.filter((e) => e.timing === "BEFORE" && !docTypes.has(e.type));
+    const missingBefore = (agg.documentsTracked ? def.expectedDocuments : []).filter((e) => e.timing === "BEFORE" && !docTypes.has(e.type));
     const blockerReason = inst?.manualBlocker ?? (missingBefore.length ? `Documento mancante: ${missingBefore.map((m) => m.type).join(", ")}` : null);
     result.push({
       code: def.code,
