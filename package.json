@@ -25,6 +25,7 @@
     "verify": "pnpm typecheck && pnpm guards && pnpm test"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.10",
     "@node-rs/argon2": "^2.2.1",
     "@tanstack/react-query": "^5.90.0",
     "better-sqlite3": "^13.0.3",
@@ -40,8 +41,10 @@
     "recharts": "^3.2.0",
     "server-only": "^0.0.1",
     "temporal-polyfill": "^1.0.5",
+    "tesseract.js": "^7.0.0",
     "unpdf": "^1.8.1",
     "yaml": "^2.8.0",
+    "yauzl": "^3.4.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {
@@ -52,6 +55,7 @@
     "@types/nodemailer": "^6.4.17",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "@types/yauzl": "^3.4.0",
     "dependency-cruiser": "^17.0.0",
     "eslint": "^9.36.0",
     "eslint-config-next": "^16.3.8",

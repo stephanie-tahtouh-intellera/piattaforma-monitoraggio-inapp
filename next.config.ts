@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["better-sqlite3", "@node-rs/argon2", "exceljs", "unpdf", "nodemailer"],
+  serverExternalPackages: ["better-sqlite3", "@node-rs/argon2", "exceljs", "unpdf", "nodemailer", "tesseract.js", "@napi-rs/canvas", "yauzl", "pdf-lib"],
   poweredByHeader: false,
   typedRoutes: false,
   async headers() {

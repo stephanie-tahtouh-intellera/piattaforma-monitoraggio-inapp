@@ -11,6 +11,7 @@ import { AnnualChart } from "@/ui/annual-chart";
 import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusChip } from "@/ui/badges";
 import { MOVEMENT_LABEL, OWNER_LABEL, SIM_STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
+import { UploadForm } from "@/ui/upload-form";
 
 const TABS = [
   ["overview", "Panoramica"],
@@ -142,6 +143,10 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       {tab === "documents" ? (
         <section className="card">
           <h2>Fascicolo documentale</h2>
+          {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <UploadForm code={p.code} /> : null}
+          {(d.documents as any[]).some((x) => x.processing_state === "OCR_PENDING" || x.processing_state === "STORED") && can(actor, "documents.import") ? (
+            <ActionForm endpoint="/api/documents/process" submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
+          ) : null}
           <div className="table-wrap">
             <table className="data">
               <thead><tr><th>Documento</th><th>Tipo</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
@@ -151,7 +156,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                     <td>{x.title ?? x.file_name}</td>
                     <td>{x.doc_type ?? "—"}{x.subtype ? ` · ${x.subtype}` : ""}</td>
                     <td className="num">{x.pages ?? "—"}</td>
-                    <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : <span className="chip">{x.processing_state}</span>}</td>
+                    <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{x.processing_state}</span>}</td>
                     <td>{x.association_method} · affidabilità {x.association_confidence}</td>
                     <td><DateIt v={x.uploaded_at?.slice(0, 10)} /></td>
                     <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`}>Apri</a> : <span className="muted small">file non disponibile</span>}</td>

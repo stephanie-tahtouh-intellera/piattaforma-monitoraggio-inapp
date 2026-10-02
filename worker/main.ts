@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { bootstrap } from "@/application/bootstrap";
 import { runChecks } from "@/application/run-checks";
+import { processPendingDocuments } from "@/application/documents";
 import { dbClock, systemNowIso } from "@/infrastructure/clock";
 import { getDb, tx } from "@/infrastructure/db/connection";
 
@@ -76,6 +77,22 @@ async function main() {
   setInterval(heartbeat, 30_000);
   setInterval(scheduledChecks, 60_000);
   setInterval(() => void dispatchOutbox(), OUTBOX_MS);
+  // Elaborazione documenti (testo + OCR) fuori dalle transazioni, un lotto alla volta
+  let docBusy = false;
+  const docs = async () => {
+    if (docBusy) return;
+    docBusy = true;
+    try {
+      const r = await processPendingDocuments(db, "worker");
+      if (r.processed) console.log(JSON.stringify({ level: "info", msg: "documenti elaborati", ...r }));
+    } catch (e) {
+      console.log(JSON.stringify({ level: "warn", msg: "elaborazione documenti", error: String(e).slice(0, 200) }));
+    } finally {
+      docBusy = false;
+    }
+  };
+  setInterval(() => void docs(), 30_000);
+  void docs();
   void dispatchOutbox();
 }
 
