@@ -47,8 +47,9 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <h1>Portafoglio procedure</h1>
           <div className="page-meta">Filtri e ordinamento lato server; lo stato dei filtri è nell'indirizzo della pagina.</div>
         </div>
-        {can(actor, "export") ? (
+        {can(actor, "export") || actor.role === "STRUCTURE_USER" ? (
           <div className="actions">
+            {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? <Link className="btn btn-primary" href="/procedure/nuova">Nuova procedura in bozza</Link> : null}
             <a className="btn btn-secondary" href={`/api/exports/portfolio.csv?${qs({}).split("?")[1]}`}>Esporta CSV ({r.total} righe)</a>
             <a className="btn btn-secondary" href={`/api/exports/portfolio.xlsx?${qs({}).split("?")[1]}`}>Esporta XLSX</a>
           </div>

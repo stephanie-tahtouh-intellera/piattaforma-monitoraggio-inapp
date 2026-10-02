@@ -1,6 +1,6 @@
 import { DomainError } from "@/application/errors";
 import { cancelProcedureTx, closeProcedureTx } from "@/application/procedure-events";
-import { runChecks } from "@/application/run-checks";
+import { calendarFromDb, runChecks } from "@/application/run-checks";
 import { resetDemo, type DatasetName } from "@/application/bootstrap";
 import { BusinessCalendar, addDays, isoDate, yearOf } from "@/domain/dates";
 import { Money } from "@/domain/money";
@@ -79,7 +79,7 @@ export function createSimulation(
   const p = requireProcedure(db, actor, code);
   const ref = configuredReferenceDate(db);
   const agg = loadAggregate(db, p.id);
-  const r = simulate(agg, input.source, isoDate(input.candidateDate), ref, new BusinessCalendar());
+  const r = simulate(agg, input.source, isoDate(input.candidateDate), ref, calendarFromDb(db));
   const ser = serializeSimulation(r);
   const versionId = (db.prepare("SELECT current_version_id AS v FROM procedures WHERE id = ?").get(p.id) as { v: number }).v;
   return tx(db, () => {
@@ -132,7 +132,7 @@ export function approveSimulation(db: Db, actor: Actor, simCode: string, reason:
   // Ricalcolo a partire dalla versione corrente (deterministico)
   const ref = configuredReferenceDate(db);
   const agg = loadAggregate(db, p.id);
-  const r = simulate(agg, s.source_milestone, isoDate(s.candidate_date), ref, new BusinessCalendar());
+  const r = simulate(agg, s.source_milestone, isoDate(s.candidate_date), ref, calendarFromDb(db));
   const now = systemNowIso();
   tx(db, () => {
     const vno = (db.prepare("SELECT MAX(version_no) AS n FROM procedure_versions WHERE procedure_id = ?").get(p.id) as { n: number }).n + 1;

@@ -80,6 +80,7 @@ export function buildAggregateFromSeed(
     procedureType: p.type,
     awardCriterion: p.awardCriterion ?? null,
     instrument: p.instrument ?? null,
+    draft: false,
     cancelled: p.events.some((e) => e.type === "CANCEL"),
     closed: p.events.some((e) => e.type === "CLOSE"),
     programmed: Money.parse(p.programmed),

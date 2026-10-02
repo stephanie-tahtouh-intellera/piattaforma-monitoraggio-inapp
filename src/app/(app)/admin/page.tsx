@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { formatDateTimeIt } from "@/contracts/format";
 import { can } from "@/server/authz";
 import { systemStatus } from "@/server/queries";
+import { engineSettings } from "@/application/run-checks";
+import Link from "next/link";
 import { db, pageActor } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
 
@@ -14,6 +16,8 @@ export default async function AdminPage() {
   const users = db().prepare("SELECT login, name, role, structure_scope, active FROM users ORDER BY id").all() as any[];
   const imp = s.imports[0] as any;
   const rep = imp ? JSON.parse(imp.summary_json) : null;
+  const es = engineSettings(db());
+  const extra = (db().prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get() as { value_json: string } | undefined)?.value_json;
   return (
     <>
       <div className="page-head">
@@ -77,6 +81,41 @@ export default async function AdminPage() {
           </table>
         </section>
       ) : null}
+      <div className="grid grid-2" style={{ marginTop: 16 }}>
+        <section className="card stack">
+          <h2>Soglie e calendario</h2>
+          <p className="muted">Finestra di attenzione, reminder e termini (DEC-037). Festività nazionali e Pasquetta sono sempre incluse; qui si aggiungono quelle locali (es. 2027-06-29). <Link href="/admin/modelli">Consulta i modelli di procedura</Link></p>
+          <ActionForm
+            endpoint="/api/admin/config/engine"
+            method="PUT"
+            submitLabel="Salva e ricalcola"
+            successMessage="Configurazione salvata (versionata e auditata)."
+            fields={[
+              { name: "attentionWindowDays", label: "Finestra di attenzione (giorni)", defaultValue: String(es.attentionWindowDays) },
+              { name: "reminderThresholdDays", label: "Soglia di reminder (giorni)", defaultValue: String(es.reminderThresholdDays) },
+              { name: "salReviewTermDays", label: "Termine di verifica SAL (giorni, massimo di legge 30)", defaultValue: String(es.salReviewTermDays) },
+              { name: "paymentTermDays", label: "Termine di pagamento dalla fattura (giorni)", defaultValue: String(es.paymentTermDays) },
+              { name: "extraHolidays", label: "Festività aggiuntive (AAAA-MM-GG, separate da virgola)", defaultValue: extra ? (JSON.parse(extra) as string[]).join(", ") : "" },
+            ]}
+          />
+        </section>
+        <section className="card stack">
+          <h2>Aggiungi o modifica utente</h2>
+          <ActionForm
+            endpoint="/api/admin/users"
+            submitLabel="Salva utente"
+            successMessage="Utente salvato; la modifica dei permessi è nell'audit."
+            fields={[
+              { name: "login", label: "Login", required: true },
+              { name: "name", label: "Nome", required: true },
+              { name: "role", label: "Ruolo", type: "select", options: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"].map((r) => ({ value: r, label: r })) },
+              { name: "structure_scope", label: "Ambito (codice struttura o *)", defaultValue: "*" },
+              { name: "supplier", label: "Fornitore (solo per il ruolo SUPPLIER, es. SUP-ALFA)" },
+              { name: "active", label: "Attivo", type: "checkbox", defaultValue: "true" },
+            ]}
+          />
+        </section>
+      </div>
       <section className="card">
         <h2>Utenti demo</h2>
         <table className="data">

@@ -3,7 +3,7 @@ import { BusinessCalendar, daysBetween, type IsoDate } from "@/domain/dates";
 import { evaluateProcedure } from "@/domain/evaluate";
 import { mapToRecord } from "@/domain/finance";
 import { alternatives, fastestCandidate } from "@/domain/reschedule";
-import { engineSettings } from "@/application/run-checks";
+import { calendarFromDb, engineSettings } from "@/application/run-checks";
 import { configuredReferenceDate } from "@/infrastructure/clock";
 import type { Db } from "@/infrastructure/db/connection";
 import { loadAggregate } from "@/infrastructure/repo/procedures";
@@ -268,7 +268,7 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
   const baselineLines = db.prepare("SELECT date, amount_cents FROM forecast_lines WHERE version_id = (SELECT id FROM procedure_versions WHERE procedure_id = ? AND is_baseline = 1)").all(p0.id) as { date: string; amount_cents: number }[];
   const baseByYear = new Map<number, bigint>();
   for (const l of baselineLines) baseByYear.set(Number(l.date.slice(0, 4)), (baseByYear.get(Number(l.date.slice(0, 4))) ?? 0n) + BigInt(l.amount_cents));
-  const cal = new BusinessCalendar();
+  const cal = calendarFromDb(db);
   const rescheduleSource = ev.deadlines.find((d) => d.kind === "MILESTONE" && d.blocking && d.daysUntil < 0)?.target ?? ev.milestones.find((m) => m.active)?.code ?? null;
   return {
     referenceDate: ref,
@@ -355,7 +355,7 @@ export function previewAlternatives(db: Db, actor: Actor, code: string, source: 
   const p = requireProcedure(db, actor, code);
   const ref = configuredReferenceDate(db);
   const agg = loadAggregate(db, p.id);
-  return alternatives(agg, source, ref, new BusinessCalendar(), manual);
+  return alternatives(agg, source, ref, calendarFromDb(db), manual);
 }
 
 export function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: string; severity?: string; status?: string; procedure?: string; rule?: string }) {

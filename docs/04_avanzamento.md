@@ -4,11 +4,11 @@
 > Stati: `TODO` · `IN_CORSO` · `FATTO` (test verdi + commit) · `PARZIALE` · `BLOCCATO`
 
 ## Stato corrente
-- **Incremento corrente:** I7 Amministrazione (P1). P0 (I0–I5) e I6 completati in locale.
+- **Incremento corrente:** I8 Hardening. I0–I7 completati in locale.
 - **Ultimo passo completato:** app Next.js completa del vertical slice (dashboard, portafoglio, scheda a 7 tab, wizard di riprogrammazione, centro alert, validazione, assistente, audit, amministrazione), 49 route, export, worker; 61 test verdi; `next build` verde.
-- **Prossimo passo:** I7 → UI di configurazione di modelli e calendario (US-100/101), gestione utenti e ruoli (US-102), dizionari (US-103), creazione bozza (US-013). I8 → prestazioni con 1.000 procedure, collaudo Docker e Mailpit.
+- **Prossimo passo:** collaudo con Docker e Mailpit quando disponibili (DEC-100); dizionari modificabili (US-103, oggi etichette nel codice); validazione con INAPP delle voci `DA VALIDARE`.
 - **Blocchi aperti:** Docker non installato (DEC-100): `Dockerfile` e `docker-compose.yml` scritti ma non collaudati. Mailpit non presente in locale: le e-mail restano in outbox (visibili in Amministrazione).
-- **Quality gate:** `pnpm verify` (typecheck + guard + 67 test) e `pnpm test:e2e` (8 test Playwright + axe) verdi.
+- **Quality gate:** `pnpm verify` (typecheck + guard + 72 test) e `pnpm test:e2e` (8 test Playwright + axe) verdi.
 
 ## Note di sessione
 - 2026-10-01 — Integrati 05/06/07/08 nella guida (v1.1). Oracle ricontrollato: invariato.
@@ -25,8 +25,8 @@
 | I4 Contratti e SAL | FATTO | transizioni SAL, fatture, liquidazioni, pagamenti parziali, storni, annullamento/rilascio |
 | I5 Dashboard, validazione, audit | FATTO | KPI, export CSV/XLSX/PDF auditati, coda di validazione, audit |
 | I6 Documenti | FATTO | OCR locale (tesseract.js, ita versionato), upload/ZIP protetti, estrazione campi → validazione, 22 PDF sintetici con hash stabili |
-| I7 Assistente e amministrazione | PARZIALE | assistente deterministico, data di riferimento, reset, impersonazione; mancano UI modelli/calendario/utenti/dizionari |
-| I8 Hardening e consegna | PARZIALE | E2E del demo script (8 test, axe WCAG 2.1 AA) verdi; mancano prestazioni 1.000 procedure e collaudo Docker |
+| I7 Assistente e amministrazione | FATTO (US-103 parziale) | assistente, bozza e consegna memoria, soglie e festività, consultazione modelli, utenti/ruoli/ambiti, reset, impersonazione |
+| I8 Hardening e consegna | PARZIALE | E2E (8 test + axe), prestazioni 1.000 procedure (p95 portafoglio 2,2 ms; simulazione 0,9 ms); manca il collaudo Docker/Mailpit |
 
 ## Test di collaudo
 | Test | Stato | Dove |
@@ -51,7 +51,7 @@
 | T-019 Assistente P-004 | FATTO | assistant-exports |
 | T-020 Assistente portafoglio | FATTO | assistant-exports |
 | T-021 AI off | FATTO | assistant-exports (nessun provider) |
-| T-022 Reset demo | PARZIALE | implementato (UI e CLI), test automatico da aggiungere |
+| T-022 Reset demo | FATTO | tests/integration/perf-reset |
 | T-023 Export | FATTO | assistant-exports |
 | T-024 Vincolo pagamento | FATTO | commands |
 | T-025 KPI | FATTO | oracle-engine, commands |

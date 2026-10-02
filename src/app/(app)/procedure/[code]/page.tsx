@@ -93,6 +93,13 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         ))}
       </nav>
 
+      {ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
+        <section className="card" style={{ marginBottom: 16 }}>
+          <h2>Consegna della memoria</h2>
+          <p className="muted">Alla consegna la baseline si congela e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
+          <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
+        </section>
+      ) : null}
       {tab === "overview" ? (
         <div className="grid grid-2">
           <section className="card">

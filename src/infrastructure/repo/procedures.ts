@@ -29,6 +29,7 @@ export interface ProcedureRow {
   programmed_cents: number;
   anac_fee_cents: number;
   documents_tracked: number;
+  is_draft: number;
   cig: string | null;
   cup: string | null;
   source_key: string | null;
@@ -145,6 +146,7 @@ export function loadAggregate(db: Db, procedureId: number): ProcedureAggregate {
     procedureType: p.procedure_type,
     awardCriterion: p.award_criterion,
     instrument: p.instrument,
+    draft: p.is_draft === 1,
     cancelled: p.cancelled_at !== null,
     closed: p.closed_at !== null,
     programmed: cents(p.programmed_cents),

@@ -1,5 +1,5 @@
 import { SEVERITY_RANK, type AlertCandidate, type LevelDef, type RecipientSpec } from "@/domain/alerts";
-import { BusinessCalendar, type IsoDate } from "@/domain/dates";
+import { BusinessCalendar, ITALIAN_CALENDAR, isoDate, type IsoDate } from "@/domain/dates";
 import { evaluateProcedure, type ProcedureEvaluation } from "@/domain/evaluate";
 import { DEFAULT_SETTINGS, type EngineSettings } from "@/domain/model";
 import { fastestCandidate, serializeSimulation, simulate } from "@/domain/reschedule";
@@ -7,6 +7,13 @@ import type { Clock } from "@/infrastructure/clock";
 import { tx, type Db } from "@/infrastructure/db/connection";
 import { listProcedureIds, loadAggregate } from "@/infrastructure/repo/procedures";
 import { formatDateIt, formatEuro } from "@/contracts/format";
+
+/** Calendario con le festività aggiuntive configurate (US-101). */
+export function calendarFromDb(db: Db): BusinessCalendar {
+  const r = db.prepare("SELECT value_json FROM config WHERE key = 'calendar.extra_holidays'").get() as { value_json: string } | undefined;
+  const extra = r ? (JSON.parse(r.value_json) as string[]).map((d) => isoDate(d)) : [];
+  return new BusinessCalendar({ ...ITALIAN_CALENDAR, extraHolidays: extra });
+}
 
 export function engineSettings(db: Db): EngineSettings {
   const r = db.prepare("SELECT value_json FROM config WHERE key = 'engine.settings'").get() as { value_json: string } | undefined;
@@ -82,7 +89,7 @@ export interface RunChecksResult {
 export function runChecks(db: Db, clock: Clock, opts: { procedureIds?: number[]; baseUrl?: string } = {}): RunChecksResult {
   const ref = clock.referenceDate();
   const settings = engineSettings(db);
-  const cal = new BusinessCalendar();
+  const cal = calendarFromDb(db);
   const baseUrl = opts.baseUrl ?? process.env.APP_BASE_URL ?? "http://localhost:3000";
   const ids = opts.procedureIds ?? listProcedureIds(db);
   const res: RunChecksResult = { referenceDate: ref, procedures: 0, alertsOpened: 0, notifications: 0, emails: 0, simulationsCreated: 0 };

@@ -191,6 +191,8 @@ export interface ProcedureAggregate {
   procedureType: ProcedureType;
   awardCriterion: AwardCriterion | null;
   instrument: Instrument | null;
+  /** Bozza della Struttura prima della consegna della memoria (US-013). */
+  draft: boolean;
   cancelled: boolean;
   closed: boolean;
   programmed: Money;

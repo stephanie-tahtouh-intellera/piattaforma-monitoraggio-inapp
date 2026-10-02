@@ -80,7 +80,7 @@ export function evaluateAnomalies(
   ref: IsoDate,
   settings: EngineSettings,
 ): AnomalyCandidate[] {
-  if (agg.cancelled || agg.closed) {
+  if (agg.cancelled || agg.closed || agg.draft) {
     const out: AnomalyCandidate[] = [];
     if (agg.cancelled && agg.movements.some((m) => m.type === "COMMITMENT")) {
       out.push({ rule: "COMMITTED_ON_CANCELLED", target: agg.code, severity: "HIGH", message: "Procedura annullata con impegni registrati" });
@@ -167,7 +167,7 @@ export function evaluateProcedure(
 ): ProcedureEvaluation {
   const ms = evaluateMilestones(agg, ref, settings);
   const status = deriveStatus(agg, ms);
-  const deadlines = activeDeadlines(agg, ms, ref, settings);
+  const deadlines = agg.draft ? [] : activeDeadlines(agg, ms, ref, settings);
   const anomalies = evaluateAnomalies(agg, ms, ref, settings);
   const need = annualNeed(agg);
   const available = availableByYear(agg);

@@ -116,6 +116,7 @@ const SAL_ACCEPTED_OR_LATER = new Set(["ACCEPTED", "INVOICED", "LIQUIDATED", "PA
 /** Stato della procedura = fase della prima milestone obbligatoria non completata (DEC-023). */
 export function deriveStatus(agg: ProcedureAggregate, ms: MilestoneEvaluation[]): ProcedureStatus {
   if (agg.cancelled) return "CANCELLED";
+  if (agg.draft) return "DRAFT";
   if (agg.closed) return "CLOSED";
   const byCode = new Map(agg.milestones.map((m) => [m.code, m]));
   for (const e of ms) {
