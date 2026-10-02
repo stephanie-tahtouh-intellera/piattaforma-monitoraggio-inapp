@@ -184,7 +184,7 @@ function insertProcedure(
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SEED', '1.00')`,
   );
   for (const d of p.documents) {
-    const full = documentsRoot ? path.join(documentsRoot, d.file) : null;
+    const full = documentsRoot ? path.join(documentsRoot, d.file.replace(/^casi:/, "")) : null;
     const meta = full && existsSync(full) ? sha256File(full) : { sha: createHash("sha256").update(`${p.code}:${d.file}`).digest("hex"), size: 0 };
     di.run(pid, d.file, path.basename(d.file), meta.sha, meta.size, d.type, d.subtype ?? null, d.title ?? null, actor, now);
     report.documents++;

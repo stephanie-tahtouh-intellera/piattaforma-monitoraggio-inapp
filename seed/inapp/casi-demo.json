@@ -1,0 +1,128 @@
+{
+  "dataset": "casi-demo",
+  "description": "Casi dimostrativi inventati (DEC-105) affiancati al portafoglio reale PN GDL: danno a ogni attore almeno un'attività da svolgere nella guida demo (SAL, fatture, pagamenti, simulazioni da approvare, validazioni). Fornitori e importi sono fittizi.",
+  "procedures": [
+    {
+      "code": "CD-01", "title": "Servizio di help desk applicativo per i portali istituzionali INAPP", "structure": "SISTEMI_INFORMATIVI",
+      "type": "DIRECT_AWARD_MEPA", "instrument": "MEPA", "programmed": "62220.00",
+      "milestones": { "MEMORY_SUBMISSION": { "forecast": "2026-10-07" } },
+      "lines": [
+        { "date": "2027-01-29", "amount": "20740.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-06-30", "amount": "41480.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2027, "amount": "62220.00" } ],
+      "documents": [ { "type": "MEMORIA", "subtype": "BOZZA", "file": "casi:CD-01/memoria_bozza.pdf", "title": "Bozza di memoria – help desk applicativo" } ]
+    },
+    {
+      "code": "CD-02", "title": "Sviluppo del cruscotto di monitoraggio degli indicatori del PN Giovani, Donne e Lavoro", "structure": "SISTEMI_INFORMATIVI",
+      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "183000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2025-11-10" }, "REVIEW_COMPLETED": { "actual": "2025-11-26" },
+        "INVITATION_SENT": { "actual": "2025-12-09" }, "OFFERS_DEADLINE": { "actual": "2026-01-12" },
+        "AWARD": { "actual": "2026-02-20" }, "AWARD_EFFECTIVE": { "actual": "2026-03-12" },
+        "CONTRACT_SIGNED": { "actual": "2026-04-20" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-ALFA", "net": "150000.00", "vat": "33000.00", "gross": "183000.00",
+        "signedDate": "2026-04-20", "startDate": "2026-05-04", "endDate": "2027-05-03" },
+      "sals": [
+        { "seq": 1, "pct": "30.00", "state": "PAID", "dueDate": "2026-07-31", "submittedDate": "2026-07-27", "accepted": "54900.00", "liquidated": "54900.00", "invoiceDate": "2026-08-07", "deliverable": "Analisi dei requisiti e prototipo" },
+        { "seq": 2, "pct": "40.00", "state": "SUBMITTED", "dueDate": "2026-09-30", "submittedDate": "2026-09-28", "deliverable": "Cruscotto in collaudo" },
+        { "seq": 3, "pct": "30.00", "state": "PLANNED", "dueDate": "2027-04-30", "deliverable": "Rilascio in esercizio e formazione" }
+      ],
+      "payments": [ { "sal": 1, "amount": "54900.00", "date": "2026-09-04", "reference": "Mandato n. 1873/2026" } ],
+      "lines": [
+        { "date": "2026-11-27", "amount": "73200.00", "anchor": "SAL2" },
+        { "date": "2027-05-31", "amount": "54900.00", "anchor": "SAL3" }
+      ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "128100.00", "year": 2026, "date": "2025-11-26" },
+        { "type": "COMMITMENT", "amount": "54900.00", "year": 2027, "date": "2025-11-26" },
+        { "type": "LIQUIDATION", "amount": "54900.00", "year": 2026, "date": "2026-08-20" },
+        { "type": "PAYMENT", "amount": "54900.00", "year": 2026, "date": "2026-09-04" }
+      ],
+      "budget": [ { "year": 2026, "amount": "130000.00" }, { "year": 2027, "amount": "60000.00" } ],
+      "documents": [
+        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "casi:CD-02/contratto.pdf", "title": "Contratto – cruscotto indicatori PN GDL" },
+        { "type": "DELIVERABLE", "file": "casi:CD-02/relazione_sal2.pdf", "title": "Relazione SAL 2 – Fornitore Demo Alfa" }
+      ],
+      "extractionProposals": [
+        { "document": "casi:CD-02/contratto.pdf", "field": "contract.gross", "value": "183600.00", "page": 1, "excerpt": "corrispettivo complessivo pari ad € 183.600,00 IVA inclusa (lettura OCR incerta)", "confidence": "0.72" },
+        { "document": "casi:CD-02/relazione_sal2.pdf", "field": "sal.2.amount", "value": "73200.00", "page": 1, "excerpt": "Importo del SAL n. 2: € 73.200,00 (40% del corrispettivo)", "confidence": "0.94" }
+      ]
+    },
+    {
+      "code": "CD-03", "title": "Servizio di rilevazione CATI per l'indagine sulla qualità del lavoro", "structure": "STUDI_ANALISI",
+      "type": "NEGOTIATED", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "244000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2025-07-14" }, "REVIEW_COMPLETED": { "actual": "2025-08-12" },
+        "INVITATION_SENT": { "actual": "2025-08-25" }, "OFFERS_DEADLINE": { "actual": "2025-09-22" },
+        "AWARD": { "actual": "2025-12-19" }, "AWARD_EFFECTIVE": { "actual": "2026-01-20" },
+        "CONTRACT_SIGNED": { "actual": "2026-02-16" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-ALFA", "net": "200000.00", "vat": "44000.00", "gross": "244000.00",
+        "signedDate": "2026-02-16", "startDate": "2026-03-02", "endDate": "2026-12-31" },
+      "sals": [
+        { "seq": 1, "pct": "40.00", "state": "ACCEPTED", "dueDate": "2026-07-31", "submittedDate": "2026-07-30", "accepted": "97600.00", "deliverable": "Questionario e prima ondata di interviste" },
+        { "seq": 2, "pct": "60.00", "state": "PLANNED", "dueDate": "2026-10-30", "deliverable": "Seconda ondata e base dati finale" }
+      ],
+      "lines": [
+        { "date": "2026-10-30", "amount": "97600.00", "anchor": "SAL1" },
+        { "date": "2026-12-30", "amount": "146400.00", "anchor": "SAL2" }
+      ],
+      "movements": [ { "type": "COMMITMENT", "amount": "244000.00", "year": 2026, "date": "2025-08-12" } ],
+      "budget": [ { "year": 2026, "amount": "244000.00" } ],
+      "documents": [
+        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "casi:CD-03/contratto.pdf", "title": "Contratto – rilevazione CATI" },
+        { "type": "VERBALE_SAL", "file": "casi:CD-03/verbale_verifica_sal1.pdf", "title": "Verbale di verifica di conformità – SAL 1" }
+      ]
+    },
+    {
+      "code": "CD-04", "title": "Segreteria organizzativa degli eventi territoriali del PN Giovani, Donne e Lavoro", "structure": "FORMAZIONE",
+      "type": "DIRECT_AWARD", "instrument": "MEPA", "programmed": "48800.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-04-06" }, "REVIEW_COMPLETED": { "actual": "2026-04-13" },
+        "AWARD": { "actual": "2026-04-22" }, "AWARD_EFFECTIVE": { "actual": "2026-04-29" },
+        "CONTRACT_SIGNED": { "actual": "2026-05-08" }
+      },
+      "contract": { "signed": true, "supplier": "SUP-BETA", "net": "40000.00", "vat": "8800.00", "gross": "48800.00",
+        "signedDate": "2026-05-08", "startDate": "2026-05-11", "endDate": "2026-07-31" },
+      "sals": [
+        { "seq": 1, "pct": "100.00", "state": "LIQUIDATED", "dueDate": "2026-07-31", "submittedDate": "2026-07-31", "accepted": "48800.00", "liquidated": "48800.00", "invoiceDate": "2026-09-01", "deliverable": "Organizzazione di 6 eventi territoriali" }
+      ],
+      "lines": [ { "date": "2026-10-01", "amount": "48800.00", "anchor": "SAL1" } ],
+      "movements": [
+        { "type": "COMMITMENT", "amount": "48800.00", "year": 2026, "date": "2026-04-13" },
+        { "type": "LIQUIDATION", "amount": "48800.00", "year": 2026, "date": "2026-09-15" }
+      ],
+      "budget": [ { "year": 2026, "amount": "48800.00" } ],
+      "documents": [ { "type": "CONTRATTO", "subtype": "TD_MEPA", "file": "casi:CD-04/documento_stipula_mepa.pdf", "title": "Documento di stipula – trattativa diretta MePA" } ]
+    },
+    {
+      "code": "CD-05", "title": "Servizio di valutazione indipendente del PN Giovani, Donne e Lavoro 2021-2027", "structure": "PROGRAMMAZIONE_CONTROLLO",
+      "type": "NEGOTIATED", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "420000.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-02-02" }, "REVIEW_COMPLETED": { "actual": "2026-03-04" },
+        "INVITATION_SENT": { "actual": "2026-03-16" }, "OFFERS_DEADLINE": { "actual": "2026-04-13" },
+        "AWARD": { "forecast": "2026-09-14", "blocker": "Commissione giudicatrice: verifica dell'anomalia delle offerte ancora in corso" }
+      },
+      "lines": [
+        { "date": "2026-12-15", "amount": "150000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-06-30", "amount": "150000.00", "anchor": "CONTRACT_SIGNED" },
+        { "date": "2027-12-15", "amount": "120000.00", "anchor": "CONTRACT_SIGNED" }
+      ],
+      "budget": [ { "year": 2026, "amount": "150000.00" }, { "year": 2027, "amount": "280000.00" } ],
+      "documents": [ { "type": "DETERMINA_INDIZIONE", "file": "casi:CD-05/determina_indizione.pdf", "title": "Determina di indizione – valutazione indipendente" } ]
+    },
+    {
+      "code": "CD-06", "title": "Rinnovo delle licenze software per l'analisi statistica dei microdati (convenzione Consip)", "structure": "METODOLOGIE_STATISTICHE",
+      "type": "CENTRAL_PURCHASING_ORDER", "instrument": "CONSIP_AQ", "programmed": "36600.00",
+      "milestones": {
+        "MEMORY_SUBMISSION": { "actual": "2026-08-31" }, "REVIEW_COMPLETED": { "actual": "2026-09-07" },
+        "AWARD": { "forecast": "2026-09-17" }
+      },
+      "lines": [ { "date": "2026-10-30", "amount": "36600.00", "anchor": "CONTRACT_SIGNED" } ],
+      "budget": [ { "year": 2026, "amount": "36600.00" } ],
+      "documents": [ { "type": "MEMORIA", "file": "casi:CD-06/memoria.pdf", "title": "Memoria – rinnovo licenze statistiche" } ]
+    }
+  ]
+}

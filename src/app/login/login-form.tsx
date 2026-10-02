@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { requestTourStart } from "@/ui/tour/state";
 
 const USERS = [
   ["dirigente", "Direttore Generale", "approva le riprogrammazioni"],
@@ -11,9 +12,11 @@ const USERS = [
   ["admin", "Amministratore", "configurazione e reset"],
 ] as const;
 
-export function LoginForm() {
-  const [login, setLogin] = useState("dirigente");
-  const [password, setPassword] = useState("");
+export function LoginForm({ initialLogin, startTour = false }: { initialLogin?: string | undefined; startTour?: boolean }) {
+  const known = USERS.some(([l]) => l === initialLogin);
+  const [login, setLogin] = useState(known ? initialLogin! : "dirigente");
+  const [password, setPassword] = useState(known ? "Demo2026!" : "");
+  const [tour, setTour] = useState(startTour);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -23,7 +26,10 @@ export function LoginForm() {
     setError(null);
     const res = await fetch("/api/auth/login", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ login, password }) });
     setBusy(false);
-    if (res.ok) window.location.href = "/";
+    if (res.ok) {
+      if (tour) requestTourStart();
+      window.location.href = "/";
+    }
     else setError("Credenziali non valide. La password demo è indicata nel README.");
   }
 
@@ -44,6 +50,9 @@ export function LoginForm() {
         <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         <span className="help">Password demo: Demo2026! (configurabile con DEMO_PASSWORD)</span>
       </div>
+      <label className="check">
+        <input type="checkbox" checked={tour} onChange={(e) => setTour(e.target.checked)} /> Avvia la guida demo del ruolo dopo l'accesso
+      </label>
       <button className="btn btn-primary" type="submit" disabled={busy} aria-busy={busy}>
         {busy ? "Accesso in corso…" : "Accedi"}
       </button>

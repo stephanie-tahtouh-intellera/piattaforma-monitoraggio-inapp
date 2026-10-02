@@ -28,6 +28,10 @@ export async function loadDataset(db: Db, clock: Clock, name: DatasetName): Prom
     const ds = await importInappWorkbook(db, clock);
     reports.push(seedDataset(db, ds, clock, null));
     await attachRealDocuments(db, clock);
+    // Casi dimostrativi inventati (DEC-105): un'attività per ogni attore della guida demo
+    reports.push(seedDataset(db, readDataset(path.join(root, "seed", "inapp", "casi-demo.json")), clock, path.join(root, "seed", "inapp", "casi-demo")));
+    const { applyDemoActions } = await import("@/server/demo-cases");
+    applyDemoActions(db);
   }
   return reports;
 }

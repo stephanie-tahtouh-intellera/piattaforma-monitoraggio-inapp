@@ -1,5 +1,5 @@
-import { EXAMPLES } from "@/server/assistant";
-import { pageActor } from "@/server/page";
+import { examplesFor } from "@/server/assistant";
+import { db, pageActor } from "@/server/page";
 import { AssistantChat } from "@/ui/assistant-chat";
 
 export const metadata = { title: "Assistente" };
@@ -16,7 +16,7 @@ export default async function AssistantPage() {
           </div>
         </div>
       </div>
-      <AssistantChat examples={EXAMPLES} />
+      <AssistantChat examples={examplesFor(db())} />
     </>
   );
 }

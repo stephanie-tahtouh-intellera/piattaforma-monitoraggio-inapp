@@ -7,7 +7,9 @@ import { LoginForm } from "./login-form";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Accesso" };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  const q = await searchParams;
+  const utente = typeof q.utente === "string" ? q.utente : undefined;
   await ensureBootstrapped();
   const ref = configuredReferenceDate(getDb());
   return (
@@ -21,7 +23,7 @@ export default async function LoginPage() {
             <p>Programmazione, scadenze, riprogrammazione e controllo finanziario delle procedure di acquisto del PN Giovani, Donne e Lavoro.</p>
             <p style={{ marginTop: "auto", fontSize: 13, opacity: 0.9 }}>Prototipo dimostrativo. Calcoli deterministici; nessuna decisione automatica.</p>
           </div>
-          <LoginForm />
+          <LoginForm initialLogin={utente} startTour={q.guida === "1"} />
         </div>
       </div>
     </div>

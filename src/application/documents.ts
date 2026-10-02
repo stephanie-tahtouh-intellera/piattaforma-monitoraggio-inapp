@@ -22,6 +22,7 @@ export function storageRoot(): string {
 export function documentFile(filePath: string): string {
   const root = projectRoot();
   if (filePath.startsWith("inapp:")) return path.join(root, "seed", "inapp", "documenti", path.basename(filePath.slice(6)));
+  if (filePath.startsWith("casi:")) return path.join(root, "seed", "inapp", "casi-demo", ...filePath.slice(5).split("/").filter((x) => x && x !== ".."));
   if (filePath.startsWith("storage:")) {
     const sha = filePath.slice(8).replace(/[^a-f0-9]/g, "");
     return path.join(storageRoot(), sha.slice(0, 2), sha);

@@ -94,7 +94,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       </nav>
 
       {ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
-        <section className="card" style={{ marginBottom: 16 }}>
+        <section className="card" style={{ marginBottom: 16 }} data-tour="memoria">
           <h2>Consegna della memoria</h2>
           <p className="muted">Alla consegna la baseline si congela e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
           <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
@@ -150,7 +150,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       {tab === "documents" ? (
         <section className="card">
           <h2>Fascicolo documentale</h2>
-          {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <UploadForm code={p.code} /> : null}
+          {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <div data-tour="upload"><UploadForm code={p.code} /></div> : null}
           {(d.documents as any[]).some((x) => x.processing_state === "OCR_PENDING" || x.processing_state === "STORED") && can(actor, "documents.import") ? (
             <ActionForm endpoint="/api/documents/process" submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
           ) : null}
@@ -195,7 +195,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           <div className="page-head"><h2>Simulazioni di riprogrammazione</h2>
             {can(actor, "simulation.create") && d.rescheduleSource ? <Link className="btn btn-primary" href={`/procedure/${p.code}/riprogrammazione`}>Nuova simulazione</Link> : null}
           </div>
-          <div className="table-wrap">
+          <div className="table-wrap" data-tour="simulazioni">
             <table className="data">
               <thead><tr><th>Codice</th><th>Alternativa</th><th>Milestone → data</th><th className="num">Date cambiate</th><th className="num">Spostato</th><th>Criticità</th><th>Stato</th><th>Autore</th><th>Azioni</th></tr></thead>
               <tbody>
@@ -312,7 +312,7 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
           </dl>
         ) : <p className="muted">Contratto non ancora registrato.</p>}
       </section>
-      <section className="card">
+      <section className="card" data-tour="sal">
         <h2>Piano SAL e pagamenti</h2>
         {d.sals.length ? (
           <div className="table-wrap">
@@ -344,7 +344,7 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
             <h2>Annualità: fabbisogno e disponibilità</h2>
             <AnnualChart rows={ev.years} />
           </section>
-          <section className="card">
+          <section className="card" data-tour="movimenti">
             <h2>Righe di previsione e movimenti</h2>
             <div className="grid grid-2">
               <table className="data">
@@ -361,8 +361,17 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
             {d.payments.length ? (
               <table className="data" style={{ marginTop: 12 }}>
                 <caption>Pagamenti</caption>
-                <thead><tr><th>Data</th><th>SAL</th><th className="num">Importo</th><th>Riferimento</th><th>Stato</th></tr></thead>
-                <tbody>{d.payments.map((x) => <tr key={x.id}><td><DateIt v={x.date} /></td><td>{x.sal}</td><td className="num"><Euro v={x.amount} /></td><td>{x.reference ?? "—"}</td><td>{x.state === "REVERSED" ? "Stornato" : "Eseguito"}</td></tr>)}</tbody>
+                <thead><tr><th>Data</th><th>SAL</th><th className="num">Importo</th><th>Riferimento</th><th>Stato</th>{can(actor, "finance.record") ? <th>Azioni</th> : null}</tr></thead>
+                <tbody>
+                  {d.payments.map((x) => (
+                    <tr key={x.id}>
+                      <td><DateIt v={x.date} /></td><td>{x.sal}</td><td className="num"><Euro v={x.amount} /></td><td>{x.reference ?? "—"}</td><td>{x.state === "REVERSED" ? "Stornato" : "Eseguito"}</td>
+                      {can(actor, "finance.record") ? (
+                        <td>{x.state !== "REVERSED" ? <ActionForm endpoint={`/api/payments/${x.id}/reverse`} submitLabel="Storna" variant="ghost" confirm="Confermi lo storno del pagamento? Resterà visibile insieme all'originale." fields={[{ name: "reason", label: "Motivo dello storno", type: "textarea", required: true }]} successMessage="Pagamento stornato." /> : null}</td>
+                      ) : null}
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             ) : null}
           </section>
@@ -382,7 +391,7 @@ function SalActions({ d, s, actor }: { d: ReturnType<typeof procedureDetail>; s:
       <ActionForm
         endpoint={`${base}/transition`}
         submitLabel="Registra esito verifica"
-        fields={[{ name: "to", label: "Esito", type: "select", options: [...(can(actor, "sal.accept") ? [{ value: "ACCEPTED", label: "Accettato" }] : []), { value: "UNDER_REVIEW", label: "In verifica" }, { value: "REJECTED", label: "Rigettato" }] }, date, { name: "note", label: "Nota o motivo", type: "textarea", required: true }]}
+        fields={[{ name: "to", label: "Esito", type: "select", options: [...(can(actor, "sal.accept") ? [{ value: "ACCEPTED", label: "Accettato" }] : []), ...(can(actor, "sal.verify") && s.state === "SUBMITTED" ? [{ value: "UNDER_REVIEW", label: "In verifica" }] : []), { value: "REJECTED", label: "Rigettato" }] }, date, { name: "note", label: "Nota o motivo", type: "textarea", required: true }]}
       />
     );
   if (s.state === "ACCEPTED" && can(actor, "finance.record")) return <ActionForm endpoint={`${base}/transition`} submitLabel="Registra fattura" fields={[{ name: "to", label: "Stato", type: "select", options: [{ value: "INVOICED", label: "Fatturato" }] }, date]} />;

@@ -1,10 +1,10 @@
 "use client";
-import { Bell, Bot, ClipboardCheck, FileText, LayoutDashboard, ListChecks, Settings, ShieldCheck } from "lucide-react";
+import { Bell, Bot, ClipboardCheck, Compass, FileText, LayoutDashboard, ListChecks, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export interface NavItem { href: string; label: string; icon: string; count?: number }
-const ICONS = { dashboard: LayoutDashboard, portfolio: ListChecks, alerts: Bell, validation: ClipboardCheck, assistant: Bot, audit: ShieldCheck, admin: Settings, docs: FileText };
+const ICONS = { dashboard: LayoutDashboard, portfolio: ListChecks, alerts: Bell, validation: ClipboardCheck, assistant: Bot, audit: ShieldCheck, admin: Settings, docs: FileText, guide: Compass };
 
 export function SideNav({ items, footer }: { items: (NavItem | "sep")[]; footer: string }) {
   const path = usePathname();

@@ -26,6 +26,22 @@ const EXAMPLES = [
   "Ultima riprogrammazione di P-002",
 ];
 
+/** Esempi coerenti con il dataset caricato (portafoglio reale + casi dimostrativi, DEC-105). */
+const EXAMPLES_INAPP = [
+  "Qual è lo stato di OP04-S18?",
+  "Quanto è stato pagato su CD-02?",
+  "Quali documenti mancano per CD-01?",
+  "Memorie in scadenza nei prossimi 30 giorni",
+  "Quali procedure sono da riprogrammare?",
+  "Qual è l'importo a rischio?",
+  "Ultima riprogrammazione di CD-05",
+];
+
+export function examplesFor(db: Db): string[] {
+  const d = db.prepare("SELECT value FROM system_meta WHERE key = 'dataset'").get() as { value: string } | undefined;
+  return d?.value === "inapp" ? EXAMPLES_INAPP : EXAMPLES;
+}
+
 const STATUS_IT: Record<string, string> = {
   MEMORY_EXPECTED: "memoria attesa",
   PRELIMINARY_REVIEW: "memoria presentata – istruttoria",
@@ -46,7 +62,7 @@ const HEALTH_IT: Record<string, string> = { GREEN: "verde", AMBER: "ambra", RED:
 export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
   requireAction(actor, "assistant");
   const q = question.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 500);
-  const codeMatch = question.match(/\b(P-\d{3}|OP\d{2}-S\d+)\b/i);
+  const codeMatch = question.match(/\b(P-\d{3}|OP\d{2}-S\d+|CD-\d{2}|BZ-\d{3})\b/i);
   const ref = configuredReferenceDate(db);
 
   if (codeMatch) {
@@ -179,7 +195,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     facts: [],
     links: [],
     missing: [],
-    examples: EXAMPLES,
+    examples: examplesFor(db),
   };
 }
 

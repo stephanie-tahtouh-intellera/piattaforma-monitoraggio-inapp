@@ -27,13 +27,13 @@ export default async function AdminPage() {
         </div>
       </div>
       <div className="grid grid-2">
-        <section className="card stack">
+        <section className="card stack" data-tour="refdate">
           <h2>Data di riferimento</h2>
           <p className="muted">La data di business è configurata e non dipende dall'orologio di sistema (DEC-002). Cambiarla ricalcola scadenze, alert e health.</p>
           <ActionForm endpoint="/api/admin/config/reference-date" method="PUT" submitLabel="Applica e ricalcola" fields={[{ name: "date", label: "Data di riferimento", type: "date", required: true, defaultValue: s.referenceDate }]} />
           <ActionForm endpoint="/api/jobs/run-checks" submitLabel="Esegui controlli ora (run_checks)" variant="secondary" successMessage="Controlli eseguiti." />
         </section>
-        <section className="card stack">
+        <section className="card stack" data-tour="reset">
           <h2>Reset demo</h2>
           <p className="muted">Ricarica il dataset da zero. Tutte le sessioni vengono chiuse. Operazione auditata.</p>
           <ActionForm
@@ -48,7 +48,7 @@ export default async function AdminPage() {
             ]}
           />
         </section>
-        <section className="card stack">
+        <section className="card stack" data-tour="impersona">
           <h2>Impersonazione</h2>
           <p className="muted">Solo per la demo: la sessione è marcata e auditata.</p>
           <ActionForm
@@ -71,7 +71,7 @@ export default async function AdminPage() {
         </section>
       </div>
       {rep ? (
-        <section className="card">
+        <section className="card" data-tour="import">
           <h2>Report di import del workbook</h2>
           <p>Righe lette {rep.rowsRead} · importate {rep.imported} · annullate {rep.cancelled}</p>
           <p className="small muted">Fogli non importati: {rep.skippedSheets.join(", ")}</p>
@@ -82,7 +82,7 @@ export default async function AdminPage() {
         </section>
       ) : null}
       <div className="grid grid-2" style={{ marginTop: 16 }}>
-        <section className="card stack">
+        <section className="card stack" data-tour="soglie">
           <h2>Soglie e calendario</h2>
           <p className="muted">Finestra di attenzione, reminder e termini (DEC-037). Festività nazionali e Pasquetta sono sempre incluse; qui si aggiungono quelle locali (es. 2027-06-29). <Link href="/admin/modelli">Consulta i modelli di procedura</Link></p>
           <ActionForm
@@ -99,7 +99,7 @@ export default async function AdminPage() {
             ]}
           />
         </section>
-        <section className="card stack">
+        <section className="card stack" data-tour="utenti">
           <h2>Aggiungi o modifica utente</h2>
           <ActionForm
             endpoint="/api/admin/users"

@@ -1,6 +1,6 @@
 import { DomainError } from "@/application/errors";
 import { cancelProcedureTx, closeProcedureTx } from "@/application/procedure-events";
-import { calendarFromDb, runChecks } from "@/application/run-checks";
+import { calendarFromDb, engineSettings, runChecks } from "@/application/run-checks";
 import { resetDemo, type DatasetName } from "@/application/bootstrap";
 import { BusinessCalendar, addDays, isoDate, yearOf } from "@/domain/dates";
 import { Money } from "@/domain/money";
@@ -182,8 +182,8 @@ export function rejectSimulation(db: Db, actor: Actor, simCode: string, reason: 
 const SAL_TRANSITIONS: Record<string, { to: string; action: Parameters<typeof can>[1] }[]> = {
   PLANNED: [{ to: "SUBMITTED", action: "sal.submit" }],
   REJECTED: [{ to: "SUBMITTED", action: "sal.submit" }],
-  SUBMITTED: [{ to: "UNDER_REVIEW", action: "sal.verify" }, { to: "REJECTED", action: "sal.verify" }, { to: "ACCEPTED", action: "sal.accept" }],
-  UNDER_REVIEW: [{ to: "ACCEPTED", action: "sal.accept" }, { to: "REJECTED", action: "sal.verify" }],
+  SUBMITTED: [{ to: "UNDER_REVIEW", action: "sal.verify" }, { to: "REJECTED", action: "sal.verify" }, { to: "REJECTED", action: "sal.accept" }, { to: "ACCEPTED", action: "sal.accept" }],
+  UNDER_REVIEW: [{ to: "ACCEPTED", action: "sal.accept" }, { to: "REJECTED", action: "sal.verify" }, { to: "REJECTED", action: "sal.accept" }],
   ACCEPTED: [{ to: "INVOICED", action: "finance.record" }],
 };
 
@@ -193,12 +193,13 @@ export function transitionSal(db: Db, actor: Actor, code: string, seq: number, t
   if (!sal) throw new DomainError("NOT_FOUND", "SAL non trovato", 404);
   const contract = db.prepare("SELECT signed FROM contracts WHERE procedure_id = ?").get(p.id) as { signed: number } | undefined;
   if (!contract?.signed) throw new DomainError("INVALID_TRANSITION", "Il contratto non è ancora stipulato", 409);
-  const t = SAL_TRANSITIONS[sal.state]?.find((x) => x.to === to);
-  if (!t) throw new DomainError("INVALID_TRANSITION", `Transizione ${sal.state} → ${to} non ammessa`, 409);
-  requireAction(actor, t.action);
+  const ts = SAL_TRANSITIONS[sal.state]?.filter((x) => x.to === to) ?? [];
+  if (!ts.length) throw new DomainError("INVALID_TRANSITION", `Transizione ${sal.state} → ${to} non ammessa`, 409);
+  requireAction(actor, (ts.find((x) => can(actor, x.action)) ?? ts[0]!).action);
   if ((to === "REJECTED" || to === "ACCEPTED") && !note?.trim()) throw new DomainError("VALIDATION_ERROR", "Nota o motivo obbligatori", 422);
   const d = isoDate(date);
-  const settings = { review: 15, pay: 30 };
+  const es = engineSettings(db);
+  const settings = { review: es.salReviewTermDays, pay: es.paymentTermDays };
   tx(db, () => {
     const upd: Record<string, unknown> = { state: to, note };
     if (to === "SUBMITTED") Object.assign(upd, { submitted_date: d, review_due_date: addDays(d, settings.review) });

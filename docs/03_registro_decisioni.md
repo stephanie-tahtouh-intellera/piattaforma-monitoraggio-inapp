@@ -109,3 +109,17 @@ Formato:
 - Non implementati: OCR (`tesseract.js`) e generazione dei 22 PDF sintetici del dataset `scenarios` (I6, T-015/T-016); upload e import ZIP con protezioni (US-020, US-112 upload); UI di configurazione di modelli e calendario (US-100/101 UI), gestione utenti (US-102), dizionari (US-103), creazione bozza (US-013); test E2E Playwright e axe; collaudo Docker.
 - Impatto: i test T-015, T-016, T-022 (via UI) e i test E2E restano da fare; la logica di dominio e le API del vertical slice sono complete e testate.
 
+### DEC-105 — Casi dimostrativi inventati accanto al portafoglio reale
+- Data: 2026-10-02 · Autore: agente, su richiesta del cliente («inventa altri casi realistici se necessario»)
+- Contesto: nel portafoglio reale tutte le 82 procedure sono della struttura «PN GDL (da assegnare)», i contratti non hanno fornitore e non ci sono SAL né pagamenti. Struttura, Fornitore e Amministrazione non avevano nulla da fare in demo; nessuna riprogrammazione era in attesa di approvazione.
+- Decisione: il dataset `inapp` carica anche `seed/inapp/casi-demo.json` (6 procedure CD-01…CD-06, `procedures.dataset = 'casi-demo'`, fornitori fittizi, CIG `CIG-DEMO-CDxx`) con 8 PDF sintetici in `seed/inapp/casi-demo/` (`pnpm exec tsx scripts/generate-seed-documents.ts casi`). Le azioni iniziali passano dai comandi applicativi (`src/server/demo-cases.ts`): bozza BZ-001 creata da `struttura.si`, simulazioni RS-CD05-001 (bloccante) e RS-CD06-001 (senza criticità) create e inviate da `gare`. I dati reali non sono modificati.
+- Copertura: Struttura (bozza, memoria in scadenza, verifica SAL), Ufficio Gare (accettazione SAL, quattro occhi), Validatore (conflitto OCR 183.600 vs 183.000 €, approvazione), Fornitore (SAL da presentare, accesso negato a contratto altrui), Amministrazione (fattura, liquidazione, pagamento in scadenza, storno), Direttore Generale (override su sforamento 2027/2028).
+- Test: `tests/integration/casi-demo.test.ts`. L'oracle del dataset `scenarios` è invariato.
+- Stato: attiva.
+
+### DEC-106 — Guida demo per attore
+- Data: 2026-10-02 · Autore: agente, su richiesta del cliente
+- Decisione: percorso guidato per ciascuno dei 7 ruoli (5–9 passi) e aiuto contestuale di ogni pagina («sezioni» e «cosa puoi fare come <ruolo>»), in `src/ui/tour/content.ts`. Pannello non modale (`src/ui/tour/guided-tour.tsx`) con evidenziazione dell'elemento, avanzamento tra le pagine, tasto Esc per ridurre; stato solo nel browser (localStorage), nessuna API. Pagina `/guida` con la storia, i casi da usare e il cambio di attore (uscita e accesso, o impersonazione per l'amministratore); opzione «Avvia la guida» nel login (`/login?utente=<login>&guida=1`).
+- Test: `e2e/guida.spec.ts` percorre tutti i passi di tutte le guide sul dataset `inapp` (server E2E dedicato sulla porta 3101) e verifica pagina, elemento evidenziato e accessibilità (axe WCAG 2.1 AA).
+- Correzioni emerse durante la stesura: termine di verifica SAL e di pagamento ora letti dalla configurazione (prima fissi a 15/30 giorni); il RUP può rigettare un SAL e l'interfaccia mostra solo gli esiti consentiti al ruolo; storno dei pagamenti disponibile nell'interfaccia; l'assistente riconosce i codici CD-xx e BZ-xxx e propone esempi coerenti con il dataset.
+- Stato: attiva.
