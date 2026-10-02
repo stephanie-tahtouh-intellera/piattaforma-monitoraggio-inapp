@@ -65,7 +65,7 @@ test.describe.serial("[DEMO] demo script della specifica §13.3", () => {
     const row = page.locator("tbody tr", { hasText: "FASTEST" });
     await row.getByLabel(/Motivazione/).first().fill("Memoria attesa entro il 12/10, nessuno spostamento tra annualità");
     await row.getByRole("button", { name: "Approva" }).click();
-    await expect(row.getByText("Riprogrammazione approvata")).toBeVisible();
+    await expect(row).toContainText("Approvata");
     await page.goto("/procedure/P-002?tab=overview");
     await expect(page.getByText(/V1 – baseline \(baseline\) → V2 – riprogrammazione/)).toBeVisible();
   });

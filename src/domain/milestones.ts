@@ -11,6 +11,7 @@ import type {
   ProcedureType,
   ProcessTemplate,
   SalInstance,
+  TemplateFamily,
 } from "./model";
 
 /** Scelta del modello per tipologia + criterio + strumento (DEC-020, guida §9.1). */
@@ -19,8 +20,9 @@ export function selectTemplate(
   type: ProcedureType,
   criterion: AwardCriterion | null,
   instrument: Instrument | null,
+  family: TemplateFamily = "v1",
 ): ProcessTemplate {
-  const candidates = templates.filter((t) => t.selection.procedureTypes.includes(type));
+  const candidates = templates.filter((t) => (t.family ?? "v1") === family && t.selection.procedureTypes.includes(type));
   const exact = candidates.find(
     (t) =>
       (t.selection.awardCriterion === undefined || t.selection.awardCriterion === (criterion ?? "LOWEST_PRICE")) &&

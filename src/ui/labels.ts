@@ -6,7 +6,7 @@ export const STATUS_LABEL: Record<string, string> = {
   TENDERING: "Indetta – in gara",
   AWARDED: "Aggiudicata",
   CONTRACTING: "In stipula",
-  EXECUTION: "Contratto in esecuzione",
+  EXECUTION: "Contratto stipulato",
   CLOSING: "Chiusura",
   CLOSED: "Chiusa",
   CANCELLED: "Annullata",
@@ -74,7 +74,23 @@ export const RULE_LABEL: Record<string, string> = {
   PAYMENT_OVER_CONTRACT: "Pagato oltre contratto",
   COMMITTED_ON_CANCELLED: "Impegni su procedura annullata",
 };
-export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", VALIDATOR: "Validatore" };
+export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore", VALIDATOR: "Validatore" };
+
+/** Fasi e corsie dello schema di processo INAPP (DEC-107). */
+export const STAGES: { n: number; title: string; sub: string; module: 1 | 2 }[] = [
+  { n: 0, title: "Piano", sub: "Programmazione", module: 1 },
+  { n: 1, title: "Fabbisogno", sub: "e memoria", module: 1 },
+  { n: 2, title: "Istruttoria", sub: "e indizione", module: 1 },
+  { n: 3, title: "Affidamento", sub: "e contratto", module: 1 },
+  { n: 4, title: "Esecuzione", sub: "e monitoraggio", module: 2 },
+  { n: 5, title: "Chiusura", sub: "e rendicontazione", module: 2 },
+];
+export const LANES: { owner: string; label: string }[] = [
+  { owner: "STRUCTURE", label: "Struttura richiedente" },
+  { owner: "PROCUREMENT", label: "Ufficio Gare" },
+  { owner: "FINANCE", label: "Amministrazione / Contabilità" },
+  { owner: "SUPPLIER", label: "Fornitore" },
+];
 export const MOVEMENT_LABEL: Record<string, string> = {
   RESERVATION: "Prenotazione",
   COMMITMENT: "Impegno",

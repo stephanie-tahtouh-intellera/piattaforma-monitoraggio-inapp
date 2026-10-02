@@ -24,6 +24,7 @@ MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert →
 - Mutazioni solo tramite route handler `/api/*` con contratto Zod; Server Actions vietate. Dentro `uow.write` nessun I/O esterno.
 - **Dati reali INAPP**: su indicazione del cliente si usano nella demo (DEC-071). Le copie versionate stanno in `seed/inapp/`; gli originali nella radice restano esclusi da git. `DEMO_DATASET=inapp` (default) carica il portafoglio reale; `DEMO_DATASET=scenarios` carica le 12 procedure dell'oracle usate da test e DoD.
 - **Logo e colori INAPP** obbligatori (DEC-081): logo bianco in `public/brand/`, palette di `docs/design/tokens.css`.
+- **Processo INAPP** (DEC-107): il portafoglio reale segue lo schema `docs/design/schema-processo-inapp.webp`, Modulo 1 (modelli `config/templates/M1-*.yaml`, famiglia `m1`, passi per corsia e date chiave); il dataset `scenarios` resta sui modelli v1 (oracle). Il Modulo 2 è nascosto nella demo (`modules.execution`, DEC-108).
 - Nessun dato demo nei servizi; nessun segreto nel repository.
 - `seed/expected_results.json` è l'oracle: non si modifica per far passare un test, solo con una DEV registrata.
 - Una storia è finita solo con test automatici per ogni criterio di accettazione.

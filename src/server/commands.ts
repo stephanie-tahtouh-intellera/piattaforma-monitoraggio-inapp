@@ -3,14 +3,14 @@ import { cancelProcedureTx, closeProcedureTx } from "@/application/procedure-eve
 import { calendarFromDb, engineSettings, runChecks } from "@/application/run-checks";
 import { resetDemo, type DatasetName } from "@/application/bootstrap";
 import { BusinessCalendar, addDays, isoDate, yearOf } from "@/domain/dates";
-import { Money } from "@/domain/money";
+import { Money, divRoundHalfUp } from "@/domain/money";
 import { serializeSimulation, simulate, type AlternativeKind } from "@/domain/reschedule";
 import { writeAudit } from "@/infrastructure/audit";
 import { configuredReferenceDate, dbClock, systemNowIso } from "@/infrastructure/clock";
 import { tx, type Db } from "@/infrastructure/db/connection";
 import { loadAggregate } from "@/infrastructure/repo/procedures";
 import { createSession, type Actor } from "./auth";
-import { can, require as requireAction, requireProcedure } from "./authz";
+import { can, canCompleteStep, require as requireAction, requireProcedure } from "./authz";
 
 const audit = (db: Db, actor: Actor, e: Omit<Parameters<typeof writeAudit>[1], "actor" | "at" | "impersonatedBy">) =>
   writeAudit(db, { ...e, actor: actor.login, impersonatedBy: actor.impersonatedBy, at: systemNowIso() });
@@ -19,21 +19,36 @@ function recheck(db: Db, procedureId: number) {
   runChecks(db, dbClock(db), { procedureIds: [procedureId] });
 }
 
-const OWNER_ROLE: Record<string, string[]> = {
-  STRUCTURE: ["STRUCTURE_USER"],
-  PROCUREMENT: ["PROCUREMENT_OFFICER"],
-  FINANCE: ["FINANCE_OFFICER"],
-};
+/** Dati registrati insieme al completamento di un passo del Modulo 1 (DEC-107). */
+export interface StepExtras {
+  operator?: string | undefined;
+  lines?: { year: number; amount: string }[] | undefined;
+  gross?: string | undefined;
+  startDate?: string | undefined;
+  endDate?: string | undefined;
+}
+
+function parseLines(lines: StepExtras["lines"], programmed: Money): { year: number; amount: Money }[] {
+  const out = (lines ?? []).map((l) => ({ year: l.year, amount: Money.parse(l.amount) })).filter((l) => !l.amount.isZero());
+  if (!out.length) throw new DomainError("VALIDATION_ERROR", "Indica almeno un importo per annualità", 422);
+  if (out.some((l) => l.amount.isNegative())) throw new DomainError("VALIDATION_ERROR", "Gli importi non possono essere negativi", 422);
+  const total = Money.sum(out.map((l) => l.amount));
+  if (total.gt(programmed)) {
+    throw new DomainError("FINANCIAL_INVARIANT_VIOLATION", "Il totale per annualità supera l'importo programmato.", 422, { available: programmed.toString(), requested: total.toString() });
+  }
+  return out;
+}
 
 /** US-031: completamento di una milestone (owner o validatore), data effettiva intangibile dopo. */
-export function completeMilestone(db: Db, actor: Actor, code: string, milestone: string, date: string, note: string | null) {
+export function completeMilestone(db: Db, actor: Actor, code: string, milestone: string, date: string, note: string | null, extras: StepExtras = {}) {
   requireAction(actor, "milestone.update");
   const p = requireProcedure(db, actor, code);
   const agg = loadAggregate(db, p.id);
   const def = agg.template.milestones.find((m) => m.code === milestone);
   if (!def) throw new DomainError("NOT_FOUND", "Milestone non trovata", 404);
-  if (actor.role !== "VALIDATOR" && !OWNER_ROLE[def.owner]?.includes(actor.role)) {
-    throw new DomainError("FORBIDDEN", "Solo l'owner della milestone o il validatore possono completarla", 403);
+  const operatorCode = (db.prepare("SELECT operator_code FROM procedures WHERE id = ?").get(p.id) as { operator_code: string | null }).operator_code;
+  if (!canCompleteStep(actor, def.owner, operatorCode)) {
+    throw new DomainError("FORBIDDEN", def.owner === "SUPPLIER" ? "Il passo spetta all'operatore economico della pratica" : "Solo l'owner della milestone o il validatore possono completarla", 403);
   }
   const ref = configuredReferenceDate(db);
   const d = isoDate(date);
@@ -46,7 +61,45 @@ export function completeMilestone(db: Db, actor: Actor, code: string, milestone:
   if (prev) throw new DomainError("INVALID_TRANSITION", "Completa prima le milestone precedenti", 409);
   const row = db.prepare("SELECT actual_date FROM milestones WHERE procedure_id = ? AND code = ?").get(p.id, milestone) as { actual_date: string | null };
   if (row.actual_date) throw new DomainError("INVALID_TRANSITION", "Milestone già completata: la data effettiva non si modifica (BR-006)", 409);
+  // Azioni del passo (DEC-107), validate prima della transazione
+  const action = def.action;
+  let operator: string | null = null;
+  let lines: { year: number; amount: Money }[] = [];
+  let gross: Money | null = null;
+  if (action === "OPERATOR" || action === "AWARD") {
+    operator = extras.operator ?? (action === "AWARD" ? operatorCode : null);
+    if (!operator) throw new DomainError("VALIDATION_ERROR", "Indica l'operatore economico", 422);
+    if (!db.prepare("SELECT 1 FROM suppliers WHERE code = ?").get(operator)) throw new DomainError("VALIDATION_ERROR", "Operatore economico non censito", 422);
+  }
+  if (action === "RESERVATIONS" || action === "COMMITMENTS") lines = parseLines(extras.lines, agg.programmed);
+  if (action === "AWARD") {
+    if (!extras.gross) throw new DomainError("VALIDATION_ERROR", "Indica l'importo di aggiudicazione IVA inclusa", 422);
+    gross = Money.parse(extras.gross);
+    if (!gross.gt(Money.ZERO)) throw new DomainError("VALIDATION_ERROR", "Importo di aggiudicazione non valido", 422);
+  }
+  if (action === "SIGN" && !db.prepare("SELECT 1 FROM contracts WHERE procedure_id = ?").get(p.id)) {
+    throw new DomainError("INVALID_TRANSITION", "Manca il contratto: registra prima la determina di aggiudicazione", 409);
+  }
   tx(db, () => {
+    const now = systemNowIso();
+    if (operator && operator !== operatorCode) db.prepare("UPDATE procedures SET operator_code = ? WHERE id = ?").run(operator, p.id);
+    for (const l of lines) {
+      db.prepare("INSERT INTO financial_movements (procedure_id, type, amount_cents, year, date, reference, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)").run(
+        p.id, action === "RESERVATIONS" ? "RESERVATION" : "COMMITMENT", l.amount.cents, l.year, d, note, actor.login, now);
+    }
+    if (gross) {
+      const net = Money.ofCents(divRoundHalfUp(gross.cents * 100n, 122n));
+      db.prepare("DELETE FROM contracts WHERE procedure_id = ? AND signed = 0").run(p.id);
+      db.prepare("INSERT INTO contracts (procedure_id, signed, supplier_code, net_cents, vat_cents, gross_cents, start_date, end_date) VALUES (?, 0, ?, ?, ?, ?, ?, ?)").run(
+        p.id, operator, net.cents, gross.sub(net).cents, gross.cents, extras.startDate ?? null, extras.endDate ?? null);
+    }
+    if (action === "SIGN") db.prepare("UPDATE contracts SET signed = 1, signed_date = ?, start_date = COALESCE(start_date, ?) WHERE procedure_id = ?").run(d, d, p.id);
+    if (action) {
+      audit(db, actor, {
+        action: `STEP_${action}`, entityType: "PROCEDURE", entityId: code, procedureCode: code,
+        after: { milestone, operator, lines: lines.map((l) => ({ year: l.year, amount: l.amount.toString() })), gross: gross?.toString() ?? null }, reason: note,
+      });
+    }
     db.prepare("UPDATE milestones SET actual_date = ?, completed_by = ?, completed_at = ?, note = ?, version = version + 1 WHERE procedure_id = ? AND code = ?").run(
       d,
       actor.login,

@@ -1,16 +1,20 @@
 import type { Role } from "@/domain/model";
 
 /**
- * Contenuti della guida demo (DEC-106): un percorso per attore e l'aiuto di ogni pagina.
- * Solo testo statico: nessun dato calcolato. I codici citati sono quelli del dataset
- * "inapp" (portafoglio reale PN GDL + casi dimostrativi CD-xx e BZ-001, DEC-105).
+ * Contenuti della guida demo (DEC-106, DEC-107): il percorso principale segue una procedura
+ * lungo lo schema di processo INAPP (Modulo 1, dal piano alla stipula) cambiando attore a ogni
+ * passaggio di corsia; i percorsi per attore mostrano le attività di ciascun ruolo sui casi CD-xx.
+ * Solo testo statico. I codici citati sono quelli del dataset "inapp" (DEC-105).
  */
 
 export interface TourStep {
-  /** Pagina del passo: percorso più eventuali parametri (es. "/procedure/CD-02?tab=finance"). */
+  /** Pagina del passo: percorso più eventuali parametri (es. "/procedure/CD-02?tab=iter"). */
   path: string;
   /** Selettore CSS dell'elemento da evidenziare (facoltativo). */
   target?: string;
+  /** Percorso per fasi: ruolo che svolge il passo e fase dello schema. */
+  role?: Role;
+  stage?: number;
   title: string;
   body: string;
   /** Cosa può fare l'attore in questa pagina. */
@@ -20,440 +24,261 @@ export interface TourStep {
 }
 
 export interface Tour {
-  role: Role;
-  login: string;
+  id: string;
+  role?: Role;
+  login?: string;
+  title: string;
   persona: string;
   goal: string;
   cases: string[];
   steps: TourStep[];
-  next?: Role;
+  next?: string;
 }
 
-export const TOUR_ORDER: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "VALIDATOR", "SUPPLIER", "FINANCE_OFFICER", "EXECUTIVE", "ADMIN"];
+export const PROCESS_TOUR = "PROCESSO";
 
-export const TOURS: Record<Role, Tour> = {
-  STRUCTURE_USER: {
-    role: "STRUCTURE_USER",
-    login: "struttura.si",
-    persona: "Responsabile della Struttura Sistemi informativi",
-    goal: "Esprime il fabbisogno, prepara e consegna la memoria, verifica la regolare esecuzione dei SAL dei propri contratti.",
-    cases: ["BZ-001 – bozza da consegnare", "CD-01 – memoria in scadenza il 07/10/2026", "CD-02 – SAL 2 presentato dal fornitore, da verificare"],
+/** Utente demo di ciascun ruolo (per il cambio di attore del percorso per fasi). */
+export const LOGIN_OF: Record<Role, string> = {
+  STRUCTURE_USER: "struttura.si",
+  PROCUREMENT_OFFICER: "gare",
+  FINANCE_OFFICER: "amministrazione",
+  SUPPLIER: "fornitore.alfa",
+  EXECUTIVE: "dirigente",
+  VALIDATOR: "validatore",
+  ADMIN: "admin",
+};
+
+/** Corsie dello schema e attori di supporto. */
+export const TOUR_ORDER: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"];
+export const LANE_ROLES: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER"];
+
+const ITER = "/procedure/BZ-001?tab=iter";
+const PASSO = "[data-tour='passo']";
+
+const PROCESS: Tour = {
+  id: PROCESS_TOUR,
+  title: "Il processo dal piano alla stipula",
+  persona: "Tutti gli attori, nell'ordine dello schema",
+  goal: "Porta una procedura di esempio (BZ-001) dal piano di programmazione al contratto stipulato, passando da una corsia all'altra come nello schema INAPP.",
+  cases: ["BZ-001 – Rinnovo licenze e supporto della piattaforma di business intelligence (85.400,00 €)"],
+  steps: [
+    {
+      path: "/procedure/BZ-001", target: ".phase-bar", role: "STRUCTURE_USER", stage: 0,
+      title: "0 · Piano: inserimento nel piano di programmazione",
+      body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto 2026/2027 e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
+      can: ["Creare altre bozze dal portafoglio («Nuova procedura in bozza»)"],
+    },
+    {
+      path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,
+      title: "1 · Fabbisogno: redazione e consegna della memoria",
+      body: "Memoria e documento tecnico sono già nel fascicolo (sezione Documenti). Alla consegna la data diventa effettiva, la baseline si congela e la pratica passa all'Ufficio Gare.",
+      tryIt: "Consegna la memoria con data 01/10/2026 e protocollo «INAPP-DEMO 412/2026».",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 1,
+      title: "1 · Presa in carico della pratica",
+      body: "La sezione Iter mostra lo schema a corsie della procedura: il passo in corso è evidenziato e indica a chi tocca. Ora tocca all'Ufficio Gare, che assegna un funzionario.",
+      tryIt: "Registra il passo con nota «Funzionario assegnato: dott.ssa Bianchi».",
+    },
+    {
+      path: ITER, target: PASSO, role: "FINANCE_OFFICER", stage: 1,
+      title: "1 · Verifica importi e prenotazioni di spesa",
+      body: "L'Amministrazione verifica importo e fonte di finanziamento e registra le prenotazioni per annualità, proposte dal riparto della bozza. Il totale non può superare il programmato.",
+      tryIt: "Conferma le prenotazioni 2026 (25.620,00 €) e 2027 (59.780,00 €) con nota «PN GDL – Priorità 1».",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
+      title: "2 · Istruttoria preliminare e richiesta documenti",
+      body: "Per l'affidamento diretto su MePA l'Ufficio Gare individua l'operatore e gli chiede i documenti per la verifica dei requisiti, prima della determina di indizione. Da questo momento l'operatore vede la pratica.",
+      tryIt: "Scegli «Fornitore Demo Alfa S.r.l.» e registra il passo.",
+    },
+    {
+      path: ITER, target: PASSO, role: "SUPPLIER", stage: 2,
+      title: "2 · Il fornitore invia i documenti",
+      body: "Il fornitore vede solo le pratiche in cui è operatore e solo i passi della propria corsia. Allega i documenti nella sezione Documenti (facoltativo nella demo) e registra l'invio.",
+      tryIt: "Registra il passo con nota «DGUE, DURC e dichiarazioni inviati».",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
+      title: "2 · Ricezione e verifica dei requisiti (FVOE)",
+      body: "L'Ufficio Gare verifica la documentazione dell'operatore.",
+      tryIt: "Registra il passo con nota «Verifica FVOE con esito positivo».",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
+      title: "2 · Determina di indizione ◆",
+      body: "È una data chiave: con la determina si indice la procedura, si acquisisce il CIG, si nomina il RUP e si autorizzano gli impegni. Le date chiave hanno alert e riprogrammazione dedicati.",
+      tryIt: "Registra la determina con nota «Det. n. 312 del 01/10/2026».",
+    },
+    {
+      path: ITER, target: PASSO, role: "FINANCE_OFFICER", stage: 2,
+      title: "2 · Assunzione degli impegni di spesa",
+      body: "L'Amministrazione trasforma le prenotazioni in impegni per annualità. I movimenti finanziari sono in sola aggiunta: si correggono con storni, mai con cancellazioni.",
+      tryIt: "Conferma gli impegni proposti (uguali alle prenotazioni).",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
+      title: "2 · Acquisizione CIG e predisposizione della procedura",
+      body: "L'Ufficio Gare predispone la trattativa diretta o l'ordine su MePA.",
+      tryIt: "Registra il passo con nota «TD MePA n. 5512345».",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
+      title: "3 · Verifica dei requisiti e proposta di aggiudicazione",
+      body: "Inizia la fase di affidamento: istruttoria sull'offerta ricevuta e proposta di aggiudicazione.",
+      tryIt: "Registra il passo.",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
+      title: "3 · Determina di aggiudicazione ◆",
+      body: "Data chiave: operatore, importo e durata. L'importo aggiudicato genera il contratto da stipulare (netto e IVA sono calcolati dal sistema).",
+      tryIt: "Indica 84.180,00 € (offerta con ribasso), inizio attività 15/10/2026, fine 14/10/2027.",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
+      title: "3 · Predisposizione e stipula del contratto",
+      body: "L'Ufficio Gare predispone l'ordine o il contratto (es. ODA MePA) da inviare all'operatore.",
+      tryIt: "Registra il passo.",
+    },
+    {
+      path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
+      title: "3 · Acquisizione della garanzia definitiva",
+      body: "Se prevista, la garanzia definitiva è acquisita sul portale gare prima della stipula.",
+      tryIt: "Registra il passo con nota «Polizza fideiussoria n. 778/2026».",
+    },
+    {
+      path: ITER, target: PASSO, role: "SUPPLIER", stage: 3,
+      title: "3 · Accettazione dell'ordine e controfirma ◆",
+      body: "Ultima data chiave del Modulo 1: il fornitore accetta l'ordine e controfirma il contratto. La stipula fissa la data di inizio della previsione di spesa.",
+      tryIt: "Premi «Accetto l'ordine e controfirmo il contratto».",
+    },
+    {
+      path: "/procedure/BZ-001", target: ".phase-bar", role: "EXECUTIVE", stage: 3,
+      title: "Contratto stipulato: fine del Modulo 1",
+      body: "La barra delle fasi è completa. Nella sezione Iter trovi le date chiave da programmate a effettive; nella sezione Audit ogni passo con autore, data e valori. L'esecuzione (Modulo 2) sarà sviluppata in seguito.",
+      can: ["Consultare Iter, Finanza (prenotazioni e impegni) e Audit", "Scaricare il report PDF"],
+    },
+    {
+      path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", role: "EXECUTIVE",
+      title: "Quando una data chiave salta",
+      body: "CD-05 ha la determina di aggiudicazione scaduta il 14/09/2026: l'Ufficio Gare ha proposto di spostarla al 14/12/2026 (RS-CD05-001). Lo spostamento porta pagamenti oltre la disponibilità 2027 e 2028: solo il Direttore Generale può approvare, con override motivato.",
+      tryIt: "Sulla riga RS-CD05-001 spunta l'override e approva con motivazione «Copertura 2028 nella prossima variazione di bilancio».",
+    },
+  ],
+};
+
+const ROLE_TOURS: Tour[] = [
+  {
+    id: "STRUCTURE_USER", role: "STRUCTURE_USER", login: "struttura.si",
+    title: "Struttura richiedente", persona: "Responsabile della Struttura Sistemi informativi",
+    goal: "Inserisce il fabbisogno nel piano, redige e consegna memoria e documento tecnico.",
+    cases: ["BZ-001 – bozza da consegnare", "CD-01 – memoria in scadenza il 07/10/2026", "CD-02, CD-07 – pratiche in corso presso Ufficio Gare e fornitore"],
     next: "PROCUREMENT_OFFICER",
     steps: [
-      {
-        path: "/",
-        target: "section[aria-label='Indicatori principali']",
-        title: "La tua dashboard",
-        body: "Vedi solo le procedure della tua struttura (ambito Sistemi informativi): gli indicatori e i totali sono calcolati sul tuo perimetro. Ogni indicatore è un collegamento al portafoglio già filtrato.",
-        can: ["Leggere procedure monitorate, alert critici e importo a rischio", "Aprire il portafoglio filtrato con un clic su un indicatore"],
-      },
-      {
-        path: "/portafoglio",
-        target: "form.filters",
-        title: "Portafoglio della struttura",
-        body: "Le tre procedure della struttura: una bozza (BZ-001), una memoria da consegnare (CD-01) e un contratto in esecuzione (CD-02). I filtri restano nell'indirizzo della pagina, quindi una vista filtrata si può condividere.",
-        can: ["Filtrare per health, fase, tipologia, annualità e alert", "Ordinare cliccando le intestazioni", "Esportare CSV o XLSX", "Creare una nuova procedura in bozza"],
-      },
-      {
-        path: "/procedure/nuova",
-        target: "main form",
-        title: "Nuova procedura in bozza",
-        body: "La bozza nasce dalla Struttura: oggetto, tipologia, importo IVA inclusa e riparto per annualità. Il sistema sceglie il modello di procedura e calcola le date previste a partire dalla data obiettivo della memoria.",
-        can: ["Creare una bozza (il riparto deve coincidere con il programmato)"],
-        tryIt: "Crea «Servizi di hosting del portale», affidamento diretto MePA, 48.800,00 € tutto sul 2027, memoria entro il 30/10/2026.",
-      },
-      {
-        path: "/procedure/BZ-001",
-        target: "[data-tour='memoria']",
-        title: "Consegna della memoria",
-        body: "BZ-001 è una bozza: non ha ancora date effettive. Alla consegna della memoria la baseline si congela (non cambierà più) e la titolarità passa all'Ufficio Gare.",
-        can: ["Consegnare la memoria con data e numero di protocollo"],
-        tryIt: "Consegna la memoria con data 01/10/2026 e protocollo «INAPP-DEMO 412/2026», poi guarda la scheda: compare la versione baseline.",
-      },
-      {
-        path: "/procedure/CD-01?tab=timeline",
-        target: "main table.data",
-        title: "Cronoprogramma e scadenze",
-        body: "CD-01 ha la memoria prevista per il 07/10/2026: mancano meno di 10 giorni, quindi la procedura è ambra e la Struttura riceve il reminder. Ogni milestone ha un responsabile (owner), una data baseline, una prevista e una effettiva.",
-        can: ["Registrare il completamento della milestone attiva con data effettiva e riferimento all'atto"],
-        tryIt: "Registra la consegna della memoria al 01/10/2026: l'alert si chiude da solo e l'health si ricalcola.",
-      },
-      {
-        path: "/procedure/CD-01?tab=documents",
-        target: "[data-tour='upload']",
-        title: "Fascicolo documentale",
-        body: "Qui stanno gli atti della procedura. Puoi caricare PDF, documenti Office o archivi ZIP (controllati per tipo, dimensione e contenuto). Il testo viene estratto, anche con OCR, e i campi riconosciuti vanno in validazione: nulla sovrascrive i dati validati.",
-        can: ["Caricare documenti e archivi ZIP", "Aprire i documenti del fascicolo"],
-      },
-      {
-        path: "/procedure/CD-02?tab=finance",
-        target: "[data-tour='sal']",
-        title: "Verifica del SAL",
-        body: "Il fornitore ha presentato il SAL 2 (73.200,00 €) il 28/09/2026: la verifica va chiusa entro 30 giorni. La Struttura attesta l'esito tecnico; l'accettazione formale spetta al RUP (Ufficio Gare).",
-        can: ["Mettere il SAL «In verifica» o rigettarlo con motivazione"],
-        tryIt: "Registra «In verifica» con la nota «Collaudo funzionale in corso».",
-      },
-      {
-        path: "/alert?view=mine",
-        target: "nav.tabs",
-        title: "Le tue notifiche",
-        body: "La campanella e la vista «Miei» raccolgono gli alert indirizzati alla tua struttura. Prendere in carico o risolvere un alert non modifica mai milestone o importi.",
-        can: ["Prendere in carico e risolvere alert", "Segnare le notifiche come lette"],
-      },
-      {
-        path: "/assistente",
-        target: "main",
-        title: "Assistente",
-        body: "Fa domande in linguaggio naturale sui dati della tua struttura e risponde citando le fonti. Non usa IA generativa: legge solo i dati del motore deterministico.",
-        tryIt: "Chiedi «Memorie in scadenza nei prossimi 30 giorni».",
-      },
+      { path: "/", target: "section[aria-label='Indicatori principali']", title: "La tua dashboard", body: "Vedi solo le procedure della tua struttura: indicatori e totali sono calcolati sul tuo perimetro. Ogni indicatore apre il portafoglio filtrato.", can: ["Leggere procedure monitorate, alert critici e importo a rischio"] },
+      { path: "/portafoglio", target: ".table-wrap", title: "Le pratiche della struttura", body: "Quattro procedure in fasi diverse: BZ-001 (bozza), CD-01 (memoria da consegnare), CD-02 (presa in carico dell'Ufficio Gare), CD-07 (in attesa della controfirma del fornitore). La colonna Owner indica a chi tocca.", can: ["Filtrare, ordinare, esportare", "Creare una nuova procedura in bozza"] },
+      { path: "/procedure/nuova", target: "main form", title: "Inserimento nel piano", body: "Fase 0 dello schema: oggetto, tipologia, importo IVA inclusa, riparto per annualità e data obiettivo della memoria. Il sistema sceglie il modello di procedura e calcola le date dei passi.", tryIt: "Crea «Servizi di hosting del portale», affidamento diretto MePA, 48.800,00 € sul 2027, memoria entro il 30/10/2026." },
+      { path: "/procedure/CD-01?tab=iter", target: PASSO, title: "Memoria in scadenza", body: "CD-01 ha la memoria prevista per il 07/10/2026: mancano meno di 10 giorni, la procedura è ambra e hai ricevuto il reminder. Il passo è nella tua corsia.", tryIt: "Registra la consegna della memoria al 01/10/2026: il reminder si chiude e la pratica passa all'Ufficio Gare." },
+      { path: "/procedure/CD-01?tab=documents", target: "[data-tour='upload']", title: "Fascicolo documentale", body: "Carica memoria e documento tecnico (PDF, Office o ZIP, controllati per tipo e contenuto). Il testo è estratto, anche con OCR, e i dati riconosciuti vanno in validazione.", can: ["Caricare documenti e archivi ZIP", "Aprire i documenti"] },
+      { path: "/procedure/CD-07?tab=iter", target: ".iter-board", title: "Seguire una pratica fino alla stipula", body: "CD-07 è quasi alla fine del Modulo 1: aggiudicata, garanzia acquisita, ora tocca al fornitore controfirmare. La vista a corsie mostra chi ha fatto cosa e quando.", can: ["Consultare l'avanzamento senza poter registrare i passi delle altre corsie"] },
+      { path: "/alert?view=mine", target: "nav.tabs", title: "Le tue notifiche", body: "La campanella e la vista «Miei» raccolgono gli alert della tua corsia. Prenderli in carico o risolverli non modifica date o importi.", can: ["Prendere in carico e risolvere alert"] },
+      { path: "/assistente", target: "main", title: "Assistente", body: "Risponde sui dati del tuo perimetro citando le fonti, senza IA generativa.", tryIt: "Chiedi «Memorie in scadenza nei prossimi 30 giorni»." },
     ],
   },
-  PROCUREMENT_OFFICER: {
-    role: "PROCUREMENT_OFFICER",
-    login: "gare",
-    persona: "Ufficio Gare (RUP)",
-    goal: "Porta avanti le gare, aggiorna le milestone, simula le riprogrammazioni e accetta i SAL.",
-    cases: ["OP01-S5 – procedura reale in rosso da riprogrammare", "CD-05 – riprogrammazione inviata con sforamento del bilancio", "CD-02 – SAL 2 da accettare", "OP04-S18 – fascicolo reale Stage4EU"],
-    next: "VALIDATOR",
-    steps: [
-      {
-        path: "/",
-        target: "section[aria-labelledby='att']",
-        title: "Cosa richiede attenzione",
-        body: "La dashboard elenca le procedure rosse e ambra con la prossima scadenza. Sono i dati reali del Piano PN Giovani, Donne e Lavoro (82 procedure) più i casi dimostrativi CD-xx.",
-        can: ["Aprire una procedura dall'elenco", "Leggere fabbisogno per annualità e procedure per fase"],
-      },
-      {
-        path: "/portafoglio?health=RED,AMBER",
-        target: ".table-wrap",
-        title: "Portafoglio filtrato: rosse e ambra",
-        body: "Il filtro è nell'indirizzo. La colonna Health spiega il motivo al passaggio del mouse; «Riprogrammazione richiesta» segnala una milestone bloccante scaduta.",
-        can: ["Filtrare, ordinare, esportare", "Rimuovere un filtro con la × sul chip"],
-      },
-      {
-        path: "/procedure/OP01-S5",
-        target: ".proc-head",
-        title: "Scheda di una procedura reale",
-        body: "OP01-S5 viene dal workbook (foglio Gare_23-27): baseline = versione V3 del Piano, previsione corrente = V4. «Perché questo stato» elenca le regole che hanno portato al rosso; in fondo trovi l'iter riportato nel workbook.",
-        can: ["Navigare le 7 sezioni della scheda", "Scaricare il report PDF", "Avviare una simulazione di riprogrammazione"],
-      },
-      {
-        path: "/procedure/OP01-S5?tab=timeline",
-        target: "main table.data",
-        title: "Cronoprogramma",
-        body: "Gantt con baseline (cerchio), prevista (rombo blu), effettiva (verde) e scaduta (rosso); la linea tratteggiata è la data di riferimento. Le date effettive non cambiano mai con una riprogrammazione.",
-        can: ["Registrare il completamento della milestone attiva"],
-      },
-      {
-        path: "/procedure/OP01-S5/riprogrammazione",
-        target: ".stepper",
-        title: "Simulazione di riprogrammazione",
-        body: "Cinque passi: causa, impatto sul cronoprogramma, impatto per annualità, alternative (più rapida, minimo impatto sul bilancio, manuale) e decisione. Salvare la simulazione non cambia nessun dato: serve l'approvazione di un'altra persona.",
-        can: ["Scegliere la nuova data (non prima della data più rapida ammissibile)", "Confrontare le alternative", "Salvare la bozza e inviarla in approvazione"],
-        tryIt: "Scegli l'alternativa «più rapida», arriva alla decisione e salva la simulazione.",
-      },
-      {
-        path: "/procedure/CD-05?tab=simulations",
-        target: "[data-tour='simulazioni']",
-        title: "Quattro occhi e criticità bloccanti",
-        body: "Per CD-05 hai già inviato la riprogrammazione RS-CD05-001; accanto c'è la bozza automatica creata dal sistema al T+1, che puoi rivedere e inviare. La tua proposta: spostare l'aggiudicazione al 14/12/2026 sposta pagamenti sul 2027 e sul 2028 oltre la disponibilità (BUDGET_OVERFLOW). Non puoi approvarla tu: serve il Direttore Generale, con override motivato.",
-        can: ["Inviare in approvazione le proprie bozze", "Vedere esito e motivazione delle decisioni"],
-      },
-      {
-        path: "/procedure/CD-02?tab=finance",
-        target: "[data-tour='sal']",
-        title: "Accettazione del SAL",
-        body: "Come RUP accetti il SAL 2 presentato dal fornitore: l'importo accettato diventa fatturabile per l'Amministrazione. Puoi anche rigettarlo con motivazione: il fornitore potrà ripresentarlo.",
-        can: ["Accettare, mettere in verifica o rigettare un SAL"],
-        tryIt: "Registra l'esito «Accettato» con nota «Collaudo superato».",
-      },
-      {
-        path: "/alert",
-        target: "nav.tabs",
-        title: "Centro alert",
-        body: "Coda unica di alert temporali (T-1 mese … T+1) e anomalie di dato. L'Ufficio Gare può sospendere l'escalation fino a una data, con motivo.",
-        can: ["Prendere in carico, risolvere, sospendere l'escalation", "Esportare gli alert in CSV"],
-      },
-      {
-        path: "/procedure/OP04-S18?tab=documents",
-        target: "main table.data",
-        title: "Il fascicolo reale",
-        body: "I 6 atti di gara forniti sono associati a OP04-S18 per CIG. Tre erano scansioni: l'OCR locale ne ha estratto il testo e i campi (CIG, importi, impegni) sono passati in validazione.",
-        can: ["Caricare nuovi atti", "Aprire i PDF originali"],
-      },
-    ],
-  },
-  VALIDATOR: {
-    role: "VALIDATOR",
-    login: "validatore",
-    persona: "Validatore / operatore di monitoraggio",
-    goal: "Controlla ciò che il sistema propone (dati estratti, associazioni, riprogrammazioni) prima che diventi un dato ufficiale.",
-    cases: ["CD-02 – importo letto male dall'OCR (183.600 € invece di 183.000 €)", "OP04-S18 – 5 associazioni di documenti da confermare", "CD-06 – riprogrammazione senza criticità da approvare"],
-    next: "SUPPLIER",
-    steps: [
-      {
-        path: "/validazione",
-        target: ".table-wrap",
-        title: "Coda di validazione",
-        body: "Ogni proposta mostra il valore proposto, quello già validato, la fonte (documento, pagina, estratto) e l'affidabilità. In CD-02 l'OCR ha letto 183.600,00 € contro i 183.000,00 € del contratto: è un conflitto da correggere o rifiutare.",
-        can: ["Approvare la proposta", "Correggerla con il valore giusto (motivazione obbligatoria)", "Rifiutarla (motivazione obbligatoria)"],
-        tryIt: "Sul conflitto di CD-02 scegli «Rifiuta» con motivazione «Errore di lettura OCR, il contratto riporta 183.000,00 €».",
-      },
-      {
-        path: "/procedure/CD-02?tab=documents",
-        target: "main table.data",
-        title: "Verifica sulla fonte",
-        body: "Prima di decidere apri il documento originale: ogni valore della piattaforma ha un'evidenza che punta al file e alla pagina da cui proviene.",
-        can: ["Aprire il PDF del contratto e la relazione del SAL"],
-      },
-      {
-        path: "/procedure/OP04-S18?tab=documents",
-        target: "main table.data",
-        title: "Documenti reali e OCR",
-        body: "I documenti associati per CIG hanno affidabilità alta; quelli associati solo perché nello stesso fascicolo sono in coda come «Associazione». Il pulsante di elaborazione esegue testo e OCR sui file in attesa.",
-        can: ["Elaborare i documenti in attesa (testo + OCR)", "Caricare documenti e archivi ZIP"],
-      },
-      {
-        path: "/procedure/CD-06?tab=simulations",
-        target: "[data-tour='simulazioni']",
-        title: "Approvare una riprogrammazione",
-        body: "L'Ufficio Gare ha inviato la riprogrammazione di CD-06 (aggiudicazione al 15/10/2026): nessuna criticità bloccante, i pagamenti restano nel 2026. Approvando nasce una nuova versione; la baseline resta intatta.",
-        can: ["Approvare o rifiutare con motivazione", "Non puoi forzare criticità bloccanti: è riservato al Direttore Generale"],
-        tryIt: "Sulla riga RS-CD06-001 (autore gare) approva con motivazione «Proroga coerente con la convenzione Consip».",
-      },
-      {
-        path: "/procedure/CD-06",
-        target: ".grid-2 .card",
-        title: "Effetto dell'approvazione",
-        body: "In «Baseline, previsione ed effettivo» la previsione è aggiornata mentre la baseline no; sotto la tabella compare la catena delle versioni. Gli alert vengono ricalcolati subito.",
-      },
-      {
-        path: "/procedure/CD-02?tab=finance",
-        target: "[data-tour='sal']",
-        title: "SAL",
-        body: "Il validatore può verificare e accettare i SAL quando il RUP lo delega.",
-        can: ["Mettere in verifica, accettare o rigettare un SAL"],
-      },
-      {
-        path: "/audit",
-        target: ".page-meta",
-        title: "Audit con catena di hash",
-        body: "Ogni azione è registrata con autore, data, valori prima/dopo e motivazione. Gli eventi sono concatenati da hash: se qualcuno alterasse il database, la catena risulterebbe interrotta.",
-        can: ["Filtrare per procedura, utente e azione"],
-      },
-    ],
-  },
-  SUPPLIER: {
-    role: "SUPPLIER",
-    login: "fornitore.alfa",
-    persona: "Fornitore Demo Alfa S.r.l.",
-    goal: "Vede solo i propri contratti, presenta i SAL e carica i deliverable.",
-    cases: ["CD-03 – SAL 2 da presentare entro il 30/10/2026", "CD-02 – SAL 2 in verifica presso INAPP"],
+  {
+    id: "PROCUREMENT_OFFICER", role: "PROCUREMENT_OFFICER", login: "gare",
+    title: "Ufficio Gare", persona: "Ufficio Gare (regia della procedura; il RUP è nominato con la determina di indizione)",
+    goal: "Prende in carico le pratiche, conduce istruttoria, indizione e affidamento fino alla stipula; propone le riprogrammazioni.",
+    cases: ["CD-02 – presa in carico da fare", "OP01-S5 – procedura reale con memoria scaduta da riprogrammare", "CD-05 – riprogrammazione inviata con sforamento del bilancio", "OP04-S18 – fascicolo reale Stage4EU"],
     next: "FINANCE_OFFICER",
     steps: [
-      {
-        path: "/portafoglio",
-        target: ".table-wrap",
-        title: "Solo i tuoi contratti",
-        body: "Il fornitore vede esclusivamente le procedure in cui è contraente: CD-02 e CD-03. Il controllo è fatto dal server su ogni pagina e su ogni API, non solo nascondendo i menu.",
-      },
-      {
-        path: "/procedure/CD-03",
-        target: "nav.tabs",
-        title: "Vista ridotta",
-        body: "La scheda mostra solo Panoramica, Finanza e Documenti: niente alert interni, simulazioni o audit dell'amministrazione.",
-      },
-      {
-        path: "/procedure/CD-03?tab=finance",
-        target: "[data-tour='sal']",
-        title: "Presentare un SAL",
-        body: "Il SAL 1 è già accettato. Il SAL 2 (60%, 146.400,00 €) scade il 30/10/2026: presentandolo parte il termine di verifica di 30 giorni per INAPP.",
-        can: ["Presentare un SAL pianificato o ripresentare un SAL rigettato"],
-        tryIt: "Presenta il SAL 2 con data 01/10/2026.",
-      },
-      {
-        path: "/procedure/CD-03?tab=documents",
-        target: "[data-tour='upload']",
-        title: "Caricare il deliverable",
-        body: "Allega la relazione del SAL: il file è controllato (tipo, firma del contenuto, dimensione) e conservato con il suo hash.",
-        can: ["Caricare PDF o ZIP"],
-      },
-      {
-        path: "/procedure/CD-04",
-        title: "Prova: una procedura non tua",
-        body: "CD-04 è il contratto di un altro fornitore. La piattaforma risponde «Accesso non consentito» senza mostrare alcun dato: è il controllo a livello di singolo oggetto.",
-      },
+      { path: "/", target: "section[aria-labelledby='att']", title: "Cosa richiede attenzione", body: "Procedure rosse e ambra del Piano PN Giovani, Donne e Lavoro (82 reali) e dei casi dimostrativi, con la prossima scadenza.", can: ["Aprire una procedura dall'elenco"] },
+      { path: "/procedure/CD-02?tab=iter", target: PASSO, title: "Presa in carico", body: "La memoria di CD-02 è stata consegnata il 28/09/2026: tocca a te prendere in carico la pratica entro il 02/10/2026.", tryIt: "Registra il passo con nota «Funzionario assegnato: dott. Verdi»." },
+      { path: "/portafoglio?health=RED,AMBER", target: ".table-wrap", title: "Portafoglio filtrato", body: "Il filtro è nell'indirizzo della pagina. La colonna Health spiega il motivo; «Riprogrammazione richiesta» segnala una data chiave scaduta.", can: ["Filtrare, ordinare, esportare"] },
+      { path: "/procedure/OP01-S5?tab=iter", target: ".iter-board", title: "Una procedura reale nello schema", body: "OP01-S5 viene dal workbook: le date del Piano (V3 baseline, V4 corrente) sono mappate sulle date chiave; i passi intermedi sono dedotti. La memoria è scaduta e blocca il processo." },
+      { path: "/procedure/OP01-S5/riprogrammazione", target: ".stepper", title: "Simulazione di riprogrammazione", body: "Cinque passi: causa, cronoprogramma, finanza per annualità, alternative (più rapida, minimo impatto, manuale), decisione. Salvare non cambia nulla: serve l'approvazione di un'altra persona.", tryIt: "Scegli l'alternativa più rapida, arriva alla decisione e salva." },
+      { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Quattro occhi", body: "Hai inviato RS-CD05-001 (aggiudicazione al 14/12/2026): sposta spesa sul 2027–2028 oltre la disponibilità. Non puoi approvarla tu: decide il Direttore Generale. Accanto c'è la bozza automatica creata dal sistema al T+1." },
+      { path: "/alert", target: "nav.tabs", title: "Centro alert", body: "Alert dei passi (T-1 mese … T+1) e anomalie di dato. Puoi sospendere l'escalation fino a una data, con motivo.", can: ["Prendere in carico, risolvere, sospendere", "Esportare in CSV"] },
+      { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Il fascicolo reale", body: "I 6 atti di gara forniti sono associati a OP04-S18 per CIG; tre scansioni sono state lette con OCR locale e i campi sono in validazione.", can: ["Caricare nuovi atti", "Aprire i PDF originali"] },
     ],
   },
-  FINANCE_OFFICER: {
-    role: "FINANCE_OFFICER",
-    login: "amministrazione",
-    persona: "Amministrazione e Contabilità",
-    goal: "Registra fatture, liquidazioni e pagamenti, controlla impegni e disponibilità per annualità.",
-    cases: ["CD-03 – SAL 1 accettato da fatturare e liquidare", "CD-04 – pagamento da 48.800,00 € in scadenza il 01/10/2026"],
+  {
+    id: "FINANCE_OFFICER", role: "FINANCE_OFFICER", login: "amministrazione",
+    title: "Amministrazione / Contabilità", persona: "Ragioneria e controllo di gestione",
+    goal: "Verifica importi e fonte di finanziamento, registra prenotazioni e impegni per annualità.",
+    cases: ["CD-03 – verifica importi e prenotazioni in scadenza oggi", "CD-08 – impegni da assumere dopo la determina di indizione"],
+    next: "SUPPLIER",
+    steps: [
+      { path: "/", target: "section[aria-labelledby='ann']", title: "Fabbisogno e disponibilità", body: "Per ogni anno il fabbisogno previsto è confrontato con la disponibilità di bilancio; l'importo a rischio somma il non coperto e la spesa in slittamento.", can: ["Leggere il dettaglio in tabella sotto il grafico"] },
+      { path: "/procedure/CD-03?tab=iter", target: PASSO, title: "Verifica importi e prenotazioni", body: "CD-03 (rilevazione CATI, 244.000,00 €) attende la tua verifica entro oggi. Le prenotazioni sono proposte dal fabbisogno per annualità; il sistema blocca totali superiori al programmato.", tryIt: "Prova a prenotare 300.000,00 € (bloccato), poi registra 244.000,00 € sul 2027." },
+      { path: "/procedure/CD-08?tab=iter", target: PASSO, title: "Assunzione degli impegni", body: "Per CD-08 la determina di indizione è del 25/09/2026: ora vanno assunti gli impegni, proposti uguali alle prenotazioni.", tryIt: "Registra gli impegni con nota «Impegno n. 1452/2026»." },
+      { path: "/procedure/CD-08?tab=finance", target: "[data-tour='prenotazioni']", title: "Prenotazioni e impegni per annualità", body: "Il riepilogo confronta fabbisogno, prenotato e impegnato; sotto ci sono i movimenti in sola aggiunta.", can: ["Consultare annualità e movimenti"] },
+      { path: "/portafoglio?year=2027&sort=risk&dir=desc", target: ".page-head .actions", title: "Esportazioni per il controllo di gestione", body: "Ordina per importo a rischio sul 2027 ed esporta in XLSX. Ogni esportazione è nell'audit.", can: ["Esportare CSV e XLSX della vista filtrata"] },
+    ],
+  },
+  {
+    id: "SUPPLIER", role: "SUPPLIER", login: "fornitore.alfa",
+    title: "Fornitore", persona: "Fornitore Demo Alfa S.r.l.",
+    goal: "Invia i documenti per la verifica dei requisiti, accetta l'ordine e controfirma il contratto.",
+    cases: ["CD-04 – documenti per i requisiti da inviare entro il 05/10/2026", "CD-07 – ordine MePA da accettare entro il 06/10/2026"],
     next: "EXECUTIVE",
     steps: [
-      {
-        path: "/",
-        target: "section[aria-labelledby='ann']",
-        title: "Fabbisogno e disponibilità",
-        body: "Il grafico confronta per ogni anno il fabbisogno previsto con la disponibilità di bilancio. L'importo a rischio somma il non coperto e la spesa dell'anno in slittamento.",
-        can: ["Leggere il dettaglio in tabella sotto il grafico"],
-      },
-      {
-        path: "/procedure/CD-03?tab=finance",
-        target: "[data-tour='sal']",
-        title: "Dal SAL accettato al pagamento",
-        body: "Il ciclo è: accettato → fatturato → liquidato → pagato. Ogni passaggio crea un movimento finanziario che non si può cancellare.",
-        can: ["Registrare la fattura", "Liquidare l'importo", "Registrare il pagamento"],
-        tryIt: "Registra la fattura del SAL 1, poi liquida 97.600,00 €.",
-      },
-      {
-        path: "/procedure/CD-04?tab=finance",
-        target: "[data-tour='sal']",
-        title: "Pagamento in scadenza",
-        body: "La fattura è del 01/09/2026: il termine di 30 giorni scade oggi. Il sistema impedisce di pagare più del liquidato.",
-        can: ["Registrare il pagamento con il riferimento del mandato"],
-        tryIt: "Prova prima a pagare 50.000,00 € (bloccato), poi registra 48.800,00 € con riferimento «Mandato 2051/2026».",
-      },
-      {
-        path: "/procedure/CD-04?tab=finance",
-        target: "[data-tour='movimenti']",
-        title: "Movimenti e storni",
-        body: "Impegni, liquidazioni e pagamenti sono in sola aggiunta. Un errore si corregge con uno storno motivato, che resta visibile insieme al pagamento originale.",
-        can: ["Stornare un pagamento con motivazione"],
-      },
-      {
-        path: "/procedure/OP04-S18?tab=finance",
-        target: "main",
-        title: "Dati reali: impegni dagli atti",
-        body: "Per OP04-S18 gli impegni 2025/2026 sono stati letti dalla determina reale e approvati in validazione; il piano SAL 20/50/30 è una proposta da validare.",
-      },
-      {
-        path: "/portafoglio?year=2027&sort=risk&dir=desc",
-        target: ".page-head .actions",
-        title: "Esportazioni",
-        body: "Ordina per importo a rischio sull'annualità 2027 ed esporta la vista in XLSX per il controllo di gestione. Ogni esportazione è registrata nell'audit.",
-        can: ["Esportare CSV e XLSX della vista filtrata"],
-      },
+      { path: "/portafoglio", target: ".table-wrap", title: "Solo le tue pratiche", body: "Vedi le procedure in cui sei operatore individuato o contraente (CD-04 e CD-07). Il controllo è sul server, per ogni pagina e API." },
+      { path: "/procedure/CD-04?tab=documents", target: "[data-tour='upload']", title: "Carica i documenti", body: "Allega DGUE, DURC e dichiarazioni: i file sono controllati per tipo, firma del contenuto e dimensione.", can: ["Caricare PDF o ZIP"] },
+      { path: "/procedure/CD-04?tab=iter", target: PASSO, title: "Invio per la verifica dei requisiti", body: "Il passo è nella tua corsia: registrandolo, la pratica torna all'Ufficio Gare per la verifica.", tryIt: "Registra l'invio con nota «Documentazione caricata»." },
+      { path: "/procedure/CD-07?tab=iter", target: PASSO, title: "Accettazione dell'ordine e controfirma", body: "CD-07 è aggiudicata a te per 48.800,00 €: accettando l'ordine il contratto è stipulato e la procedura chiude il Modulo 1.", tryIt: "Premi «Accetto l'ordine e controfirmo il contratto»." },
+      { path: "/procedure/CD-05", title: "Prova: una procedura non tua", body: "CD-05 riguarda un altro operatore: la piattaforma risponde «Accesso non consentito» senza mostrare dati." },
     ],
   },
-  EXECUTIVE: {
-    role: "EXECUTIVE",
-    login: "dirigente",
-    persona: "Direttore Generale",
-    goal: "Ha la visione d'insieme, decide le riprogrammazioni e può forzare, motivando, le criticità bloccanti.",
-    cases: ["CD-05 – riprogrammazione che sfora il bilancio 2027/2028: serve il tuo override", "Portafoglio reale PN GDL: 82 procedure"],
+  {
+    id: "EXECUTIVE", role: "EXECUTIVE", login: "dirigente",
+    title: "Direttore Generale", persona: "Direttore Generale (attore di supporto: firma le determine e decide le riprogrammazioni)",
+    goal: "Ha la visione d'insieme e decide le riprogrammazioni, anche forzando con motivazione le criticità di bilancio.",
+    cases: ["CD-05 – riprogrammazione che sfora il bilancio 2027/2028", "Portafoglio reale PN GDL: 82 procedure"],
+    next: "VALIDATOR",
+    steps: [
+      { path: "/", target: "section[aria-label='Indicatori principali']", title: "Dashboard direzionale", body: "Procedure monitorate per health, alert critici, programmato, contratti stipulati e importo a rischio, alla data di riferimento in alto.", can: ["Aprire l'elenco corrispondente a ogni indicatore"] },
+      { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Le procedure in rosso", body: "Le date chiave scadute rendono rossa la procedura; la colonna «A rischio» mostra la spesa scoperta o in slittamento." },
+      { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Decidere con override", body: "RS-CD05-001 sposta l'aggiudicazione di CD-05 al 14/12/2026 e sfora la disponibilità 2027 e 2028: puoi approvarla solo con override motivato, oppure rifiutarla.", tryIt: "Spunta l'override e approva con motivazione «Copertura 2028 nella prossima variazione di bilancio»." },
+      { path: "/procedure/CD-05?tab=iter", target: ".iter-board", title: "Effetto sulle date chiave", body: "Dopo l'approvazione le date previste dei passi successivi si spostano; la baseline resta quella originale." },
+      { path: "/alert?view=critical", target: "nav.tabs", title: "Alert critici", body: "Le date chiave superate arrivano a te in escalation. Puoi sospendere l'escalation fino a una data.", can: ["Sospendere l'escalation con motivo"] },
+      { path: "/audit", target: "form.filters", title: "Tracciabilità", body: "Filtra per azione «SIMULATION_APPROVE_OVERRIDE» o «STEP_AWARD»: ogni decisione ha autore, data, motivazione e valori prima/dopo." },
+    ],
+  },
+  {
+    id: "VALIDATOR", role: "VALIDATOR", login: "validatore",
+    title: "Validatore", persona: "Validatore / operatore di monitoraggio (attore di supporto)",
+    goal: "Controlla i dati proposti dal sistema (estrazioni dai documenti, associazioni) e approva le riprogrammazioni senza criticità.",
+    cases: ["CD-07 – importo dell'ordine letto male dall'OCR (48.300 € invece di 48.800 €)", "OP04-S18 – 5 associazioni di documenti", "CD-06 – riprogrammazione senza criticità"],
     next: "ADMIN",
     steps: [
-      {
-        path: "/",
-        target: "section[aria-label='Indicatori principali']",
-        title: "Dashboard direzionale",
-        body: "Procedure monitorate con la ripartizione rosso/ambra/verde, alert critici, importo programmato e importo a rischio. Tutti i numeri sono calcolati dal motore alla data di riferimento indicata in alto.",
-        can: ["Cliccare un indicatore per aprire l'elenco corrispondente"],
-      },
-      {
-        path: "/portafoglio?health=RED",
-        target: ".table-wrap",
-        title: "Le procedure in rosso",
-        body: "Dal portafoglio filtrato si apre ogni procedura; la colonna «A rischio» mostra quanto della spesa prevista è scoperto o in slittamento.",
-      },
-      {
-        path: "/procedure/CD-05?tab=simulations",
-        target: "[data-tour='simulazioni']",
-        title: "Decidere con override",
-        body: "L'Ufficio Gare propone di spostare l'aggiudicazione di CD-05 al 14/12/2026. La simulazione segnala lo sforamento della disponibilità 2027 e 2028: solo tu puoi approvarla, spuntando l'override e motivando. In alternativa la rifiuti.",
-        can: ["Approvare con override motivato", "Rifiutare con motivazione"],
-        tryIt: "Sulla riga RS-CD05-001 (autore gare) spunta l'override e approva con motivazione «Copertura 2028 da richiedere nella prossima variazione di bilancio». La riga di autore «system» è la bozza automatica generata al T+1.",
-      },
-      {
-        path: "/procedure/CD-05",
-        target: ".grid-2 .card:nth-child(2)",
-        title: "Impatto per annualità",
-        body: "Dopo l'approvazione il grafico mostra il fabbisogno spostato sul 2027–2028 e lo sforamento evidenziato. La baseline resta quella originale.",
-      },
-      {
-        path: "/alert?view=critical",
-        target: "nav.tabs",
-        title: "Alert critici",
-        body: "Gli alert critici (scadenze bloccanti superate) arrivano anche a te in escalation. Puoi sospendere l'escalation fino a una data.",
-        can: ["Sospendere l'escalation con motivo e data", "Esportare gli alert"],
-      },
-      {
-        path: "/audit",
-        target: "form.filters",
-        title: "Tracciabilità",
-        body: "Filtra per azione «SIMULATION_APPROVE_OVERRIDE»: trovi la tua decisione, con motivazione e valori prima/dopo.",
-      },
-      {
-        path: "/assistente",
-        target: "main",
-        title: "Assistente",
-        body: "Risponde a domande sul portafoglio citando le fonti.",
-        tryIt: "Chiedi «Qual è l'importo a rischio?» oppure «Qual è lo stato di OP04-S18?».",
-      },
+      { path: "/validazione", target: ".table-wrap", title: "Coda di validazione", body: "Ogni proposta mostra valore proposto e validato, fonte con estratto e affidabilità. In CD-07 l'OCR ha letto 48.300,00 € sull'ordine MePA contro i 48.800,00 € dell'aggiudicazione.", tryIt: "Rifiuta il conflitto di CD-07 con motivazione «Errore di lettura OCR: l'ordine riporta 48.800,00 €»." },
+      { path: "/procedure/CD-07?tab=documents", target: "main table.data", title: "Verifica sulla fonte", body: "Apri l'ordine MePA: ogni valore ha un'evidenza che punta al file e alla pagina di origine." },
+      { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Documenti reali e OCR", body: "Le associazioni per CIG hanno affidabilità alta; quelle per appartenenza al fascicolo sono in coda. Il pulsante di elaborazione esegue testo e OCR sui file in attesa.", can: ["Elaborare i documenti in attesa", "Caricare documenti"] },
+      { path: "/procedure/CD-06?tab=simulations", target: "[data-tour='simulazioni']", title: "Approvare una riprogrammazione", body: "RS-CD06-001 sposta l'aggiudicazione di CD-06 al 15/10/2026 senza criticità: puoi approvarla (non è tua). Le criticità bloccanti restano riservate al Direttore Generale.", tryIt: "Approva con motivazione «Proroga coerente con la convenzione Consip»." },
+      { path: "/audit", target: ".page-meta", title: "Audit con catena di hash", body: "Gli eventi sono concatenati da hash: un'alterazione del database interromperebbe la catena.", can: ["Filtrare per procedura, utente e azione"] },
     ],
   },
-  ADMIN: {
-    role: "ADMIN",
-    login: "admin",
-    persona: "Amministratore della piattaforma",
-    goal: "Configura soglie, calendario, utenti e data di riferimento; ripristina la demo.",
+  {
+    id: "ADMIN", role: "ADMIN", login: "admin",
+    title: "Amministratore", persona: "Amministratore della piattaforma",
+    goal: "Configura data di riferimento, moduli, soglie, utenti; ripristina la demo.",
     cases: ["Spostare la data di riferimento per far scattare gli alert", "Reset della demo tra un incontro e l'altro"],
     steps: [
-      {
-        path: "/admin",
-        target: "[data-tour='refdate']",
-        title: "Data di riferimento",
-        body: "La demo ragiona su una data di business configurabile, non sull'orologio del server. Spostandola in avanti si vedono scattare reminder, alert ed escalation.",
-        can: ["Cambiare la data e ricalcolare", "Eseguire subito i controlli (run_checks)"],
-        tryIt: "Imposta il 20/10/2026, poi torna sulla dashboard e guarda come cambiano gli indicatori. Ripristina il 01/10/2026 alla fine.",
-      },
-      {
-        path: "/admin",
-        target: "[data-tour='impersona']",
-        title: "Impersonazione",
-        body: "Per presentare la demo senza uscire e rientrare puoi agire come un altro utente: la sessione è marcata e ogni azione resta attribuita anche a te nell'audit.",
-        can: ["Impersonare un utente demo"],
-      },
-      {
-        path: "/admin",
-        target: "[data-tour='reset']",
-        title: "Reset della demo",
-        body: "Ricarica da zero il portafoglio reale (con i casi dimostrativi) oppure le 12 procedure di collaudo P-001…P-012. Tutte le sessioni vengono chiuse.",
-        can: ["Scegliere il dataset e confermare digitando RESET"],
-      },
-      {
-        path: "/admin",
-        target: "[data-tour='import']",
-        title: "Import del workbook",
-        body: "Il report dell'ultimo import del workbook reale: righe lette, importate, annullate e segnalazioni per riga e campo.",
-      },
-      {
-        path: "/admin",
-        target: "[data-tour='soglie']",
-        title: "Soglie e calendario",
-        body: "Finestra di attenzione, soglia di reminder, termini di verifica SAL e di pagamento, festività locali. Ogni modifica è versionata e ricalcola gli alert.",
-        can: ["Modificare soglie e festività"],
-      },
-      {
-        path: "/admin",
-        target: "[data-tour='utenti']",
-        title: "Utenti e ruoli",
-        body: "Aggiungi o modifica utenti, ruolo e ambito (struttura o fornitore). Le modifiche dei permessi sono nell'audit.",
-        can: ["Creare o disattivare utenti", "Assegnare ruolo e ambito"],
-      },
-      {
-        path: "/admin/modelli",
-        target: "main section.card",
-        title: "Modelli di procedura",
-        body: "I sei modelli (affidamento diretto, negoziate, aperta, accordo quadro, adesione) con milestone, durate minime, owner, documenti attesi e politica di alert. Sono dimostrativi: le durate vanno validate con INAPP.",
-      },
+      { path: "/admin", target: "[data-tour='refdate']", title: "Data di riferimento", body: "La demo ragiona su una data di business configurabile. Spostandola in avanti scattano reminder, alert ed escalation.", tryIt: "Imposta il 20/10/2026, guarda la dashboard, poi ripristina il 01/10/2026." },
+      { path: "/admin", target: "[data-tour='moduli']", title: "Moduli visibili", body: "La demo mostra il Modulo 1 (dalla programmazione alla stipula). Il Modulo 2 (esecuzione, SAL, pagamenti) è sviluppabile in seguito e resta nascosto." },
+      { path: "/admin", target: "[data-tour='impersona']", title: "Impersonazione", body: "Agisci come un altro utente senza uscire: la sessione è marcata e ogni azione resta attribuita anche a te." },
+      { path: "/admin", target: "[data-tour='reset']", title: "Reset della demo", body: "Ricarica da zero il portafoglio reale con i casi dimostrativi, oppure le 12 procedure di collaudo. Tutte le sessioni vengono chiuse.", can: ["Scegliere il dataset e confermare digitando RESET"] },
+      { path: "/admin", target: "[data-tour='import']", title: "Import del workbook", body: "Righe lette, importate e annullate, con le segnalazioni per riga e campo." },
+      { path: "/admin", target: "[data-tour='soglie']", title: "Soglie e calendario", body: "Finestra di attenzione, reminder, termini e festività locali; ogni modifica è versionata e ricalcola gli alert." },
+      { path: "/admin", target: "[data-tour='utenti']", title: "Utenti e ruoli", body: "Ruolo e ambito (struttura o fornitore) di ogni utente; le modifiche sono nell'audit." },
+      { path: "/admin/modelli", target: "main section.card", title: "Modelli di procedura", body: "I modelli del Modulo 1 riportano per ogni passo corsia, fase, durata, date chiave e documenti attesi. Variante A (documenti richiesti all'operatore prima dell'indizione) per affidamenti diretti e adesioni; variante B (inviti, offerte, verifica sull'aggiudicatario) per negoziate, aperte e accordi quadro. Durate dimostrative da validare con INAPP." },
     ],
   },
-};
+];
+
+export const TOURS: Record<string, Tour> = Object.fromEntries([PROCESS, ...ROLE_TOURS].map((t) => [t.id, t]));
+export const ROLE_TOUR: Record<Role, Tour> = Object.fromEntries(ROLE_TOURS.map((t) => [t.role!, t])) as Record<Role, Tour>;
 
 export interface PageHelp {
   title: string;
@@ -479,14 +304,22 @@ export function pageHelp(pathname: string, tab: string | null): PageHelp | null 
   return null;
 }
 
+const STEP_ACTIONS: Partial<Record<Role, string[]>> = {
+  STRUCTURE_USER: ["Registrare i passi della corsia Struttura (memoria)"],
+  PROCUREMENT_OFFICER: ["Registrare i passi della corsia Ufficio Gare (presa in carico, istruttoria, determine, stipula)"],
+  FINANCE_OFFICER: ["Registrare prenotazioni e impegni per annualità"],
+  SUPPLIER: ["Registrare l'invio dei documenti e la controfirma del contratto"],
+  VALIDATOR: ["Registrare un passo per conto dell'owner"],
+};
+
 const HELP: Record<string, PageHelp> = {
   dashboard: {
     title: "Dashboard",
     summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento.",
     sections: [
-      ["Indicatori", "Procedure monitorate (rosso/ambra/verde), alert critici, programmato, importo a rischio. Ogni riquadro apre l'elenco filtrato."],
+      ["Indicatori", "Procedure monitorate (rosso/ambra/verde), in ritardo, da riprogrammare, alert critici, programmato, contrattualizzato, contratti stipulati, importo a rischio."],
       ["Fabbisogno per annualità", "Previsione di spesa confrontata con la disponibilità di bilancio, con tabella equivalente."],
-      ["Procedure per fase", "Quante procedure sono in programmazione, gara, aggiudicazione, esecuzione."],
+      ["Procedure per fase", "Quante procedure sono in ciascuna fase del processo."],
       ["Richiede attenzione", "Procedure rosse e ambra con la prossima scadenza."],
     ],
     actions: { ALL: ["Aprire il portafoglio filtrato dagli indicatori", "Aprire una procedura dall'elenco"] },
@@ -496,7 +329,7 @@ const HELP: Record<string, PageHelp> = {
     summary: "Elenco delle procedure con filtri, ordinamento ed esportazione.",
     sections: [
       ["Filtri", "Ricerca per codice/oggetto/CIG, health, fase, struttura, tipologia, annualità, alert, riprogrammazione."],
-      ["Tabella", "Fase, health con motivazione, prossima scadenza, programmato, importo a rischio, owner corrente."],
+      ["Tabella", "Fase, health con motivazione, prossima scadenza, programmato, importo a rischio, corsia a cui tocca il passo in corso (Owner)."],
     ],
     actions: {
       ALL: ["Filtrare e ordinare (i filtri restano nell'indirizzo)"],
@@ -510,16 +343,17 @@ const HELP: Record<string, PageHelp> = {
   },
   draft: {
     title: "Nuova procedura in bozza",
-    summary: "La Struttura esprime il fabbisogno: il modello di procedura e le date previste sono calcolati dal sistema.",
+    summary: "Fase 0 dello schema: inserimento nel piano di programmazione da parte della Struttura.",
     sections: [["Dati della bozza", "Oggetto, tipologia, criterio, importo IVA inclusa, riparto per annualità, data obiettivo della memoria."]],
     actions: { STRUCTURE_USER: ["Creare la bozza"], ADMIN: ["Creare la bozza"] },
   },
   "procedure.overview": {
     title: "Scheda procedura · Panoramica",
-    summary: "Stato, health e motivazioni, confronto baseline/previsione/effettivo, previsione di spesa per annualità.",
+    summary: "Fase del processo, a chi tocca il passo in corso, health e motivazioni, confronto baseline/previsione/effettivo, previsione di spesa.",
     sections: [
-      ["Intestazione", "Codice, fase, health, tipologia, modello, CIG, importi programmato/contrattualizzato/pagato, prossima scadenza."],
-      ["Perché questo stato", "Le regole che determinano l'health, con riferimento."],
+      ["Intestazione", "Codice, fase, health, tipologia, modello, CIG, importi, prossima scadenza e «Tocca a»."],
+      ["Barra delle fasi", "0 Piano · 1 Fabbisogno · 2 Istruttoria · 3 Affidamento (Modulo 1)."],
+      ["Perché questo stato", "Le regole che determinano l'health."],
       ["Previsione per annualità", "Fabbisogno contro disponibilità, importo a rischio, fonte del workbook e iter."],
     ],
     actions: {
@@ -530,48 +364,48 @@ const HELP: Record<string, PageHelp> = {
       EXECUTIVE: ["Report PDF"],
     },
   },
+  "procedure.iter": {
+    title: "Scheda procedura · Iter",
+    summary: "Lo schema di processo applicato alla procedura: corsie (chi) per fasi (quando), con il passo in corso evidenziato.",
+    sections: [
+      ["Corsie", "Struttura richiedente, Ufficio Gare, Amministrazione / Contabilità, Fornitore."],
+      ["Riquadri", "Fatto (verde, con data effettiva), in corso (bordo blu, rosso se scaduto), da fare (data prevista). ◆ = data chiave. ✓/○ = documento atteso presente o mancante."],
+      ["Date chiave", "Memoria, indizione, aggiudicazione, stipula: baseline, prevista, effettiva."],
+      ["Passo in corso", "A chi tocca e, se tocca a te, il modulo per registrarlo."],
+    ],
+    actions: { ...STEP_ACTIONS, ALL: ["Consultare l'avanzamento di tutte le corsie"] },
+  },
   "procedure.timeline": {
     title: "Scheda procedura · Cronoprogramma",
-    summary: "Milestone con owner, stato, date baseline/prevista/effettiva e Gantt.",
+    summary: "Tutti i passi con owner, stato, date baseline/prevista/effettiva e Gantt.",
     sections: [["Tabella e Gantt", "Cerchio = baseline, rombo blu = prevista, verde = effettiva, rosso = scaduta; linea tratteggiata = data di riferimento."]],
-    actions: {
-      STRUCTURE_USER: ["Registrare il completamento della milestone attiva"],
-      PROCUREMENT_OFFICER: ["Registrare il completamento della milestone attiva"],
-      FINANCE_OFFICER: ["Registrare il completamento della milestone attiva"],
-      VALIDATOR: ["Registrare il completamento della milestone attiva"],
-    },
+    actions: { ALL: ["Consultare; i passi si registrano nella sezione Iter"] },
   },
   "procedure.finance": {
     title: "Scheda procedura · Finanza",
-    summary: "Contratto, piano SAL, annualità, righe di previsione, movimenti e pagamenti.",
+    summary: "Contratto (dopo l'aggiudicazione), prenotazioni e impegni per annualità, previsione di spesa e movimenti.",
     sections: [
-      ["Contratto", "Operatore, netto/IVA/lordo, date di stipula, decorrenza e fine."],
-      ["Piano SAL", "Stato di ogni SAL e azione disponibile per il tuo ruolo."],
-      ["Movimenti", "Impegni, liquidazioni, pagamenti e storni: sola aggiunta."],
+      ["Contratto", "Operatore, netto/IVA/lordo, date di stipula, inizio e fine."],
+      ["Prenotazioni e impegni", "Fabbisogno, prenotato e impegnato per anno."],
+      ["Movimenti", "In sola aggiunta: si correggono con storni."],
     ],
-    actions: {
-      SUPPLIER: ["Presentare un SAL"],
-      STRUCTURE_USER: ["Presentare, mettere in verifica o rigettare un SAL"],
-      PROCUREMENT_OFFICER: ["Accettare o rigettare un SAL"],
-      VALIDATOR: ["Verificare, accettare o rigettare un SAL"],
-      FINANCE_OFFICER: ["Registrare fattura, liquidazione e pagamento", "Stornare un pagamento"],
-    },
+    actions: { FINANCE_OFFICER: ["Prenotazioni e impegni si registrano nella sezione Iter"], ALL: ["Consultare"] },
   },
   "procedure.documents": {
     title: "Scheda procedura · Documenti",
     summary: "Fascicolo con stato di elaborazione (testo, OCR) e affidabilità dell'associazione.",
     sections: [["Fascicolo", "Documenti, tipo, pagine, elaborazione, metodo di associazione."], ["Proposte da validare", "Campi estratti in attesa di decisione."]],
     actions: {
-      STRUCTURE_USER: ["Caricare documenti e ZIP"],
-      PROCUREMENT_OFFICER: ["Caricare documenti e ZIP"],
-      SUPPLIER: ["Caricare deliverable"],
+      STRUCTURE_USER: ["Caricare memoria, documento tecnico e allegati"],
+      PROCUREMENT_OFFICER: ["Caricare determine, ordini e verbali"],
+      SUPPLIER: ["Caricare i documenti per la verifica dei requisiti"],
       VALIDATOR: ["Caricare documenti", "Elaborare i documenti in attesa (OCR)"],
       ADMIN: ["Caricare documenti", "Elaborare i documenti in attesa (OCR)"],
     },
   },
   "procedure.alerts": {
     title: "Scheda procedura · Alert",
-    summary: "Alert temporali e anomalie della procedura, con destinatari e stato.",
+    summary: "Alert dei passi e anomalie di dato della procedura, con destinatari e stato.",
     sections: [["Alert", "Livello, scadenza, messaggio, stato."]],
     actions: {
       STRUCTURE_USER: ["Prendere in carico e risolvere"],
@@ -583,8 +417,8 @@ const HELP: Record<string, PageHelp> = {
   },
   "procedure.simulations": {
     title: "Scheda procedura · Simulazioni",
-    summary: "Riprogrammazioni simulate, inviate, approvate o rifiutate, con criticità e decisione.",
-    sections: [["Simulazioni", "Milestone e nuova data, date cambiate, importo spostato, criticità, stato e autore."]],
+    summary: "Riprogrammazioni delle date chiave: simulate, inviate, approvate o rifiutate.",
+    sections: [["Simulazioni", "Passo e nuova data, date cambiate, importo spostato, criticità, stato e autore."]],
     actions: {
       PROCUREMENT_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
       FINANCE_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
@@ -602,7 +436,7 @@ const HELP: Record<string, PageHelp> = {
     title: "Simulazione di riprogrammazione",
     summary: "Procedura guidata in 5 passi; nessun dato cambia finché un'altra persona non approva.",
     sections: [
-      ["1 · Causa", "Milestone da spostare, causa e nuova data (non prima della più rapida ammissibile)."],
+      ["1 · Causa", "Passo da spostare, causa e nuova data (non prima della più rapida ammissibile)."],
       ["2 · Cronoprogramma", "Date ricalcolate a valle."],
       ["3 · Finanza", "Spostamento della spesa tra annualità e confronto con la disponibilità."],
       ["4 · Alternative", "Più rapida, minimo impatto annuale, manuale."],
@@ -613,10 +447,7 @@ const HELP: Record<string, PageHelp> = {
   alerts: {
     title: "Centro alert",
     summary: "Coda unica di alert e anomalie del tuo ambito.",
-    sections: [
-      ["Viste", "Tutti, Miei, Critici, Da riprogrammare, Finanziari."],
-      ["Filtri", "Tipo (alert/anomalia) e stato (da gestire/chiusi)."],
-    ],
+    sections: [["Viste", "Tutti, Miei, Critici, Da riprogrammare, Finanziari."], ["Filtri", "Tipo (alert/anomalia) e stato (da gestire/chiusi)."]],
     actions: {
       ALL: ["Esportare in CSV"],
       STRUCTURE_USER: ["Prendere in carico e risolvere"],
@@ -635,7 +466,7 @@ const HELP: Record<string, PageHelp> = {
   assistant: {
     title: "Assistente",
     summary: "Domande in linguaggio naturale con risposte deterministiche e fonti citate.",
-    sections: [["Esempi", "Stato di una procedura, memorie in scadenza, importo a rischio, procedure da riprogrammare."]],
+    sections: [["Esempi", "Stato e passo in corso di una procedura, memorie in scadenza, importo a rischio, procedure da riprogrammare."]],
     actions: { ALL: ["Fare una domanda o scegliere un esempio"] },
   },
   audit: {
@@ -649,37 +480,38 @@ const HELP: Record<string, PageHelp> = {
     summary: "Configurazione della demo e stato del sistema.",
     sections: [
       ["Data di riferimento", "Data di business e controlli manuali."],
-      ["Reset demo", "Ricarica del dataset scelto."],
-      ["Impersonazione", "Agire come un altro utente demo."],
+      ["Moduli visibili", "Modulo 1 sempre attivo; Modulo 2 nascosto nella demo."],
+      ["Impersonazione e reset", "Agire come un altro utente; ricaricare il dataset."],
       ["Stato del sistema e import", "Worker, coda e-mail, report del workbook."],
-      ["Soglie e calendario", "Parametri degli alert e festività locali."],
-      ["Utenti", "Ruoli e ambiti."],
+      ["Soglie, calendario, utenti", "Parametri degli alert, festività locali, ruoli e ambiti."],
     ],
     actions: { ADMIN: ["Tutte le operazioni della pagina"] },
   },
   templates: {
     title: "Modelli di procedura",
-    summary: "Milestone, durate, owner e documenti attesi per tipologia di procedura.",
-    sections: [],
+    summary: "Passi, corsie, durate, date chiave e documenti attesi per tipologia di procedura.",
+    sections: [["Modulo 1", "Modelli M1-*: variante A (affidamento diretto, adesione) e B (negoziata, aperta, accordo quadro)."], ["Collaudo", "Modelli v1 usati dalle 12 procedure di collaudo."]],
     actions: { ADMIN: ["Consultare (configurazione versionata nei file YAML)"] },
   },
   guide: {
     title: "Guida demo",
-    summary: "Percorsi guidati per attore e casi dimostrativi.",
+    summary: "Mappa del processo, percorso per fasi e percorsi per attore.",
     sections: [],
-    actions: { ALL: ["Avviare la guida del ruolo attivo", "Cambiare attore"] },
+    actions: { ALL: ["Avviare il percorso per fasi o quello del ruolo attivo", "Cambiare attore"] },
   },
 };
 
 /** Casi da usare durante la presentazione (dataset "inapp"). */
 export const DEMO_CASES: { code: string; title: string; shows: string; who: Role[] }[] = [
-  { code: "BZ-001", title: "Rinnovo licenze e supporto della piattaforma di business intelligence", shows: "Bozza della Struttura: consegna della memoria e congelamento della baseline", who: ["STRUCTURE_USER"] },
-  { code: "CD-01", title: "Help desk applicativo per i portali istituzionali", shows: "Memoria in scadenza (07/10/2026): reminder e health ambra", who: ["STRUCTURE_USER"] },
-  { code: "CD-02", title: "Cruscotto di monitoraggio degli indicatori PN GDL", shows: "SAL presentato dal fornitore da verificare e accettare; importo letto male dall'OCR in validazione", who: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "VALIDATOR", "SUPPLIER"] },
-  { code: "CD-03", title: "Rilevazione CATI per l'indagine sulla qualità del lavoro", shows: "SAL accettato da fatturare e liquidare; SAL successivo da presentare", who: ["FINANCE_OFFICER", "SUPPLIER"] },
-  { code: "CD-04", title: "Segreteria organizzativa degli eventi territoriali PN GDL", shows: "Pagamento in scadenza; blocco dei pagamenti oltre il liquidato; storno", who: ["FINANCE_OFFICER"] },
-  { code: "CD-05", title: "Valutazione indipendente del PN GDL 2021-2027", shows: "Riprogrammazione con sforamento del bilancio: override motivato del Direttore Generale", who: ["PROCUREMENT_OFFICER", "EXECUTIVE"] },
-  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Riprogrammazione senza criticità approvata dal Validatore (quattro occhi)", who: ["VALIDATOR"] },
-  { code: "OP01-S5", title: "Procedura reale del Piano", shows: "Milestone bloccante scaduta: simulazione di riprogrammazione guidata", who: ["PROCUREMENT_OFFICER"] },
-  { code: "OP04-S18", title: "Stage4EU – fascicolo reale", shows: "6 atti di gara reali associati per CIG, OCR, impegni letti dalla determina", who: ["PROCUREMENT_OFFICER", "VALIDATOR", "FINANCE_OFFICER"] },
+  { code: "BZ-001", title: "Rinnovo licenze e supporto della piattaforma di business intelligence", shows: "Procedura guida: il percorso per fasi la porta dal piano alla stipula", who: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER"] },
+  { code: "CD-01", title: "Help desk applicativo per i portali istituzionali", shows: "Fase 1 · memoria in scadenza il 07/10/2026", who: ["STRUCTURE_USER"] },
+  { code: "CD-02", title: "Licenze e assistenza del sistema di protocollo informatico", shows: "Fase 1 · presa in carico dell'Ufficio Gare", who: ["PROCUREMENT_OFFICER"] },
+  { code: "CD-03", title: "Rilevazione CATI per l'indagine sulla qualità del lavoro", shows: "Fase 1 · verifica importi e prenotazioni, in scadenza oggi", who: ["FINANCE_OFFICER"] },
+  { code: "CD-04", title: "Segreteria organizzativa degli eventi territoriali PN GDL", shows: "Fase 2 · documenti dell'operatore per la verifica dei requisiti", who: ["SUPPLIER"] },
+  { code: "CD-08", title: "Campagna di comunicazione sui servizi per l'occupazione giovanile", shows: "Fase 2 · impegni di spesa dopo la determina di indizione", who: ["FINANCE_OFFICER"] },
+  { code: "CD-05", title: "Valutazione indipendente del PN GDL 2021-2027", shows: "Fase 3 · aggiudicazione scaduta: riprogrammazione con sforamento, override del Direttore", who: ["PROCUREMENT_OFFICER", "EXECUTIVE"] },
+  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Fase 3 · riprogrammazione senza criticità approvata dal Validatore", who: ["VALIDATOR"] },
+  { code: "CD-07", title: "Servizi di hosting e gestione del portale istituzionale", shows: "Fase 3 · ordine da accettare e controfirmare; importo letto male dall'OCR", who: ["SUPPLIER", "VALIDATOR"] },
+  { code: "OP01-S5", title: "Procedura reale del Piano", shows: "Memoria scaduta: simulazione di riprogrammazione guidata", who: ["PROCUREMENT_OFFICER"] },
+  { code: "OP04-S18", title: "Stage4EU – fascicolo reale", shows: "6 atti di gara reali associati per CIG, OCR, impegni letti dalla determina", who: ["PROCUREMENT_OFFICER", "VALIDATOR"] },
 ];

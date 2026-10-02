@@ -3,6 +3,7 @@ import { formatDateTimeIt } from "@/contracts/format";
 import { can } from "@/server/authz";
 import { systemStatus } from "@/server/queries";
 import { engineSettings } from "@/application/run-checks";
+import { executionModuleEnabled } from "@/application/modules";
 import Link from "next/link";
 import { db, pageActor } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
@@ -46,6 +47,17 @@ export default async function AdminPage() {
               { name: "dataset", label: "Dataset", type: "select", options: [{ value: "inapp", label: "Portafoglio reale INAPP (PN GDL)" }, { value: "scenarios", label: "Scenari di collaudo P-001…P-012" }] },
               { name: "confirm", label: "Digita RESET per confermare", required: true },
             ]}
+          />
+        </section>
+        <section className="card stack" data-tour="moduli">
+          <h2>Moduli visibili</h2>
+          <p className="muted">Modulo 1 (dalla programmazione alla stipula) sempre attivo. Modulo 2 (esecuzione e rendicontazione: SAL, liquidazioni, pagamenti) è sviluppabile in seguito e nascosto nella demo del portafoglio reale.</p>
+          <ActionForm
+            endpoint="/api/admin/config/modules"
+            method="PUT"
+            submitLabel="Salva"
+            successMessage="Configurazione dei moduli salvata e auditata."
+            fields={[{ name: "execution", label: "Mostra il Modulo 2 (anteprima)", type: "checkbox", defaultValue: String(executionModuleEnabled(db())) }]}
           />
         </section>
         <section className="card stack" data-tour="impersona">

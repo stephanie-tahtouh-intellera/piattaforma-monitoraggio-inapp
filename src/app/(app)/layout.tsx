@@ -7,7 +7,6 @@ import { ROLE_LABEL, can, scopeSql } from "@/server/authz";
 import { db, pageActor } from "@/server/page";
 import { DemoBanner } from "@/ui/demo-banner";
 import { LogoutButton, SideNav, type NavItem } from "@/ui/nav";
-import { TOURS } from "@/ui/tour/content";
 import { GuidedTour } from "@/ui/tour/guided-tour";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +30,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (can(actor, "audit.read")) items.push("sep", { href: "/audit", label: "Audit", icon: "audit" });
   if (can(actor, "admin")) items.push({ href: "/admin", label: "Amministrazione", icon: "admin" });
   items.push("sep", { href: "/guida", label: "Guida demo", icon: "guide" });
-  const next = TOURS[actor.role].next;
 
   return (
     <>
@@ -78,7 +76,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
       </div>
       <Suspense fallback={null}>
-        <GuidedTour role={actor.role} roleLabel={ROLE_LABEL[actor.role]} nextLabel={next ? ROLE_LABEL[next] : null} />
+        <GuidedTour role={actor.role} roleLabel={ROLE_LABEL[actor.role]} roleLabels={ROLE_LABEL} />
       </Suspense>
     </>
   );

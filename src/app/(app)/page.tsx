@@ -1,5 +1,6 @@
 import { OctagonAlert } from "lucide-react";
 import Link from "next/link";
+import { executionModuleEnabled } from "@/application/modules";
 import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact } from "@/contracts/format";
 import { dashboard } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
@@ -26,6 +27,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const structure = sp(q.structure);
   const data = dashboard(db(), actor, { ...(structure ? { structure } : {}) });
   const k = data.kpi;
+  const module2 = executionModuleEnabled(db());
+  const signedCount = data.byStatus.filter((x) => ["EXECUTION", "CLOSING", "CLOSED"].includes(x.status)).reduce((t, x) => t + Number(x.n), 0);
   const ref = formatDateIt(data.referenceDate);
   const structures = db().prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all() as { code: string; name: string }[];
   return (
@@ -55,12 +58,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <section aria-label="Indicatori principali" className="grid grid-4">
         <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href="/portafoglio" aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
-        <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · milestone o SAL scaduti`} href="/portafoglio?health=RED" aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
+        <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href="/portafoglio?health=RED" aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
         <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href="/portafoglio?reschedule=1" aria={`Procedure da riprogrammare: ${k.toReschedule}`} />
         <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}`} extra={k.criticalAlerts ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico</div> : null} />
         <Kpi label="Programmato" value={formatEuroCompact(k.programmed)} sub={`${formatEuro(k.programmed)} · escluse le annullate`} href="/portafoglio?sort=programmed&dir=desc" aria={`Programmato ${formatEuro(k.programmed)}`} />
         <Kpi label="Contrattualizzato" value={formatEuroCompact(k.contracted)} sub={`${formatEuro(k.contracted)} · contratti stipulati`} href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Contrattualizzato ${formatEuro(k.contracted)}`} />
-        <Kpi label="Pagato" value={formatEuroCompact(k.paid)} sub={formatEuro(k.paid)} href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Pagato ${formatEuro(k.paid)}`} />
+        {module2 ? <Kpi label="Pagato" value={formatEuroCompact(k.paid)} sub={formatEuro(k.paid)} href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Pagato ${formatEuro(k.paid)}`} /> : <Kpi label="Contratti stipulati" value={signedCount} sub="procedure con Modulo 1 completato" href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Contratti stipulati: ${signedCount}`} />}
         <Kpi
           label="Importo a rischio"
           value={formatEuroCompact(k.atRisk.total)}

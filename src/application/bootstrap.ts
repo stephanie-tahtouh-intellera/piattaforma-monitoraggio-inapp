@@ -20,6 +20,8 @@ export function isSeeded(db: Db): boolean {
 /** Carica un dataset (idempotente). Per "inapp" usa il file generato dall'import del workbook reale. */
 export async function loadDataset(db: Db, clock: Clock, name: DatasetName): Promise<SeedReport[]> {
   const root = projectRoot();
+  // Il dataset attivo determina la famiglia di modelli anche per le bozze create durante il caricamento (DEC-107)
+  tx(db, () => db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('dataset', ?)").run(name));
   const reports: SeedReport[] = [];
   if (name === "scenarios") {
     reports.push(seedDataset(db, readDataset(path.join(root, "seed", "scenarios", "procedures.json")), clock, path.join(root, "seed", "scenarios", "documents")));
@@ -67,6 +69,7 @@ export async function resetDemo(db: Db, clock: Clock, actor: string, dataset?: D
     db.prepare("DELETE FROM procedures").run();
     db.prepare("DELETE FROM audit_events").run();
     db.prepare("DELETE FROM system_meta WHERE key IN ('seeded_at','reset_in_progress')").run();
+    db.prepare("DELETE FROM config WHERE key = 'modules.execution'").run();
   });
   const name = dataset ?? datasetName();
   const reports = await loadDataset(db, clock, name);

@@ -19,7 +19,7 @@ Con Docker (non collaudato su questa macchina, DEC-100): `docker compose up --bu
 ## Dataset
 | `DEMO_DATASET` | Contenuto |
 |---|---|
-| `inapp` (default) | Portafoglio reale PN Giovani, Donne e Lavoro (foglio `Gare_23-27`, 82 procedure), fascicolo reale associato per CIG a OP04-S18 e 7 casi dimostrativi inventati (CD-01…CD-06, BZ-001) per la guida demo |
+| `inapp` (default) | Portafoglio reale PN Giovani, Donne e Lavoro (foglio `Gare_23-27`, 82 procedure), fascicolo reale associato per CIG a OP04-S18 e 9 casi dimostrativi inventati (BZ-001, CD-01…CD-08) fermi a passi diversi del Modulo 1 |
 | `scenarios` | 12 procedure P-001…P-012: oracle dei test e del demo script (guida §10) |
 
 Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --dataset scenarios`.
@@ -32,7 +32,7 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 | `amministrazione` | Amministrazione: fatture, liquidazioni, pagamenti |
 | `struttura.si` | Struttura Sistemi informativi (vede solo la propria struttura) |
 | `validatore` | Coda di validazione, audit |
-| `fornitore.alfa` | Fornitore: solo i contratti assegnati (CD-02 e CD-03; P-004 nel dataset scenarios) |
+| `fornitore.alfa` | Fornitore: pratiche in cui è operatore o contraente (CD-04, CD-07; P-004 nel dataset scenarios) |
 | `admin` | Configurazione, data di riferimento, reset, impersonazione |
 
 ## Comandi
@@ -52,11 +52,12 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 Vedi `CLAUDE.md` e `docs/` (guida operativa v1.1, specifica, analisi, registro decisioni, design).
 
 ## Guida demo (dataset `inapp`)
-Nell'applicazione: voce **Guida demo** nel menu (pagina `/guida`) e pulsante «Guida demo» in basso a destra su ogni pagina.
-- Un percorso guidato per ciascuno dei 7 attori (5–9 passi): spiega le sezioni, cosa può fare il ruolo e propone un'azione da provare sui casi CD-xx.
-- «Aiuto pagina»: sezioni della pagina corrente e azioni consentite al ruolo attivo.
-- Per avviarla al login: spunta «Avvia la guida demo del ruolo dopo l'accesso» (o apri `/login?utente=gare&guida=1`).
-- Ordine consigliato: Struttura → Ufficio Gare → Validatore → Fornitore → Amministrazione → Direttore Generale → Amministratore. Fra una presentazione e l'altra: Amministrazione → Reset demo.
+La demo segue lo schema di processo INAPP (`docs/design/schema-processo-inapp.webp`), **Modulo 1**: dalla programmazione alla stipula, su quattro corsie (Struttura richiedente, Ufficio Gare, Amministrazione / Contabilità, Fornitore). Il Modulo 2 (esecuzione e rendicontazione) è nascosto (Amministrazione → Moduli visibili).
+- **Percorso per fasi** (pagina `/guida`, 17 passi): porta la bozza BZ-001 dal piano alla controfirma del contratto; quando il passo tocca a un'altra corsia il pannello propone «Accedi come … e continua».
+- **Percorsi per attore**: le attività di ciascun ruolo sui casi CD-01…CD-08, fermi a passi diversi del Modulo 1.
+- **Scheda Iter** di ogni procedura: vista a corsie con il passo in corso, a chi tocca e il modulo per registrarlo.
+- «Aiuto pagina»: sezioni della pagina corrente e azioni consentite al ruolo attivo. Avvio al login: `/login?utente=gare&guida=1`.
+- Fra una presentazione e l'altra: Amministrazione → Reset demo.
 
 ## Demo script (dataset `scenarios`, 10–15 minuti)
 1. Accedi come `dirigente`: dashboard, data di riferimento, KPI (12 procedure, 4 in ritardo, 3 da riprogrammare, a rischio 612.000 €).

@@ -123,3 +123,23 @@ Formato:
 - Test: `e2e/guida.spec.ts` percorre tutti i passi di tutte le guide sul dataset `inapp` (server E2E dedicato sulla porta 3101) e verifica pagina, elemento evidenziato e accessibilità (axe WCAG 2.1 AA).
 - Correzioni emerse durante la stesura: termine di verifica SAL e di pagamento ora letti dalla configurazione (prima fissi a 15/30 giorni); il RUP può rigettare un SAL e l'interfaccia mostra solo gli esiti consentiti al ruolo; storno dei pagamenti disponibile nell'interfaccia; l'assistente riconosce i codici CD-xx e BZ-xxx e propone esempi coerenti con il dataset.
 - Stato: attiva.
+
+### DEC-107 — Processo INAPP, Modulo 1: dalla programmazione alla stipula
+- Data: 2026-10-02 · Autore: agente, su schema fornito dal cliente (`docs/design/schema-processo-inapp.webp`)
+- Contesto: il cliente chiede che la demo segua lo schema di processo a corsie (Struttura richiedente, Ufficio Gare, Amministrazione / Contabilità, Fornitore) e fasi (0 Piano, 1 Fabbisogno e memoria, 2 Istruttoria e indizione, 3 Affidamento e contratto; 4–5 nel Modulo 2). Il RUP non è una corsia: è nominato con la determina di indizione.
+- Decisione:
+  - sei modelli `config/templates/M1-*.yaml` (famiglia `m1`) con un passo per riquadro dello schema, la corsia (`owner`, ora anche `SUPPLIER`), la fase (`stage`), le date chiave (`key`: memoria, indizione, aggiudicazione, stipula) e l'azione registrata con il passo (`action`). Generati da uno script una tantum; durate dimostrative `DA VALIDARE`;
+  - variante A (affidamento diretto, ODA/TD MePA, ordinativo, adesione Consip): documenti richiesti all'operatore prima della determina di indizione, come nello schema; variante B (negoziate, aperta, accordo quadro): inviti, offerte e valutazione dopo l'indizione, requisiti verificati sull'aggiudicatario;
+  - la famiglia dipende dal dataset: `inapp`, `casi-demo` e bozze utente → `m1`; `scenarios` → v1 (oracle invariato, nessuna DEV sull'oracle);
+  - import del workbook: ogni passo eredita la data della prossima data chiave registrata (memoria, indizione, aggiudicazione, contratto); i passi intermedi sono dedotti;
+  - azioni dei passi: operatore individuato (`procedures.operator_code`, migrazione 0003: il fornitore vede la pratica e svolge i passi della propria corsia), prenotazioni e impegni per annualità (totale ≤ programmato), aggiudicazione con importo IVA inclusa (netto/IVA al 22%, `DA VALIDARE`) che crea il contratto da stipulare, controfirma del fornitore che lo stipula; ogni azione è auditata (`STEP_*`);
+  - solo l'owner del passo (il fornitore solo se è l'operatore della pratica) o il validatore registrano il passo;
+  - interfaccia: barra delle fasi nella scheda, sezione **Iter** a corsie con il passo in corso e il modulo di registrazione, «Tocca a» nell'intestazione, riepilogo prenotazioni/impegni in Finanza; il Cronoprogramma rimanda all'Iter per la registrazione;
+  - casi dimostrativi riscritti per fase (BZ-001 procedura guida; CD-01…CD-08 fermi a passi diversi) e guida con percorso per fasi su BZ-001 e cambio di attore dal pannello.
+- Test: `tests/integration/casi-demo.test.ts` (corsie, permessi, prenotazioni, percorso completo BZ-001), `e2e/guida.spec.ts` (percorso per fasi svolto nel browser, con axe).
+- Stato: attiva; modelli e aliquota `DA VALIDARE`.
+
+### DEC-108 — Modulo 2 nascosto nella demo
+- Data: 2026-10-02 · Autore: agente, su indicazione del cliente («nascondilo dalla demo»)
+- Decisione: configurazione `modules.execution` (Amministrazione → Moduli visibili, auditata). Default: nascosto per il portafoglio reale, visibile per il dataset di collaudo (i test del demo script su SAL e pagamenti restano validi). Con il Modulo 2 nascosto non compaiono piano SAL, liquidazioni, pagamenti, indicatore «Pagato» e fasi 4–5; la barra delle fasi termina con «Contratto stipulato». Le funzioni restano nel codice e nei test.
+- Stato: attiva.

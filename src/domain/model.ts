@@ -21,7 +21,13 @@ export const ROLES: Role[] = [
 ];
 
 /** Owner logico di una milestone (ruolo applicativo abbreviato). */
-export type OwnerRole = "STRUCTURE" | "PROCUREMENT" | "FINANCE";
+export type OwnerRole = "STRUCTURE" | "PROCUREMENT" | "FINANCE" | "SUPPLIER";
+
+/** Famiglia di modelli: v1 (dataset di collaudo) o m1 (Modulo 1 del processo INAPP, DEC-107). */
+export type TemplateFamily = "v1" | "m1";
+
+/** Azione da registrare insieme al completamento di un passo (DEC-107). */
+export type StepAction = "OPERATOR" | "RESERVATIONS" | "COMMITMENTS" | "AWARD" | "SIGN";
 
 export type ProcedureType =
   | "DIRECT_AWARD"
@@ -31,6 +37,11 @@ export type ProcedureType =
   | "NEGOTIATED"
   | "OPEN"
   | "FRAMEWORK_AGREEMENT";
+
+/** Fase dello schema di processo (0 Piano … 5 Chiusura) per stato, quando il modello non la indica. */
+export const STATUS_STAGE: Record<string, number | null> = {
+  DRAFT: 0, MEMORY_EXPECTED: 1, PRELIMINARY_REVIEW: 2, TENDERING: 2, AWARDED: 3, CONTRACTING: 3, EXECUTION: 4, CLOSING: 4, CLOSED: 5, CANCELLED: null,
+};
 
 export type AwardCriterion = "LOWEST_PRICE" | "MEAT";
 export type Instrument = "MEPA" | "OFF_MEPA" | "CONSIP_AQ";
@@ -96,11 +107,18 @@ export interface MilestoneDefinition {
   alertPolicy: AlertPolicyCode;
   minLeadDays: number;
   expectedDocuments: ExpectedDocument[];
+  /** Data chiave dello schema di processo (programmata → effettiva). */
+  key?: boolean;
+  /** Fase dello schema 0–5 (Piano … Chiusura). */
+  stage?: number;
+  action?: StepAction;
 }
 
 export interface ProcessTemplate {
   code: string;
   label: string;
+  family?: TemplateFamily;
+  variant?: string;
   illustrative: boolean;
   durationMonths: number;
   selection: { procedureTypes: ProcedureType[]; awardCriterion?: AwardCriterion; instrument?: Instrument };

@@ -30,7 +30,7 @@ export type Action =
 const M: Record<Action, Role[]> = {
   "procedure.view": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"],
   "procedure.draft": ["STRUCTURE_USER", "ADMIN"],
-  "milestone.update": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "VALIDATOR"],
+  "milestone.update": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "VALIDATOR"],
   "simulation.create": ["PROCUREMENT_OFFICER", "FINANCE_OFFICER"],
   "simulation.decide": ["EXECUTIVE", "VALIDATOR"],
   "simulation.override": ["EXECUTIVE"],
@@ -64,7 +64,8 @@ export function require(actor: Actor | null, action: Action): Actor {
 /** Filtro SQL di visibilità sulle procedure (alias "p"). */
 export function scopeSql(actor: Actor): { sql: string; params: unknown[] } {
   if (actor.role === "SUPPLIER") {
-    return { sql: "p.id IN (SELECT procedure_id FROM contracts WHERE supplier_code = ?)", params: [actor.supplierCode ?? "__none__"] };
+    // Contraente oppure operatore individuato prima del contratto (DEC-107)
+    return { sql: "(p.operator_code = ? OR p.id IN (SELECT procedure_id FROM contracts WHERE supplier_code = ?))", params: [actor.supplierCode ?? "__none__", actor.supplierCode ?? "__none__"] };
   }
   if (actor.role === "STRUCTURE_USER" && actor.structureScope !== "*") return { sql: "p.structure_code = ?", params: [actor.structureScope] };
   return { sql: "1 = 1", params: [] };
@@ -78,6 +79,19 @@ export function requireProcedure(db: Db, actor: Actor, code: string): { id: numb
   const ok = db.prepare(`SELECT 1 FROM procedures p WHERE p.id = ? AND ${s.sql}`).get(p.id, ...s.params);
   if (!ok) throw new DomainError("FORBIDDEN", "Procedura fuori dal tuo ambito", 403);
   return p;
+}
+
+export const OWNER_ROLE: Record<string, string[]> = {
+  STRUCTURE: ["STRUCTURE_USER"],
+  PROCUREMENT: ["PROCUREMENT_OFFICER"],
+  FINANCE: ["FINANCE_OFFICER"],
+  SUPPLIER: ["SUPPLIER"],
+};
+
+/** Chi può completare il passo: owner del passo (il fornitore solo se è l'operatore della pratica) o validatore. */
+export function canCompleteStep(actor: Actor, owner: string, operatorCode: string | null): boolean {
+  if (owner === "SUPPLIER") return actor.role === "SUPPLIER" && !!operatorCode && actor.supplierCode === operatorCode;
+  return actor.role === "VALIDATOR" || !!OWNER_ROLE[owner]?.includes(actor.role);
 }
 
 export const ROLE_LABEL: Record<Role, string> = {

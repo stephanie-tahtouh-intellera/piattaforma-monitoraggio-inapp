@@ -1,7 +1,7 @@
 import type { SeedProcedure } from "@/contracts/seed";
 import { addDays, isoDate, type BusinessCalendar, type IsoDate } from "@/domain/dates";
 import { selectTemplate } from "@/domain/milestones";
-import type { ForecastLine, MilestoneInstance, ProcedureAggregate, ProcessTemplate, SalInstance } from "@/domain/model";
+import type { ForecastLine, MilestoneInstance, ProcedureAggregate, ProcessTemplate, SalInstance, TemplateFamily } from "@/domain/model";
 import { Money, parsePercent, splitByPercent } from "@/domain/money";
 
 const d = (s: string | undefined | null): IsoDate | null => (s ? isoDate(s) : null);
@@ -15,8 +15,9 @@ export function buildAggregateFromSeed(
   templates: ProcessTemplate[],
   cal: BusinessCalendar,
   opts: { salReviewTermDays: number; paymentTermDays: number },
+  family: TemplateFamily = "v1",
 ): ProcedureAggregate {
-  const template = selectTemplate(templates, p.type, p.awardCriterion ?? null, p.instrument ?? null);
+  const template = selectTemplate(templates, p.type, p.awardCriterion ?? null, p.instrument ?? null, family);
   const milestones: MilestoneInstance[] = [];
   let prev: IsoDate | null = null;
   for (const def of template.milestones) {

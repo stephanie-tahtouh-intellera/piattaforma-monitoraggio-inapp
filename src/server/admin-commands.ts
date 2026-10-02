@@ -1,7 +1,7 @@
 import { hashSync } from "@node-rs/argon2";
 import { DomainError } from "@/application/errors";
 import { calendarFromDb, runChecks } from "@/application/run-checks";
-import { ARGON_OPTS } from "@/application/seed-loader";
+import { ARGON_OPTS, familyOfDataset } from "@/application/seed-loader";
 import { addDays, addMonths, isoDate, type IsoDate } from "@/domain/dates";
 import { selectTemplate } from "@/domain/milestones";
 import { DEFAULT_SETTINGS, ROLES, type AwardCriterion, type EngineSettings, type Instrument, type ProcedureType, type Role } from "@/domain/model";
@@ -38,7 +38,8 @@ export function createDraft(db: Db, actor: Actor, input: DraftInput): { code: st
   const memoryDue = isoDate(input.memoryDue);
   if (memoryDue < configuredReferenceDate(db)) throw new DomainError("VALIDATION_ERROR", "La data obiettivo della memoria non può essere nel passato", 422);
   const templates = loadTemplates();
-  const template = selectTemplate(templates, input.type, input.awardCriterion ?? null, input.instrument ?? null);
+  const dataset = (db.prepare("SELECT value FROM system_meta WHERE key = 'dataset'").get() as { value: string } | undefined)?.value;
+  const template = selectTemplate(templates, input.type, input.awardCriterion ?? null, input.instrument ?? null, familyOfDataset(dataset));
   const cal = calendarFromDb(db);
   const now = systemNowIso();
   const created = tx(db, () => {

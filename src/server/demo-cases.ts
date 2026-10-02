@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { readFileSync, statSync } from "node:fs";
+import { documentFile } from "@/application/documents";
+import { systemNowIso } from "@/infrastructure/clock";
 import type { Db } from "@/infrastructure/db/connection";
 import { createDraft } from "./admin-commands";
 import type { Actor } from "./auth";
@@ -15,7 +19,7 @@ function seedActor(db: Db, login: string): Actor {
 /**
  * Azioni iniziali dei casi dimostrativi (DEC-105), eseguite con i comandi applicativi
  * così che stato, versioni e audit siano identici a quelli prodotti dalla UI:
- * - bozza della Struttura Sistemi informativi (consegna della memoria nella guida);
+ * - bozza BZ-001 della Struttura Sistemi informativi: la procedura che il percorso demo porta dal piano alla stipula;
  * - CD-05: simulazione con criticità bloccanti inviata dall'Ufficio Gare → override del Direttore Generale;
  * - CD-06: simulazione senza criticità inviata dall'Ufficio Gare → approvazione del Validatore.
  */
@@ -30,7 +34,20 @@ export function applyDemoActions(db: Db): void {
     annual: { "2026": "25620.00", "2027": "59780.00" },
     memoryDue: "2026-10-16",
   });
-  db.prepare("UPDATE procedures SET dataset = 'casi-demo' WHERE code = ?").run(draft.code);
+  // Procedura guida del percorso demo: fascicolo con memoria e documento tecnico, completezza documentale non tracciata
+  db.prepare("UPDATE procedures SET dataset = 'casi-demo', documents_tracked = 0 WHERE code = ?").run(draft.code);
+  const pid = (db.prepare("SELECT id FROM procedures WHERE code = ?").get(draft.code) as { id: number }).id;
+  for (const [type, file, title] of [
+    ["MEMORIA", "memoria.pdf", "Memoria per il Direttore Generale – BZ-001"],
+    ["DOCUMENTO_TECNICO", "documento_tecnico.pdf", "Documento tecnico – BZ-001"],
+  ] as const) {
+    const full = documentFile(`casi:BZ-001/${file}`);
+    const buf = readFileSync(full);
+    db.prepare(
+      `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, uploaded_by, uploaded_at, association_method, association_confidence)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'struttura.si', ?, 'UPLOAD', '1.00')`,
+    ).run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, systemNowIso());
+  }
   const plans: { code: string; source: string; date: string; cause: string; notes: string }[] = [
     {
       code: "CD-05",

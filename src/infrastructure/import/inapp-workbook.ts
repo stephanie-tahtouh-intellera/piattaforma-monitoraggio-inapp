@@ -220,7 +220,7 @@ export async function readInappWorkbook(
     const net = Money.ofCents(divRoundHalfUp(programmed.sub(fee).cents * 100n, 122n));
     const cls = classify(adopted, cellText(row.getCell(C.planned).value), net);
     report.byType[cls.type] = (report.byType[cls.type] ?? 0) + 1;
-    const template = selectTemplate(templates, cls.type, cls.criterion, cls.instrument);
+    const template = selectTemplate(templates, cls.type, cls.criterion, cls.instrument, "m1");
 
     const start = cellDate(row.getCell(C.start).value);
     const end = cellDate(row.getCell(C.end).value);
@@ -242,25 +242,21 @@ export async function readInappWorkbook(
     const set = (code: string, d: IsoDate | null) => {
       if (d && template.milestones.some((m) => m.code === code)) actuals[code] = d;
     };
-    if (reached >= 1) set("MEMORY_SUBMISSION", firstKnown(memD, indD, awdD, conD));
-    if (reached >= 2) {
-      set("REVIEW_COMPLETED", firstKnown(indD, memD, awdD, conD));
-      set("INVITATION_SENT", firstKnown(indD, awdD, conD));
-    }
-    if (reached >= 3) {
-      set("OFFERS_DEADLINE", firstKnown(awdD, conD, indD));
-      set("EVALUATION_COMPLETED", firstKnown(awdD, conD, indD));
-      set("AWARD", firstKnown(awdD, conD, indD));
-    }
-    if (reached >= 4) {
-      set("AWARD_EFFECTIVE", firstKnown(conD, awdD));
-      set("CONTRACT_SIGNED", firstKnown(conD, start));
-    }
-    for (const def of template.milestones) {
-      if (reached >= 1 && !actuals[def.code] && phase !== "CANCELLED") {
-        const need = { MEMORY_SUBMISSION: 1, REVIEW_COMPLETED: 2, INVITATION_SENT: 2, OFFERS_DEADLINE: 3, EVALUATION_COMPLETED: 3, AWARD: 3, AWARD_EFFECTIVE: 4, CONTRACT_SIGNED: 4 }[def.code] ?? 9;
-        if (need <= reached) issue("Iter procedura affidamento", `data effettiva non disponibile per ${def.code}`);
-      }
+    // Modulo 1 (DEC-107): ogni passo eredita la data della prossima data chiave registrata nel workbook
+    // (memoria, indizione, aggiudicazione, contratto); i passi intermedi sono dedotti.
+    const KEY_EVENT: Record<string, { level: number; date: IsoDate | null }> = {
+      MEMORY_SUBMISSION: { level: 1, date: firstKnown(memD, indD, awdD, conD) },
+      INDICTION: { level: 2, date: firstKnown(indD, awdD, conD) },
+      AWARD: { level: 3, date: firstKnown(awdD, conD, indD) },
+      CONTRACT_SIGNED: { level: 4, date: firstKnown(conD, start) },
+    };
+    const ms = template.milestones;
+    for (let i = 0; i < ms.length; i++) {
+      const keyDef = ms.slice(i).find((m) => KEY_EVENT[m.code]);
+      const ev = keyDef ? KEY_EVENT[keyDef.code]! : null;
+      if (!ev || ev.level > reached) continue;
+      if (ev.date) set(ms[i]!.code, ev.date);
+      else if (phase !== "CANCELLED") issue("Iter procedura affidamento", `data effettiva non disponibile per ${ms[i]!.code}`);
     }
 
     const anchorStart = start ?? addMonths(ref, template.durationMonths);
@@ -333,7 +329,7 @@ export async function readInappWorkbook(
       lines,
       movements:
         reached >= 2 && phase !== "CANCELLED"
-          ? lines.map((l) => ({ type: "COMMITMENT" as const, amount: l.amount, year: Number(l.date.slice(0, 4)), date: actuals.REVIEW_COMPLETED ?? l.date }))
+          ? lines.map((l) => ({ type: "COMMITMENT" as const, amount: l.amount, year: Number(l.date.slice(0, 4)), date: actuals.INDICTION ?? l.date }))
           : [],
       budget,
       documents: [],

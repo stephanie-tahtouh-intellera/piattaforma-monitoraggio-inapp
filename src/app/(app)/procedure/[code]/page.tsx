@@ -12,9 +12,11 @@ import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusCh
 import { MOVEMENT_LABEL, OWNER_LABEL, SIM_STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
 import { UploadForm } from "@/ui/upload-form";
+import { IterBoard, PhaseBar } from "@/ui/process";
 
 const TABS = [
   ["overview", "Panoramica"],
+  ["iter", "Iter"],
   ["timeline", "Cronoprogramma"],
   ["finance", "Finanza"],
   ["documents", "Documenti"],
@@ -48,7 +50,11 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   }
   const p = d.procedure;
   const ev = d.evaluation;
-  const tabs = d.supplierView ? TABS.filter(([k]) => ["overview", "finance", "documents"].includes(k)) : TABS.filter(([k]) => k !== "audit" || can(actor, "audit.read"));
+  const module2 = d.process.module2;
+  const tabs = d.supplierView
+    ? TABS.filter(([k]) => ["overview", "iter", "documents", ...(module2 ? ["finance"] : [])].includes(k))
+    : TABS.filter(([k]) => k !== "audit" || can(actor, "audit.read"));
+  const turn = d.process.activeStep;
   const ref = d.referenceDate;
 
   return (
@@ -72,8 +78,11 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
             <div><dt>CIG</dt><dd className="mono">{p.cig || "n.d."}</dd></div>
             <div><dt>Programmato</dt><dd><Euro v={ev.programmed} /></dd></div>
             <div><dt>Contrattualizzato</dt><dd>{ev.contracted ? <Euro v={ev.contracted} /> : "—"}</dd></div>
-            <div><dt>Pagato / residuo</dt><dd><Euro v={ev.paid} /> / <Euro v={ev.residual} /></dd></div>
+            {module2 ? <div><dt>Pagato / residuo</dt><dd><Euro v={ev.paid} /> / <Euro v={ev.residual} /></dd></div> : null}
             <div><dt>Prossima scadenza</dt><dd><Deadline d={ev.nextDeadline ? { date: ev.nextDeadline.due, label: ev.nextDeadline.label, days: ev.nextDeadline.daysUntil } : null} /></dd></div>
+            {turn && !p.cancelledAt ? (
+              <div data-tour="turno"><dt>Tocca a</dt><dd><strong>{OWNER_LABEL[turn.owner] ?? turn.owner}</strong> · {turn.label}{turn.canComplete ? <> · <Link href={`/procedure/${p.code}?tab=iter`}>registra il passo</Link></> : null}</dd></div>
+            ) : null}
           </dl>
         </div>
         <div className="actions" style={{ alignItems: "flex-start", flexDirection: "column" }}>
@@ -83,6 +92,8 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           {can(actor, "export") ? <a className="btn btn-secondary" href={`/api/exports/procedures/${p.code}.pdf`}>Report PDF</a> : null}
         </div>
       </section>
+
+      {!p.cancelledAt ? <PhaseBar stage={d.process.stage} module2={module2} signed={!!d.contract?.signed} /> : null}
 
       <nav className="tabs" aria-label="Sezioni della procedura">
         {tabs.map(([k, l]) => (
@@ -143,7 +154,9 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         </div>
       ) : null}
 
-      {tab === "timeline" ? <Timeline d={d} canComplete={can(actor, "milestone.update")} /> : null}
+      {tab === "iter" ? <IterBoard d={d} /> : null}
+
+      {tab === "timeline" ? <Timeline d={d} /> : null}
 
       {tab === "finance" ? <Finance d={d} actor={actor} /> : null}
 
@@ -239,7 +252,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   );
 }
 
-function Timeline({ d, canComplete }: { d: ReturnType<typeof procedureDetail>; canComplete: boolean }) {
+function Timeline({ d }: { d: ReturnType<typeof procedureDetail> }) {
   const dates = d.timeline.flatMap((m) => [m.baseline, m.forecast, m.actual]).filter(Boolean) as string[];
   dates.push(d.referenceDate);
   const min = isoDate([...dates].sort()[0]!);
@@ -278,19 +291,10 @@ function Timeline({ d, canComplete }: { d: ReturnType<typeof procedureDetail>; c
           </tbody>
         </table>
       </div>
-      {canComplete && active && !d.procedure.cancelledAt ? (
-        <div className="card" style={{ marginTop: 16 }}>
-          <h3>Registra il completamento di «{active.label}»</h3>
-          <ActionForm
-            endpoint={`/api/procedures/${d.procedure.code}/milestones/${active.code}/complete`}
-            submitLabel="Registra completamento"
-            fields={[
-              { name: "date", label: "Data effettiva", type: "date", required: true, defaultValue: d.referenceDate },
-              { name: "note", label: "Nota o riferimento all'atto", type: "textarea", help: "Le date effettive non cambiano con le riprogrammazioni (BR-006)." },
-            ]}
-            successMessage="Milestone completata e controlli ricalcolati."
-          />
-        </div>
+      {active?.canComplete && !d.procedure.cancelledAt ? (
+        <p style={{ marginTop: 16 }}>
+          Il passo in corso «{active.label}» tocca a te: <Link href={`/procedure/${d.procedure.code}?tab=iter`}>registralo nella sezione Iter</Link>. Le date effettive non cambiano con le riprogrammazioni (BR-006).
+        </p>
       ) : null}
     </section>
   );
@@ -312,6 +316,27 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
           </dl>
         ) : <p className="muted">Contratto non ancora registrato.</p>}
       </section>
+      {!d.supplierView ? (
+        <section className="card" data-tour="prenotazioni">
+          <h2>Prenotazioni e impegni per annualità</h2>
+          <table className="data">
+            <caption className="sr-only">Fabbisogno, prenotazioni e impegni per anno</caption>
+            <thead><tr><th>Anno</th><th className="num">Fabbisogno previsto</th><th className="num">Prenotato</th><th className="num">Impegnato</th></tr></thead>
+            <tbody>
+              {ev.years.map((y) => (
+                <tr key={y.year}>
+                  <td>{y.year}</td>
+                  <td className="num"><Euro v={y.need} /></td>
+                  <td className="num"><Euro v={d.process.reservations.find((r) => r.year === y.year)?.amount ?? "0.00"} /></td>
+                  <td className="num"><Euro v={d.process.commitments.find((r) => r.year === y.year)?.amount ?? "0.00"} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="small muted">Le prenotazioni si registrano con la verifica degli importi (fase 1), gli impegni dopo la determina di indizione (fase 2), dalla sezione Iter.</p>
+        </section>
+      ) : null}
+      {d.process.module2 ? (
       <section className="card" data-tour="sal">
         <h2>Piano SAL e pagamenti</h2>
         {d.sals.length ? (
@@ -338,6 +363,7 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
           </div>
         ) : <p className="muted">Piano SAL non disponibile (nei dati del workbook gli importi sono solo annuali).</p>}
       </section>
+      ) : null}
       {!d.supplierView ? (
         <>
           <section className="card">
@@ -358,7 +384,7 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
                 <tbody>{d.movements.map((m) => <tr key={m.id}><td><DateIt v={m.date} /></td><td>{MOVEMENT_LABEL[m.type] ?? m.type}</td><td className="num"><Euro v={m.amount} /></td><td className="small">{m.reference}</td></tr>)}</tbody>
               </table>
             </div>
-            {d.payments.length ? (
+            {d.process.module2 && d.payments.length ? (
               <table className="data" style={{ marginTop: 12 }}>
                 <caption>Pagamenti</caption>
                 <thead><tr><th>Data</th><th>SAL</th><th className="num">Importo</th><th>Riferimento</th><th>Stato</th>{can(actor, "finance.record") ? <th>Azioni</th> : null}</tr></thead>

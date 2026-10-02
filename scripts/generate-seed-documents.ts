@@ -1,6 +1,6 @@
 /* Genera una volta i PDF sintetici (DEC-070): dataset scenarios, oppure i casi dimostrativi con l'argomento "casi" (DEC-105). Metadati fissi, hash in SHA256SUMS. */
 import { createHash } from "node:crypto";
-import { mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
@@ -42,16 +42,38 @@ const DOCS: Doc[] = [
   { file: "da_associare/determina_indizione_cig_demo_p012.pdf", title: "DETERMINA DEL DIRETTORE GENERALE", segnatura: det("0000098", "20-03-2026"), body: ["Oggetto: indizione procedura negoziata - CIG CIG-DEMO-P012", "Documento senza codice procedura nel nome: associazione per CIG."], raster: true },
 ];
 
-const CASI_DOCS: Doc[] = [
-  { file: "CD-01/memoria_bozza.pdf", title: "MEMORIA PER IL DIRETTORE GENERALE (BOZZA)", body: ["Oggetto: Servizio di help desk applicativo per i portali istituzionali INAPP - CUP CUP-DEMO-CD01", "1. Fabbisogno: supporto di primo e secondo livello agli utenti dei portali, 12 mesi.", "5. Stima dei costi: € 51.000,00 oltre IVA (pari ad € 62.220,00 IVA inclusa).", "6. Procedura: affidamento diretto tramite trattativa diretta MePA.", "BOZZA - da consegnare entro il 07/10/2026"] },
-  { file: "CD-02/contratto.pdf", title: "CONTRATTO", body: ["Contratto per lo sviluppo del cruscotto di monitoraggio degli indicatori PN GDL - CIG CIG-DEMO-CD02", "Operatore: Fornitore Demo Alfa S.r.l.", "Corrispettivo: € 150.000,00 oltre IVA, pari ad € 183.000,00 IVA inclusa.", "Pagamenti: 30% alla consegna dell'analisi, 40% al collaudo del cruscotto, 30% a saldo.", "Decorrenza 04/05/2026, durata 12 mesi."] },
-  { file: "CD-02/relazione_sal2.pdf", title: "RELAZIONE SAL 2 - Fornitore Demo Alfa S.r.l.", body: ["Deliverable: cruscotto degli indicatori in ambiente di collaudo, manuale utente.", "Importo del SAL n. 2: € 73.200,00 (40% del corrispettivo).", "Presentato il 28/09/2026 tramite PEC."] },
-  { file: "CD-03/contratto.pdf", title: "CONTRATTO", body: ["Servizio di rilevazione CATI per l'indagine sulla qualità del lavoro - CIG CIG-DEMO-CD03", "Operatore: Fornitore Demo Alfa S.r.l.", "Corrispettivo: € 200.000,00 oltre IVA (pari ad € 244.000,00 IVA inclusa).", "SAL 1 (40%): questionario e prima ondata; SAL 2 (60%): seconda ondata e base dati."] },
-  { file: "CD-03/verbale_verifica_sal1.pdf", title: "VERBALE DI VERIFICA DI CONFORMITA' - SAL 1", body: ["Il RUP attesta la conformità delle prestazioni del SAL 1 (40%), pari ad € 97.600,00 IVA inclusa.", "Si autorizza l'emissione della fattura."] },
-  { file: "CD-04/documento_stipula_mepa.pdf", title: "DOCUMENTO DI STIPULA - TRATTATIVA DIRETTA MePA", body: ["CIG CIG-DEMO-CD04 - Fornitore Demo Beta S.r.l.", "Segreteria organizzativa di 6 eventi territoriali del PN GDL.", "Valore € 40.000,00 oltre IVA; IVA € 8.800,00; totale € 48.800,00 IVA inclusa."] },
-  { file: "CD-05/determina_indizione.pdf", title: "DETERMINA DEL DIRETTORE GENERALE", segnatura: det("0000057", "04-03-2026"), body: ["Oggetto: indizione procedura negoziata per il servizio di valutazione indipendente del PN GDL - CIG CIG-DEMO-CD05", "Criterio: offerta economicamente più vantaggiosa.", "Prenotazioni: annualità 2026 € 150.000,00; annualità 2027 € 270.000,00."] },
-  { file: "CD-06/memoria.pdf", title: "MEMORIA PER IL DIRETTORE GENERALE", segnatura: "INAPP-DEMO.PROTOCOLLO.0000391.METODOLOGIE_STATISTICHE.31-08-2026", body: ["Oggetto: rinnovo delle licenze software statistiche tramite convenzione Consip - CIG CIG-DEMO-CD06", "Stima dei costi: € 30.000,00 oltre IVA (pari ad € 36.600,00 IVA inclusa), annualità 2026."] },
-];
+/** Documenti dei casi dimostrativi (DEC-105/107): uno per ogni atto citato in seed/inapp/casi-demo.json. */
+function casiDocs(): Doc[] {
+  const ds = JSON.parse(readFileSync(path.resolve(__dirname, "..", "seed", "inapp", "casi-demo.json"), "utf8")) as {
+    procedures: { code: string; title: string; programmed: string; operator?: string; documents: { type: string; file: string; title?: string }[] }[];
+  };
+  const eur = (v: string) => `€ ${Number(v.split(".")[0]).toLocaleString("it-IT")},${v.split(".")[1] ?? "00"}`;
+  const ops: Record<string, string> = { "SUP-ALFA": "Fornitore Demo Alfa S.r.l.", "SUP-BETA": "Fornitore Demo Beta S.r.l.", "SUP-EPSILON": "Fornitore Demo Epsilon S.p.A." };
+  const out: Doc[] = [];
+  for (const p of ds.procedures) {
+    const cig = `CIG-DEMO-${p.code.replace("-", "")}`;
+    const op = p.operator ? (ops[p.operator] ?? p.operator) : "operatore da individuare";
+    for (const d of p.documents) {
+      const file = d.file.replace(/^casi:/, "");
+      const head = `Oggetto: ${p.title} - ${cig}`;
+      const body: Record<string, string[]> = {
+        MEMORIA: [head, "1. Fabbisogno e obiettivi dell'intervento.", `5. Stima dei costi: ${eur(p.programmed)} IVA inclusa.`, "7. Fonte di finanziamento: PN Giovani, Donne e Lavoro (demo)."],
+        DOCUMENTO_TECNICO: [head, "Attività, deliverable, durata e requisiti tecnici del servizio.", "Criteri di verifica della regolare esecuzione."],
+        DOCUMENTI_OPERATORE: [head, `Operatore: ${op}.`, "DGUE, dichiarazioni sui requisiti generali e speciali, visura camerale, DURC."],
+        DETERMINA_INDIZIONE: [head, "DETERMINA di indire la procedura, di acquisire il CIG e di nominare il RUP.", `Impegno di spesa complessivo pari ad ${eur(p.programmed)} IVA inclusa, ripartito per annualità.`],
+        DETERMINA_AGGIUDICAZIONE: [head, `DETERMINA di aggiudicare a ${op} per l'importo di ${eur(p.programmed)} IVA inclusa.`],
+        GARANZIA_DEFINITIVA: [head, `Garanzia definitiva prestata da ${op} ai sensi della normativa vigente.`],
+        ODA: [head, `Ordine diretto di acquisto MePA intestato a ${op}.`, `Totale ordine ${eur(p.programmed)} IVA inclusa. In attesa di accettazione del fornitore.`],
+      };
+      out.push({ file, title: (d.title ?? d.type).replace(/ – .*$/, "").toUpperCase(), body: body[d.type] ?? [head, d.title ?? d.type, d.type === "MEMORIA" ? "BOZZA" : ""] });
+    }
+  }
+  // Bozza BZ-001 (procedura guida della demo): memoria e documento tecnico pronti da consegnare
+  const bz = "Oggetto: Rinnovo licenze e supporto della piattaforma di business intelligence";
+  out.push({ file: "BZ-001/memoria.pdf", title: "MEMORIA PER IL DIRETTORE GENERALE", body: [bz, "5. Stima dei costi: € 70.000,00 oltre IVA (pari ad € 85.400,00 IVA inclusa).", "Annualità 2026 € 25.620,00; annualità 2027 € 59.780,00."] });
+  out.push({ file: "BZ-001/documento_tecnico.pdf", title: "DOCUMENTO TECNICO", body: [bz, "Licenze per 12 mesi, supporto specialistico e aggiornamenti della piattaforma di business intelligence."] });
+  return out;
+}
 
 const clean = (s: string) => s.replace(/€/g, "EUR").replace(/[’]/g, "'").replace(/→/g, "->").replace(/[^\x20-\x7E -ÿ]/g, "?");
 
@@ -123,8 +145,9 @@ async function rasterPdf(d: Doc): Promise<Uint8Array> {
 }
 
 async function main() {
+  if (CASI) rmSync(OUT, { recursive: true, force: true });
   const sums: string[] = [];
-  for (const d of CASI ? CASI_DOCS : DOCS) {
+  for (const d of CASI ? casiDocs() : DOCS) {
     const bytes = d.raster ? await rasterPdf(d) : await textPdf(d);
     const file = path.join(OUT, d.file);
     mkdirSync(path.dirname(file), { recursive: true });

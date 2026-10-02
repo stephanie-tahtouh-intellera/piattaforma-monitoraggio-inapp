@@ -8,7 +8,9 @@ import { configuredReferenceDate } from "@/infrastructure/clock";
 import type { Db } from "@/infrastructure/db/connection";
 import { loadAggregate } from "@/infrastructure/repo/procedures";
 import type { Actor } from "./auth";
-import { can, requireProcedure, scopeSql } from "./authz";
+import { can, canCompleteStep, requireProcedure, scopeSql } from "./authz";
+import { executionModuleEnabled } from "@/application/modules";
+import { STATUS_STAGE } from "@/domain/model";
 
 const money = (c: number | bigint | null | undefined) => centsToString(c ?? null);
 
@@ -213,8 +215,31 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       note: row?.note ?? null,
       evidence: evidences.find((e) => e.field === `milestone.${m.code}.actual`) ?? null,
       expectedDocuments: m.def.expectedDocuments,
+      key: m.def.key ?? false,
+      stage: m.def.stage ?? STATUS_STAGE[m.def.phase] ?? null,
+      action: m.def.action ?? null,
+      canComplete: m.active && !agg.cancelled && !agg.closed && can(actor, "milestone.update") && canCompleteStep(actor, m.def.owner, p.operator_code ?? null),
     };
   });
+  const module2 = executionModuleEnabled(db);
+  const activeStep = timeline.find((t) => t.active) ?? null;
+  const operator = p.operator_code ? (db.prepare("SELECT code, name FROM suppliers WHERE code = ?").get(p.operator_code) as { code: string; name: string }) : null;
+  const byYear = (type: string) => {
+    const m = new Map<number, bigint>();
+    for (const x of db.prepare("SELECT year, amount_cents FROM financial_movements WHERE procedure_id = ? AND type = ?").all(p0.id, type) as { year: number; amount_cents: number }[]) m.set(x.year, (m.get(x.year) ?? 0n) + BigInt(x.amount_cents));
+    return [...m.entries()].sort((a, b) => a[0] - b[0]).map(([year, c]) => ({ year, amount: centsToString(c) }));
+  };
+  const process = {
+    family: agg.template.family ?? "v1",
+    variant: agg.template.variant ?? null,
+    stage: ev.status === "CANCELLED" ? null : (activeStep?.stage ?? STATUS_STAGE[ev.status] ?? null),
+    module2,
+    activeStep: activeStep ? { code: activeStep.code, label: activeStep.label, owner: activeStep.owner, due: activeStep.forecast, canComplete: activeStep.canComplete } : null,
+    operator,
+    suppliers: actor.role === "PROCUREMENT_OFFICER" || actor.role === "VALIDATOR" ? (db.prepare("SELECT code, name FROM suppliers ORDER BY name").all() as { code: string; name: string }[]) : [],
+    reservations: byYear("RESERVATION"),
+    commitments: byYear("COMMITMENT"),
+  };
   const contract = db.prepare("SELECT c.*, s.name AS supplier_name FROM contracts c LEFT JOIN suppliers s ON s.code = c.supplier_code WHERE c.procedure_id = ?").get(p0.id) as Record<string, any> | undefined;
   const sals = (db.prepare("SELECT * FROM sals WHERE procedure_id = ? ORDER BY seq").all(p0.id) as Record<string, any>[]).map((s) => {
     const inst = agg.sals.find((x) => x.seq === s.seq)!;
@@ -322,6 +347,7 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
         baseline: centsToString(baseByYear.get(y) ?? 0n),
       })),
     },
+    process,
     rescheduleSource,
     fastestCandidate: rescheduleSource && !agg.milestones.find((m) => m.code === rescheduleSource)?.actualDate ? fastestCandidate(agg, rescheduleSource, ref, cal) : null,
     timeline,

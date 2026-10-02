@@ -1,128 +1,642 @@
 {
-  "dataset": "casi-demo",
-  "description": "Casi dimostrativi inventati (DEC-105) affiancati al portafoglio reale PN GDL: danno a ogni attore almeno un'attività da svolgere nella guida demo (SAL, fatture, pagamenti, simulazioni da approvare, validazioni). Fornitori e importi sono fittizi.",
-  "procedures": [
-    {
-      "code": "CD-01", "title": "Servizio di help desk applicativo per i portali istituzionali INAPP", "structure": "SISTEMI_INFORMATIVI",
-      "type": "DIRECT_AWARD_MEPA", "instrument": "MEPA", "programmed": "62220.00",
-      "milestones": { "MEMORY_SUBMISSION": { "forecast": "2026-10-07" } },
-      "lines": [
-        { "date": "2027-01-29", "amount": "20740.00", "anchor": "CONTRACT_SIGNED" },
-        { "date": "2027-06-30", "amount": "41480.00", "anchor": "CONTRACT_SIGNED" }
-      ],
-      "budget": [ { "year": 2027, "amount": "62220.00" } ],
-      "documents": [ { "type": "MEMORIA", "subtype": "BOZZA", "file": "casi:CD-01/memoria_bozza.pdf", "title": "Bozza di memoria – help desk applicativo" } ]
-    },
-    {
-      "code": "CD-02", "title": "Sviluppo del cruscotto di monitoraggio degli indicatori del PN Giovani, Donne e Lavoro", "structure": "SISTEMI_INFORMATIVI",
-      "type": "NEGOTIATED", "awardCriterion": "LOWEST_PRICE", "instrument": "MEPA", "programmed": "183000.00",
-      "milestones": {
-        "MEMORY_SUBMISSION": { "actual": "2025-11-10" }, "REVIEW_COMPLETED": { "actual": "2025-11-26" },
-        "INVITATION_SENT": { "actual": "2025-12-09" }, "OFFERS_DEADLINE": { "actual": "2026-01-12" },
-        "AWARD": { "actual": "2026-02-20" }, "AWARD_EFFECTIVE": { "actual": "2026-03-12" },
-        "CONTRACT_SIGNED": { "actual": "2026-04-20" }
-      },
-      "contract": { "signed": true, "supplier": "SUP-ALFA", "net": "150000.00", "vat": "33000.00", "gross": "183000.00",
-        "signedDate": "2026-04-20", "startDate": "2026-05-04", "endDate": "2027-05-03" },
-      "sals": [
-        { "seq": 1, "pct": "30.00", "state": "PAID", "dueDate": "2026-07-31", "submittedDate": "2026-07-27", "accepted": "54900.00", "liquidated": "54900.00", "invoiceDate": "2026-08-07", "deliverable": "Analisi dei requisiti e prototipo" },
-        { "seq": 2, "pct": "40.00", "state": "SUBMITTED", "dueDate": "2026-09-30", "submittedDate": "2026-09-28", "deliverable": "Cruscotto in collaudo" },
-        { "seq": 3, "pct": "30.00", "state": "PLANNED", "dueDate": "2027-04-30", "deliverable": "Rilascio in esercizio e formazione" }
-      ],
-      "payments": [ { "sal": 1, "amount": "54900.00", "date": "2026-09-04", "reference": "Mandato n. 1873/2026" } ],
-      "lines": [
-        { "date": "2026-11-27", "amount": "73200.00", "anchor": "SAL2" },
-        { "date": "2027-05-31", "amount": "54900.00", "anchor": "SAL3" }
-      ],
-      "movements": [
-        { "type": "COMMITMENT", "amount": "128100.00", "year": 2026, "date": "2025-11-26" },
-        { "type": "COMMITMENT", "amount": "54900.00", "year": 2027, "date": "2025-11-26" },
-        { "type": "LIQUIDATION", "amount": "54900.00", "year": 2026, "date": "2026-08-20" },
-        { "type": "PAYMENT", "amount": "54900.00", "year": 2026, "date": "2026-09-04" }
-      ],
-      "budget": [ { "year": 2026, "amount": "130000.00" }, { "year": 2027, "amount": "60000.00" } ],
-      "documents": [
-        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "casi:CD-02/contratto.pdf", "title": "Contratto – cruscotto indicatori PN GDL" },
-        { "type": "DELIVERABLE", "file": "casi:CD-02/relazione_sal2.pdf", "title": "Relazione SAL 2 – Fornitore Demo Alfa" }
-      ],
-      "extractionProposals": [
-        { "document": "casi:CD-02/contratto.pdf", "field": "contract.gross", "value": "183600.00", "page": 1, "excerpt": "corrispettivo complessivo pari ad € 183.600,00 IVA inclusa (lettura OCR incerta)", "confidence": "0.72" },
-        { "document": "casi:CD-02/relazione_sal2.pdf", "field": "sal.2.amount", "value": "73200.00", "page": 1, "excerpt": "Importo del SAL n. 2: € 73.200,00 (40% del corrispettivo)", "confidence": "0.94" }
-      ]
-    },
-    {
-      "code": "CD-03", "title": "Servizio di rilevazione CATI per l'indagine sulla qualità del lavoro", "structure": "STUDI_ANALISI",
-      "type": "NEGOTIATED", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "244000.00",
-      "milestones": {
-        "MEMORY_SUBMISSION": { "actual": "2025-07-14" }, "REVIEW_COMPLETED": { "actual": "2025-08-12" },
-        "INVITATION_SENT": { "actual": "2025-08-25" }, "OFFERS_DEADLINE": { "actual": "2025-09-22" },
-        "AWARD": { "actual": "2025-12-19" }, "AWARD_EFFECTIVE": { "actual": "2026-01-20" },
-        "CONTRACT_SIGNED": { "actual": "2026-02-16" }
-      },
-      "contract": { "signed": true, "supplier": "SUP-ALFA", "net": "200000.00", "vat": "44000.00", "gross": "244000.00",
-        "signedDate": "2026-02-16", "startDate": "2026-03-02", "endDate": "2026-12-31" },
-      "sals": [
-        { "seq": 1, "pct": "40.00", "state": "ACCEPTED", "dueDate": "2026-07-31", "submittedDate": "2026-07-30", "accepted": "97600.00", "deliverable": "Questionario e prima ondata di interviste" },
-        { "seq": 2, "pct": "60.00", "state": "PLANNED", "dueDate": "2026-10-30", "deliverable": "Seconda ondata e base dati finale" }
-      ],
-      "lines": [
-        { "date": "2026-10-30", "amount": "97600.00", "anchor": "SAL1" },
-        { "date": "2026-12-30", "amount": "146400.00", "anchor": "SAL2" }
-      ],
-      "movements": [ { "type": "COMMITMENT", "amount": "244000.00", "year": 2026, "date": "2025-08-12" } ],
-      "budget": [ { "year": 2026, "amount": "244000.00" } ],
-      "documents": [
-        { "type": "CONTRATTO", "subtype": "CONTRATTO_PUBBLICO", "file": "casi:CD-03/contratto.pdf", "title": "Contratto – rilevazione CATI" },
-        { "type": "VERBALE_SAL", "file": "casi:CD-03/verbale_verifica_sal1.pdf", "title": "Verbale di verifica di conformità – SAL 1" }
-      ]
-    },
-    {
-      "code": "CD-04", "title": "Segreteria organizzativa degli eventi territoriali del PN Giovani, Donne e Lavoro", "structure": "FORMAZIONE",
-      "type": "DIRECT_AWARD", "instrument": "MEPA", "programmed": "48800.00",
-      "milestones": {
-        "MEMORY_SUBMISSION": { "actual": "2026-04-06" }, "REVIEW_COMPLETED": { "actual": "2026-04-13" },
-        "AWARD": { "actual": "2026-04-22" }, "AWARD_EFFECTIVE": { "actual": "2026-04-29" },
-        "CONTRACT_SIGNED": { "actual": "2026-05-08" }
-      },
-      "contract": { "signed": true, "supplier": "SUP-BETA", "net": "40000.00", "vat": "8800.00", "gross": "48800.00",
-        "signedDate": "2026-05-08", "startDate": "2026-05-11", "endDate": "2026-07-31" },
-      "sals": [
-        { "seq": 1, "pct": "100.00", "state": "LIQUIDATED", "dueDate": "2026-07-31", "submittedDate": "2026-07-31", "accepted": "48800.00", "liquidated": "48800.00", "invoiceDate": "2026-09-01", "deliverable": "Organizzazione di 6 eventi territoriali" }
-      ],
-      "lines": [ { "date": "2026-10-01", "amount": "48800.00", "anchor": "SAL1" } ],
-      "movements": [
-        { "type": "COMMITMENT", "amount": "48800.00", "year": 2026, "date": "2026-04-13" },
-        { "type": "LIQUIDATION", "amount": "48800.00", "year": 2026, "date": "2026-09-15" }
-      ],
-      "budget": [ { "year": 2026, "amount": "48800.00" } ],
-      "documents": [ { "type": "CONTRATTO", "subtype": "TD_MEPA", "file": "casi:CD-04/documento_stipula_mepa.pdf", "title": "Documento di stipula – trattativa diretta MePA" } ]
-    },
-    {
-      "code": "CD-05", "title": "Servizio di valutazione indipendente del PN Giovani, Donne e Lavoro 2021-2027", "structure": "PROGRAMMAZIONE_CONTROLLO",
-      "type": "NEGOTIATED", "awardCriterion": "MEAT", "instrument": "OFF_MEPA", "programmed": "420000.00",
-      "milestones": {
-        "MEMORY_SUBMISSION": { "actual": "2026-02-02" }, "REVIEW_COMPLETED": { "actual": "2026-03-04" },
-        "INVITATION_SENT": { "actual": "2026-03-16" }, "OFFERS_DEADLINE": { "actual": "2026-04-13" },
-        "AWARD": { "forecast": "2026-09-14", "blocker": "Commissione giudicatrice: verifica dell'anomalia delle offerte ancora in corso" }
-      },
-      "lines": [
-        { "date": "2026-12-15", "amount": "150000.00", "anchor": "CONTRACT_SIGNED" },
-        { "date": "2027-06-30", "amount": "150000.00", "anchor": "CONTRACT_SIGNED" },
-        { "date": "2027-12-15", "amount": "120000.00", "anchor": "CONTRACT_SIGNED" }
-      ],
-      "budget": [ { "year": 2026, "amount": "150000.00" }, { "year": 2027, "amount": "280000.00" } ],
-      "documents": [ { "type": "DETERMINA_INDIZIONE", "file": "casi:CD-05/determina_indizione.pdf", "title": "Determina di indizione – valutazione indipendente" } ]
-    },
-    {
-      "code": "CD-06", "title": "Rinnovo delle licenze software per l'analisi statistica dei microdati (convenzione Consip)", "structure": "METODOLOGIE_STATISTICHE",
-      "type": "CENTRAL_PURCHASING_ORDER", "instrument": "CONSIP_AQ", "programmed": "36600.00",
-      "milestones": {
-        "MEMORY_SUBMISSION": { "actual": "2026-08-31" }, "REVIEW_COMPLETED": { "actual": "2026-09-07" },
-        "AWARD": { "forecast": "2026-09-17" }
-      },
-      "lines": [ { "date": "2026-10-30", "amount": "36600.00", "anchor": "CONTRACT_SIGNED" } ],
-      "budget": [ { "year": 2026, "amount": "36600.00" } ],
-      "documents": [ { "type": "MEMORIA", "file": "casi:CD-06/memoria.pdf", "title": "Memoria – rinnovo licenze statistiche" } ]
+ "dataset": "casi-demo",
+ "description": "Casi dimostrativi inventati (DEC-105, DEC-107) accanto al portafoglio reale PN GDL: ogni caso è fermo a un passo diverso del Modulo 1, così ogni corsia dello schema ha un'attività. Fornitori e importi sono fittizi.",
+ "procedures": [
+  {
+   "code": "CD-01",
+   "title": "Servizio di help desk applicativo per i portali istituzionali INAPP",
+   "structure": "SISTEMI_INFORMATIVI",
+   "type": "DIRECT_AWARD_MEPA",
+   "instrument": "MEPA",
+   "programmed": "62220.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "forecast": "2026-10-07"
     }
-  ]
+   },
+   "lines": [
+    {
+     "date": "2027-01-29",
+     "amount": "20740.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-06-30",
+     "amount": "41480.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "62220.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "subtype": "BOZZA",
+     "file": "casi:CD-01/memoria_bozza.pdf",
+     "title": "Bozza di memoria – CD-01"
+    }
+   ]
+  },
+  {
+   "code": "CD-02",
+   "title": "Licenze e assistenza del sistema di protocollo informatico",
+   "structure": "SISTEMI_INFORMATIVI",
+   "type": "DIRECT_AWARD_MEPA",
+   "instrument": "MEPA",
+   "programmed": "24400.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-09-28"
+    },
+    "TAKEN_IN_CHARGE": {
+     "forecast": "2026-10-02"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-03-31",
+     "amount": "24400.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "24400.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-02/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-02"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-02/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-02"
+    }
+   ]
+  },
+  {
+   "code": "CD-03",
+   "title": "Rilevazione CATI per l'indagine sulla qualità del lavoro",
+   "structure": "STUDI_ANALISI",
+   "type": "NEGOTIATED",
+   "instrument": "OFF_MEPA",
+   "programmed": "244000.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-09-14"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-09-18"
+    },
+    "FUNDING_CHECK": {
+     "forecast": "2026-10-01"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-06-30",
+     "amount": "97600.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-12-15",
+     "amount": "146400.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "250000.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-03/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-03"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-03/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-03"
+    }
+   ],
+   "awardCriterion": "MEAT"
+  },
+  {
+   "code": "CD-04",
+   "title": "Segreteria organizzativa degli eventi territoriali del PN Giovani, Donne e Lavoro",
+   "structure": "FORMAZIONE",
+   "type": "DIRECT_AWARD_MEPA",
+   "instrument": "MEPA",
+   "programmed": "48800.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-09-07"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-09-09"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-09-14"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-09-21"
+    },
+    "OPERATOR_DOCUMENTS": {
+     "forecast": "2026-10-05"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-04-30",
+     "amount": "48800.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "48800.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-04/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-04"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-04/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-04"
+    }
+   ],
+   "operator": "SUP-ALFA",
+   "movements": [
+    {
+     "type": "RESERVATION",
+     "amount": "48800.00",
+     "year": 2027,
+     "date": "2026-09-14"
+    }
+   ]
+  },
+  {
+   "code": "CD-05",
+   "title": "Servizio di valutazione indipendente del PN Giovani, Donne e Lavoro 2021-2027",
+   "structure": "PROGRAMMAZIONE_CONTROLLO",
+   "type": "NEGOTIATED",
+   "instrument": "OFF_MEPA",
+   "programmed": "420000.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-01-19"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-01-23"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-01-30"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-02-16"
+    },
+    "INDICTION": {
+     "actual": "2026-02-24"
+    },
+    "COMMITMENTS": {
+     "actual": "2026-02-27"
+    },
+    "PROCEDURE_SETUP": {
+     "actual": "2026-03-06"
+    },
+    "OFFERS_DEADLINE": {
+     "actual": "2026-04-13"
+    },
+    "EVALUATION_COMPLETED": {
+     "actual": "2026-07-17"
+    },
+    "OPERATOR_DOCUMENTS": {
+     "actual": "2026-07-31"
+    },
+    "AWARD_PROPOSAL": {
+     "actual": "2026-08-28"
+    },
+    "AWARD": {
+     "forecast": "2026-09-14",
+     "blocker": "Commissione: verifica dell'anomalia dell'offerta ancora in corso"
+    }
+   },
+   "lines": [
+    {
+     "date": "2026-12-15",
+     "amount": "150000.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-06-30",
+     "amount": "150000.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-12-15",
+     "amount": "120000.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2026,
+     "amount": "150000.00"
+    },
+    {
+     "year": 2027,
+     "amount": "280000.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-05/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-05"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-05/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-05"
+    },
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:CD-05/determina_indizione.pdf",
+     "title": "Determina di indizione – CD-05"
+    },
+    {
+     "type": "DOCUMENTI_OPERATORE",
+     "file": "casi:CD-05/documenti_operatore.pdf",
+     "title": "Documenti dell'operatore per la verifica dei requisiti – CD-05"
+    }
+   ],
+   "awardCriterion": "MEAT",
+   "operator": "SUP-BETA",
+   "movements": [
+    {
+     "type": "RESERVATION",
+     "amount": "150000.00",
+     "year": 2026,
+     "date": "2026-01-30"
+    },
+    {
+     "type": "RESERVATION",
+     "amount": "270000.00",
+     "year": 2027,
+     "date": "2026-01-30"
+    },
+    {
+     "type": "COMMITMENT",
+     "amount": "150000.00",
+     "year": 2026,
+     "date": "2026-02-27"
+    },
+    {
+     "type": "COMMITMENT",
+     "amount": "270000.00",
+     "year": 2027,
+     "date": "2026-02-27"
+    }
+   ]
+  },
+  {
+   "code": "CD-06",
+   "title": "Rinnovo delle licenze software per l'analisi statistica dei microdati (convenzione Consip)",
+   "structure": "METODOLOGIE_STATISTICHE",
+   "type": "CENTRAL_PURCHASING_ORDER",
+   "instrument": "CONSIP_AQ",
+   "programmed": "36600.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-08-24"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-08-25"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-08-27"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-08-31"
+    },
+    "OPERATOR_DOCUMENTS": {
+     "actual": "2026-09-03"
+    },
+    "REQUIREMENTS_CHECK": {
+     "actual": "2026-09-07"
+    },
+    "INDICTION": {
+     "actual": "2026-09-09"
+    },
+    "COMMITMENTS": {
+     "actual": "2026-09-10"
+    },
+    "PROCEDURE_SETUP": {
+     "actual": "2026-09-11"
+    },
+    "AWARD_PROPOSAL": {
+     "actual": "2026-09-15"
+    },
+    "AWARD": {
+     "forecast": "2026-09-17"
+    }
+   },
+   "lines": [
+    {
+     "date": "2026-10-30",
+     "amount": "36600.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2026,
+     "amount": "36600.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-06/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-06"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-06/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-06"
+    },
+    {
+     "type": "DOCUMENTI_OPERATORE",
+     "file": "casi:CD-06/documenti_operatore.pdf",
+     "title": "Documenti dell'operatore per la verifica dei requisiti – CD-06"
+    },
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:CD-06/determina_indizione.pdf",
+     "title": "Determina di indizione – CD-06"
+    }
+   ],
+   "operator": "SUP-EPSILON",
+   "movements": [
+    {
+     "type": "RESERVATION",
+     "amount": "36600.00",
+     "year": 2026,
+     "date": "2026-08-27"
+    },
+    {
+     "type": "COMMITMENT",
+     "amount": "36600.00",
+     "year": 2026,
+     "date": "2026-09-10"
+    }
+   ]
+  },
+  {
+   "code": "CD-07",
+   "title": "Servizi di hosting e gestione del portale istituzionale",
+   "structure": "SISTEMI_INFORMATIVI",
+   "type": "DIRECT_AWARD_MEPA",
+   "instrument": "MEPA",
+   "programmed": "48800.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-08-03"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-08-05"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-08-07"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-08-24"
+    },
+    "OPERATOR_DOCUMENTS": {
+     "actual": "2026-08-31"
+    },
+    "REQUIREMENTS_CHECK": {
+     "actual": "2026-09-04"
+    },
+    "INDICTION": {
+     "actual": "2026-09-09"
+    },
+    "COMMITMENTS": {
+     "actual": "2026-09-11"
+    },
+    "PROCEDURE_SETUP": {
+     "actual": "2026-09-14"
+    },
+    "AWARD_PROPOSAL": {
+     "actual": "2026-09-17"
+    },
+    "AWARD": {
+     "actual": "2026-09-21"
+    },
+    "CONTRACT_PREPARATION": {
+     "actual": "2026-09-24"
+    },
+    "GUARANTEE": {
+     "actual": "2026-09-29"
+    },
+    "CONTRACT_SIGNED": {
+     "forecast": "2026-10-06"
+    }
+   },
+   "lines": [
+    {
+     "date": "2026-12-15",
+     "amount": "24400.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-06-30",
+     "amount": "24400.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2026,
+     "amount": "24400.00"
+    },
+    {
+     "year": 2027,
+     "amount": "24400.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-07/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-07"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-07/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-07"
+    },
+    {
+     "type": "DOCUMENTI_OPERATORE",
+     "file": "casi:CD-07/documenti_operatore.pdf",
+     "title": "Documenti dell'operatore per la verifica dei requisiti – CD-07"
+    },
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:CD-07/determina_indizione.pdf",
+     "title": "Determina di indizione – CD-07"
+    },
+    {
+     "type": "DETERMINA_AGGIUDICAZIONE",
+     "file": "casi:CD-07/determina_aggiudicazione.pdf",
+     "title": "Determina di aggiudicazione – CD-07"
+    },
+    {
+     "type": "GARANZIA_DEFINITIVA",
+     "file": "casi:CD-07/garanzia_definitiva.pdf",
+     "title": "Garanzia definitiva – CD-07"
+    },
+    {
+     "type": "ODA",
+     "subtype": "ODA_MEPA",
+     "file": "casi:CD-07/ordine_mepa.pdf",
+     "title": "Ordine diretto MePA da accettare – CD-07"
+    }
+   ],
+   "operator": "SUP-ALFA",
+   "contract": {
+    "signed": false,
+    "supplier": "SUP-ALFA",
+    "net": "40000.00",
+    "vat": "8800.00",
+    "gross": "48800.00",
+    "startDate": "2026-10-15",
+    "endDate": "2027-10-14"
+   },
+   "movements": [
+    {
+     "type": "RESERVATION",
+     "amount": "24400.00",
+     "year": 2026,
+     "date": "2026-08-07"
+    },
+    {
+     "type": "RESERVATION",
+     "amount": "24400.00",
+     "year": 2027,
+     "date": "2026-08-07"
+    },
+    {
+     "type": "COMMITMENT",
+     "amount": "24400.00",
+     "year": 2026,
+     "date": "2026-09-11"
+    },
+    {
+     "type": "COMMITMENT",
+     "amount": "24400.00",
+     "year": 2027,
+     "date": "2026-09-11"
+    }
+   ],
+   "extractionProposals": [
+    {
+     "document": "casi:CD-07/ordine_mepa.pdf",
+     "field": "contract.gross",
+     "value": "48300.00",
+     "page": 1,
+     "excerpt": "Totale ordine € 48.300,00 IVA inclusa (lettura OCR incerta)",
+     "confidence": "0.71"
+    }
+   ]
+  },
+  {
+   "code": "CD-08",
+   "title": "Campagna di comunicazione sui servizi per l'occupazione giovanile",
+   "structure": "COMUNICAZIONE",
+   "type": "NEGOTIATED",
+   "instrument": "MEPA",
+   "programmed": "146400.00",
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-08-31"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-09-02"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-09-07"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-09-18"
+    },
+    "INDICTION": {
+     "actual": "2026-09-25"
+    },
+    "COMMITMENTS": {
+     "forecast": "2026-10-02"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-03-31",
+     "amount": "73200.00",
+     "anchor": "CONTRACT_SIGNED"
+    },
+    {
+     "date": "2027-09-30",
+     "amount": "73200.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "146400.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "MEMORIA",
+     "file": "casi:CD-08/memoria.pdf",
+     "title": "Memoria per il Direttore Generale – CD-08"
+    },
+    {
+     "type": "DOCUMENTO_TECNICO",
+     "file": "casi:CD-08/documento_tecnico.pdf",
+     "title": "Documento tecnico – CD-08"
+    },
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:CD-08/determina_indizione.pdf",
+     "title": "Determina di indizione – CD-08"
+    }
+   ],
+   "awardCriterion": "LOWEST_PRICE",
+   "movements": [
+    {
+     "type": "RESERVATION",
+     "amount": "146400.00",
+     "year": 2027,
+     "date": "2026-09-07"
+    }
+   ]
+  }
+ ]
 }

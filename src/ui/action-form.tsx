@@ -50,7 +50,11 @@ export function ActionForm({
       else {
         let v = String(fd.get(f.name) ?? "");
         if (f.type === "amount") v = v.replace(/\./g, "").replace(",", ".").replace(/\s|€/g, "");
-        if (v !== "") payload[f.name] = v;
+        // Campi "lines.<anno>": importi per annualità inviati come elenco (DEC-107)
+        const yl = /^lines\.(\d{4})$/.exec(f.name);
+        if (yl) {
+          if (v !== "") ((payload.lines ??= []) as { year: number; amount: string }[]).push({ year: Number(yl[1]), amount: v });
+        } else if (v !== "") payload[f.name] = v;
       }
     }
     setBusy(true);

@@ -29,8 +29,8 @@ const EXAMPLES = [
 /** Esempi coerenti con il dataset caricato (portafoglio reale + casi dimostrativi, DEC-105). */
 const EXAMPLES_INAPP = [
   "Qual è lo stato di OP04-S18?",
-  "Quanto è stato pagato su CD-02?",
-  "Quali documenti mancano per CD-01?",
+  "Qual è lo stato di CD-04?",
+  "Quali documenti mancano per CD-07?",
   "Memorie in scadenza nei prossimi 30 giorni",
   "Quali procedure sono da riprogrammare?",
   "Qual è l'importo a rischio?",
@@ -48,11 +48,12 @@ const STATUS_IT: Record<string, string> = {
   TENDERING: "indetta – in gara",
   AWARDED: "aggiudicata",
   CONTRACTING: "in stipula",
-  EXECUTION: "contratto in esecuzione",
+  EXECUTION: "a contratto stipulato",
   CLOSING: "in chiusura",
   CLOSED: "chiusa",
   CANCELLED: "annullata",
 };
+const OWNER_IT: Record<string, string> = { STRUCTURE: "Struttura richiedente", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore" };
 const HEALTH_IT: Record<string, string> = { GREEN: "verde", AMBER: "ambra", RED: "rosso", NEUTRAL: "neutro" };
 
 /**
@@ -119,7 +120,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     const nd = ev.nextDeadline;
     return {
       intent: "PROCEDURE_STATUS",
-      text: `${code} «${d.procedure.title}» è ${STATUS_IT[ev.status] ?? ev.status}, health ${HEALTH_IT[ev.health]}.${nd ? ` Prossima scadenza: ${nd.label} il ${formatDateIt(nd.due)} (${nd.daysUntil >= 0 ? `tra ${nd.daysUntil} giorni` : `scaduta da ${-nd.daysUntil} giorni`}).` : ""}${ev.rescheduleRequired ? " È richiesta una riprogrammazione." : ""}${ev.healthDrivers.length ? ` Motivi: ${ev.healthDrivers.map((x) => x.message).join("; ")}.` : ""}`,
+      text: `${code} «${d.procedure.title}» è ${STATUS_IT[ev.status] ?? ev.status}, health ${HEALTH_IT[ev.health]}.${d.process.activeStep ? ` Passo in corso: ${d.process.activeStep.label} (tocca a ${OWNER_IT[d.process.activeStep.owner] ?? d.process.activeStep.owner}).` : ""}${nd ? ` Prossima scadenza: ${nd.label} il ${formatDateIt(nd.due)} (${nd.daysUntil >= 0 ? `tra ${nd.daysUntil} giorni` : `scaduta da ${-nd.daysUntil} giorni`}).` : ""}${ev.rescheduleRequired ? " È richiesta una riprogrammazione." : ""}${ev.healthDrivers.length ? ` Motivi: ${ev.healthDrivers.map((x) => x.message).join("; ")}.` : ""}`,
       facts: [
         { label: "Fase", value: STATUS_IT[ev.status] ?? ev.status, source: "Regola: prima milestone obbligatoria non completata (DEC-023)", href: `${href}?tab=timeline` },
         { label: "Health", value: HEALTH_IT[ev.health] ?? ev.health, source: "Regole di health (guida §8.4)", href },

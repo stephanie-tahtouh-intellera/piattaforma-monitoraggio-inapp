@@ -1,0 +1,219 @@
+# Modulo 1 del processo INAPP (DEC-107): pre-contratto, dalla memoria alla stipula. Durate dimostrative DA VALIDARE.
+# Variante B: inviti/offerte/valutazione; requisiti verificati sull'aggiudicatario.
+code: M1-NEG-OEPV-v1
+label: "Procedura negoziata con offerta economicamente più vantaggiosa (Modulo 1)"
+family: m1
+variant: B
+illustrative: true
+durationMonths: 7
+selection:
+  procedureTypes: [NEGOTIATED]
+  awardCriterion: MEAT
+milestones:
+  - code: MEMORY_SUBMISSION
+    label: "Redazione e consegna della memoria e del documento tecnico"
+    phase: MEMORY_EXPECTED
+    owner: STRUCTURE
+    mandatory: true
+    blocking: true
+    offsetDays: 0
+    minDurationDays: 0
+    alertPolicy: MEMORY
+    minLeadDays: 10
+    key: true
+    stage: 1
+    expectedDocuments:
+      - { type: MEMORIA, timing: WITH, severity: HIGH }
+      - { type: DOCUMENTO_TECNICO, timing: WITH, severity: MEDIUM }
+  - code: TAKEN_IN_CHARGE
+    label: "Presa in carico della pratica (funzionario assegnato)"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 5
+    minDurationDays: 2
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 1
+    expectedDocuments: []
+  - code: FUNDING_CHECK
+    label: "Verifica importi e fonte di finanziamento – prenotazioni di spesa per annualità"
+    phase: PRELIMINARY_REVIEW
+    owner: FINANCE
+    mandatory: true
+    blocking: false
+    offsetDays: 7
+    minDurationDays: 3
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 1
+    action: RESERVATIONS
+    expectedDocuments: []
+  - code: PRELIMINARY_INQUIRY
+    label: "Istruttoria preliminare: atti di gara e requisiti di partecipazione"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 2
+    expectedDocuments: []
+  - code: INDICTION
+    label: "Determina di indizione (procedura, CIG, nomina RUP, impegni)"
+    phase: PRELIMINARY_REVIEW
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 7
+    minDurationDays: 3
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    key: true
+    stage: 2
+    expectedDocuments:
+      - { type: DETERMINA_INDIZIONE, timing: WITH, severity: HIGH }
+  - code: COMMITMENTS
+    label: "Assunzione degli impegni di spesa per annualità"
+    phase: TENDERING
+    owner: FINANCE
+    mandatory: true
+    blocking: false
+    offsetDays: 3
+    minDurationDays: 1
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 2
+    action: COMMITMENTS
+    expectedDocuments: []
+  - code: PROCEDURE_SETUP
+    label: "Acquisizione CIG, predisposizione e pubblicazione della procedura (RDO, bando)"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 7
+    minDurationDays: 3
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 2
+    expectedDocuments: []
+  - code: OFFERS_DEADLINE
+    label: "Scadenza per la presentazione delle offerte"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 25
+    minDurationDays: 12
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    expectedDocuments: []
+  - code: EVALUATION_COMPLETED
+    label: "Valutazione delle offerte e individuazione dell'aggiudicatario"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 60
+    minDurationDays: 30
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    action: OPERATOR
+    expectedDocuments: []
+  - code: OPERATOR_DOCUMENTS
+    label: "Invio documenti dell'aggiudicatario per la verifica dei requisiti"
+    phase: TENDERING
+    owner: SUPPLIER
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    expectedDocuments:
+      - { type: DOCUMENTI_OPERATORE, timing: WITH, severity: MEDIUM }
+  - code: AWARD_PROPOSAL
+    label: "Verifica dei requisiti (FVOE) e proposta di aggiudicazione"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    expectedDocuments: []
+  - code: AWARD
+    label: "Determina di aggiudicazione (operatore, importo, durata)"
+    phase: TENDERING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: true
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    key: true
+    stage: 3
+    action: AWARD
+    expectedDocuments:
+      - { type: DETERMINA_AGGIUDICAZIONE, timing: WITH, severity: HIGH }
+  - code: CONTRACT_PREPARATION
+    label: "Predisposizione e stipula del contratto (es. ODA MePA)"
+    phase: AWARDED
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    expectedDocuments: []
+  - code: GUARANTEE
+    label: "Acquisizione della garanzia definitiva (se prevista)"
+    phase: CONTRACTING
+    owner: PROCUREMENT
+    mandatory: true
+    blocking: false
+    offsetDays: 15
+    minDurationDays: 7
+    alertPolicy: STANDARD
+    minLeadDays: 10
+    key: false
+    stage: 3
+    expectedDocuments:
+      - { type: GARANZIA_DEFINITIVA, timing: WITH, severity: MEDIUM }
+  - code: CONTRACT_SIGNED
+    label: "Accettazione dell'ordine e controfirma del contratto"
+    phase: CONTRACTING
+    owner: SUPPLIER
+    mandatory: true
+    blocking: true
+    offsetDays: 6
+    minDurationDays: 3
+    alertPolicy: BLOCKING
+    minLeadDays: 10
+    key: true
+    stage: 3
+    action: SIGN
+    expectedDocuments:
+      - { type: CONTRATTO, timing: WITH, severity: HIGH }

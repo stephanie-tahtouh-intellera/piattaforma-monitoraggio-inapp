@@ -71,6 +71,8 @@ export const SeedProcedure = z.object({
     .array(z.object({ document: z.string(), field: z.string(), value: z.string(), page: z.number().int().optional(), excerpt: z.string(), confidence: z.string() }))
     .default([]),
   rescheduleProposal: z.object({ source: z.string(), candidate: date, note: z.string().optional() }).optional(),
+  /** Operatore economico individuato prima del contratto (DEC-107). */
+  operator: z.string().optional(),
 });
 
 export type SeedProcedure = z.infer<typeof SeedProcedure>;
@@ -85,6 +87,8 @@ export type SeedDataset = z.infer<typeof SeedDataset>;
 export const TemplateSchema = z.object({
   code: z.string(),
   label: z.string(),
+  family: z.enum(["v1", "m1"]).default("v1"),
+  variant: z.string().optional(),
   illustrative: z.boolean(),
   durationMonths: z.number().int(),
   selection: z.object({
@@ -97,7 +101,7 @@ export const TemplateSchema = z.object({
       code: z.string(),
       label: z.string(),
       phase: z.string(),
-      owner: z.enum(["STRUCTURE", "PROCUREMENT", "FINANCE"]),
+      owner: z.enum(["STRUCTURE", "PROCUREMENT", "FINANCE", "SUPPLIER"]),
       mandatory: z.boolean(),
       blocking: z.boolean(),
       offsetDays: z.number().int(),
@@ -105,6 +109,9 @@ export const TemplateSchema = z.object({
       alertPolicy: z.enum(["MEMORY", "BLOCKING", "STANDARD"]),
       minLeadDays: z.number().int(),
       expectedDocuments: z.array(z.object({ type: z.string(), timing: z.enum(["WITH", "BEFORE"]), severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]) })),
+      key: z.boolean().optional(),
+      stage: z.number().int().min(0).max(5).optional(),
+      action: z.enum(["OPERATOR", "RESERVATIONS", "COMMITMENTS", "AWARD", "SIGN"]).optional(),
     }),
   ),
 });

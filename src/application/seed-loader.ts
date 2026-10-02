@@ -4,7 +4,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { SeedDataset, type SeedProcedure } from "@/contracts/seed";
 import { BusinessCalendar } from "@/domain/dates";
-import { DEFAULT_SETTINGS } from "@/domain/model";
+import { DEFAULT_SETTINGS, type TemplateFamily } from "@/domain/model";
 import { Money } from "@/domain/money";
 import { writeAudit } from "@/infrastructure/audit";
 import type { Clock } from "@/infrastructure/clock";
@@ -14,6 +14,11 @@ import { buildAggregateFromSeed } from "./build-aggregate";
 import { cancelProcedureTx, closeProcedureTx } from "./procedure-events";
 
 export const ARGON_OPTS = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
+
+/** Portafoglio reale e casi dimostrativi seguono il processo del Modulo 1; il collaudo resta sui modelli v1 (DEC-107). */
+export function familyOfDataset(dataset: string | null | undefined): TemplateFamily {
+  return dataset === "inapp" || dataset === "casi-demo" || dataset === "user" ? "m1" : "v1";
+}
 
 interface Reference {
   structures: { code: string; name: string }[];
@@ -91,7 +96,7 @@ function insertProcedure(
   report: SeedReport,
 ): void {
   const now = clock.nowIso();
-  const agg = buildAggregateFromSeed(p, templates, cal, DEFAULT_SETTINGS);
+  const agg = buildAggregateFromSeed(p, templates, cal, DEFAULT_SETTINGS, familyOfDataset(dataset));
   const info = db
     .prepare(
       `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents,
@@ -122,6 +127,7 @@ function insertProcedure(
       now,
     });
   const pid = Number(info.lastInsertRowid);
+  if (p.operator) db.prepare("UPDATE procedures SET operator_code = ? WHERE id = ?").run(p.operator, pid);
   const insVersion = db.prepare(
     `INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, created_by, created_at, approved_by, approved_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,

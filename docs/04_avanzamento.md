@@ -5,15 +5,16 @@
 
 ## Stato corrente
 - **Incremento corrente:** I8 Hardening. I0–I7 completati in locale.
-- **Ultimo passo completato:** guida demo per attore (DEC-106) e casi dimostrativi CD-01…CD-06 + BZ-001 accanto al portafoglio reale (DEC-105).
-- **Prossimo passo:** collaudo con Docker e Mailpit quando disponibili (DEC-100); dizionari modificabili (US-103, oggi etichette nel codice); validazione con INAPP delle voci `DA VALIDARE`.
+- **Ultimo passo completato:** processo INAPP del Modulo 1 (DEC-107: modelli M1 per corsia, operatore invitato, prenotazioni/impegni, aggiudicazione e controfirma, scheda Iter, barra delle fasi), Modulo 2 nascosto nella demo (DEC-108), guida con percorso per fasi su BZ-001 e casi CD-01…CD-08.
+- **Prossimo passo:** validazione con INAPP dei modelli del Modulo 1 (durate dei passi, varianti A/B, aliquota IVA 22% nell'aggiudicazione) e delle altre voci `DA VALIDARE`; collaudo con Docker e Mailpit quando disponibili (DEC-100); Modulo 2 (esecuzione e rendicontazione) quando richiesto; dizionari modificabili (US-103).
 - **Blocchi aperti:** Docker non installato (DEC-100): `Dockerfile` e `docker-compose.yml` scritti ma non collaudati. Mailpit non presente in locale: le e-mail restano in outbox (visibili in Amministrazione).
-- **Quality gate:** `pnpm verify` (typecheck + guard + 80 test) e `pnpm test:e2e` (18 test Playwright + axe: demo script e guide) verdi.
+- **Quality gate:** `pnpm verify` (typecheck + guard + 80 test) e `pnpm test:e2e` (19 test Playwright + axe: demo script sul dataset di collaudo, guide e percorso per fasi completo sul dataset reale) verdi.
 
 ## Note di sessione
 - 2026-10-01 — Integrati 05/06/07/08 nella guida (v1.1). Oracle ricontrollato: invariato.
 - 2026-10-01/02 — Su indicazione del cliente: logo e dati reali INAPP (DEV-007). Implementati I0–I5; import del workbook reale (82 procedure) e fascicolo reale associato per CIG a OP04-S18. Comandi: `pnpm db:bootstrap`, `pnpm dev`, `pnpm worker`, `pnpm test`, `pnpm cli reset --yes --dataset scenarios`.
 - 2026-10-02 — Guida demo per i 7 attori (pagina `/guida`, pannello «Guida demo», aiuto di pagina) e casi dimostrativi inventati (DEC-105/106). Corretti termine SAL fisso a 15 giorni, rigetto SAL del RUP, storno pagamenti in UI, codici dell'assistente.
+- 2026-10-02 — Su indicazione del cliente la demo segue lo schema di processo INAPP (`docs/design/schema-processo-inapp.webp`): Modulo 1 implementato (DEC-107), Modulo 2 nascosto (DEC-108); casi dimostrativi riscritti per fase.
 - Problema noto dell'ambiente: gli heredoc annidati nella shell dello strumento falliscono con testo contenente apostrofi; usare file Python o lo strumento di scrittura.
 
 ## Incrementi
