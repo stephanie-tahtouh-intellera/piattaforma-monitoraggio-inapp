@@ -4,11 +4,11 @@
 > Stati: `TODO` · `IN_CORSO` · `FATTO` (test verdi + commit) · `PARZIALE` · `BLOCCATO`
 
 ## Stato corrente
-- **Incremento corrente:** I6 Documenti (P1). Il P0 (I0–I5) è funzionante in locale.
+- **Incremento corrente:** I7 Amministrazione (P1). P0 (I0–I5) e I6 completati in locale.
 - **Ultimo passo completato:** app Next.js completa del vertical slice (dashboard, portafoglio, scheda a 7 tab, wizard di riprogrammazione, centro alert, validazione, assistente, audit, amministrazione), 49 route, export, worker; 61 test verdi; `next build` verde.
-- **Prossimo passo:** I6 → generare i 22 PDF sintetici del dataset `scenarios` (pdf-lib, metadati fissi, SHA256SUMS), OCR con `tesseract.js` nel worker (T-015), upload/ZIP con protezioni (US-020, US-112), estrazione campi con evidenze (US-022). Poi I7/I8 (vedi DEV-008).
+- **Prossimo passo:** I7 → UI di configurazione di modelli e calendario (US-100/101), gestione utenti e ruoli (US-102), dizionari (US-103), creazione bozza (US-013). I8 → prestazioni con 1.000 procedure, collaudo Docker e Mailpit.
 - **Blocchi aperti:** Docker non installato (DEC-100): `Dockerfile` e `docker-compose.yml` scritti ma non collaudati. Mailpit non presente in locale: le e-mail restano in outbox (visibili in Amministrazione).
-- **Quality gate:** `pnpm verify` (typecheck + guard + test) verde.
+- **Quality gate:** `pnpm verify` (typecheck + guard + 67 test) e `pnpm test:e2e` (8 test Playwright + axe) verdi.
 
 ## Note di sessione
 - 2026-10-01 — Integrati 05/06/07/08 nella guida (v1.1). Oracle ricontrollato: invariato.
@@ -24,9 +24,9 @@
 | I3 Riprogrammazione | FATTO | simulazione, alternative, 4 occhi, override, STALE, wizard 5 passi |
 | I4 Contratti e SAL | FATTO | transizioni SAL, fatture, liquidazioni, pagamenti parziali, storni, annullamento/rilascio |
 | I5 Dashboard, validazione, audit | FATTO | KPI, export CSV/XLSX/PDF auditati, coda di validazione, audit |
-| I6 Documenti | PARZIALE | estrazione testo (unpdf) e associazione per CIG sul fascicolo reale; mancano OCR, upload/ZIP, PDF sintetici |
+| I6 Documenti | FATTO | OCR locale (tesseract.js, ita versionato), upload/ZIP protetti, estrazione campi → validazione, 22 PDF sintetici con hash stabili |
 | I7 Assistente e amministrazione | PARZIALE | assistente deterministico, data di riferimento, reset, impersonazione; mancano UI modelli/calendario/utenti/dizionari |
-| I8 Hardening e consegna | TODO | E2E Playwright + axe, prestazioni 1.000 procedure, collaudo Docker |
+| I8 Hardening e consegna | PARZIALE | E2E del demo script (8 test, axe WCAG 2.1 AA) verdi; mancano prestazioni 1.000 procedure e collaudo Docker |
 
 ## Test di collaudo
 | Test | Stato | Dove |
@@ -44,8 +44,8 @@
 | T-012 Pagamento parziale | FATTO | commands |
 | T-013 SAL P-010 | FATTO | oracle-db |
 | T-014 Doc P-007 | FATTO | oracle-db |
-| T-015 OCR | TODO | — |
-| T-016 Conflitto data da import | TODO | (anomalia di sequenza testata su P-010) |
+| T-015 OCR | FATTO | tests/integration/documents |
+| T-016 Data impossibile | FATTO | documents (DATE_IMPOSSIBLE) |
 | T-017 Permessi | FATTO | commands |
 | T-018 Audit correzione | FATTO | commands |
 | T-019 Assistente P-004 | FATTO | assistant-exports |
