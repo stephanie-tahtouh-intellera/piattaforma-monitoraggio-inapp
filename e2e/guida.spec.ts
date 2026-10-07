@@ -57,7 +57,7 @@ test.describe.serial("[DEC-106] guida demo", () => {
     await axe(page);
     await page.goto("/guida");
     await expect(page.getByRole("heading", { name: "Guida alla demo" })).toBeVisible();
-    await expect(page.locator(".guide-card")).toHaveCount(7);
+    await expect(page.locator(".guide-card")).toHaveCount(TOUR_ORDER.length);
     await expect(page.locator(".map-step")).toHaveCount(TOURS[PROCESS_TOUR]!.steps.filter((s) => s.stage !== undefined && LANE_ROLES.includes(s.role!)).length);
     await axe(page);
   });
@@ -95,7 +95,8 @@ test.describe.serial("[DEC-106] guida demo", () => {
         const card = page.locator("[data-tour='memoria']");
         await card.getByLabel("Protocollo o nota").fill("INAPP-DEMO 412/2026");
         await card.getByRole("button", { name: "Consegna memoria" }).click();
-        await expect(card.locator(".alert-box.success")).toBeVisible();
+        // Alla consegna la scheda sparisce con il refresh: l'esito è la procedura che non è più bozza, non il messaggio
+        await expect(card).toHaveCount(0);
       },
       2: () => register(() => note("Funzionario assegnato: dott.ssa Bianchi")),
       3: () => register(() => note("PN GDL – Priorità 1")),

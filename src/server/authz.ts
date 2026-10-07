@@ -20,7 +20,7 @@ export type Action =
   | "budget.edit"
   | "alert.handle"
   | "alert.suspend"
-  | "validation.decide"
+  | "document.classify"
   | "documents.import"
   | "export"
   | "audit.read"
@@ -28,27 +28,27 @@ export type Action =
   | "assistant";
 
 const M: Record<Action, Role[]> = {
-  "procedure.view": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"],
+  "procedure.view": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "ADMIN"],
   "procedure.draft": ["STRUCTURE_USER", "ADMIN"],
-  "milestone.update": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "VALIDATOR"],
+  "milestone.update": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "ADMIN"],
   "simulation.create": ["PROCUREMENT_OFFICER", "FINANCE_OFFICER"],
-  "simulation.decide": ["EXECUTIVE", "VALIDATOR"],
+  "simulation.decide": ["EXECUTIVE"],
   "simulation.override": ["EXECUTIVE"],
   "contract.edit": ["PROCUREMENT_OFFICER"],
   "sal.plan": ["STRUCTURE_USER", "PROCUREMENT_OFFICER"],
   "sal.submit": ["STRUCTURE_USER", "SUPPLIER"],
-  "sal.verify": ["STRUCTURE_USER", "VALIDATOR"],
-  "sal.accept": ["PROCUREMENT_OFFICER", "VALIDATOR"],
+  "sal.verify": ["STRUCTURE_USER"],
+  "sal.accept": ["PROCUREMENT_OFFICER"],
   "finance.record": ["FINANCE_OFFICER"],
   "budget.edit": ["FINANCE_OFFICER"],
-  "alert.handle": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "VALIDATOR"],
+  "alert.handle": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER"],
   "alert.suspend": ["PROCUREMENT_OFFICER", "EXECUTIVE"],
-  "validation.decide": ["VALIDATOR"],
-  "documents.import": ["VALIDATOR", "ADMIN"],
-  export: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "EXECUTIVE", "VALIDATOR", "ADMIN"],
-  "audit.read": ["EXECUTIVE", "VALIDATOR", "ADMIN"],
+  "document.classify": ["PROCUREMENT_OFFICER", "ADMIN"],
+  "documents.import": ["PROCUREMENT_OFFICER", "ADMIN"],
+  export: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "EXECUTIVE", "ADMIN"],
+  "audit.read": ["EXECUTIVE", "ADMIN"],
   admin: ["ADMIN"],
-  assistant: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "EXECUTIVE", "VALIDATOR", "ADMIN"],
+  assistant: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "EXECUTIVE", "ADMIN"],
 };
 
 export function can(actor: Actor, action: Action): boolean {
@@ -88,10 +88,10 @@ export const OWNER_ROLE: Record<string, string[]> = {
   SUPPLIER: ["SUPPLIER"],
 };
 
-/** Chi può completare il passo: owner del passo (il fornitore solo se è l'operatore della pratica) o validatore. */
+/** Chi può completare il passo: owner del passo (il fornitore solo se è l'operatore della pratica) o amministratore (passi in demo per conto dell'owner). */
 export function canCompleteStep(actor: Actor, owner: string, operatorCode: string | null): boolean {
   if (owner === "SUPPLIER") return actor.role === "SUPPLIER" && !!operatorCode && actor.supplierCode === operatorCode;
-  return actor.role === "VALIDATOR" || !!OWNER_ROLE[owner]?.includes(actor.role);
+  return actor.role === "ADMIN" || !!OWNER_ROLE[owner]?.includes(actor.role);
 }
 
 export const ROLE_LABEL: Record<Role, string> = {
@@ -100,6 +100,5 @@ export const ROLE_LABEL: Record<Role, string> = {
   FINANCE_OFFICER: "Amministrazione",
   SUPPLIER: "Fornitore",
   EXECUTIVE: "Direttore Generale",
-  VALIDATOR: "Validatore",
   ADMIN: "Amministratore",
 };

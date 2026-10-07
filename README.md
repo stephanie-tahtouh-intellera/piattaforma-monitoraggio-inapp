@@ -31,9 +31,8 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 | `gare` | Ufficio Gare (RUP): simulazioni, contratti, SAL |
 | `amministrazione` | Amministrazione: fatture, liquidazioni, pagamenti |
 | `struttura.si` | Struttura Sistemi informativi (vede solo la propria struttura) |
-| `validatore` | Coda di validazione, audit |
 | `fornitore.alfa` | Fornitore: pratiche in cui è operatore o contraente (CD-04, CD-07; P-004 nel dataset scenarios) |
-| `admin` | Configurazione, data di riferimento, reset, impersonazione |
+| `admin` | Configurazione, data di riferimento, reset, impersonazione; registra i passi in demo per conto dell'owner |
 
 ## Comandi
 | Comando | Effetto |

@@ -44,12 +44,11 @@ export const LOGIN_OF: Record<Role, string> = {
   FINANCE_OFFICER: "amministrazione",
   SUPPLIER: "fornitore.alfa",
   EXECUTIVE: "dirigente",
-  VALIDATOR: "validatore",
   ADMIN: "admin",
 };
 
 /** Corsie dello schema e attori di supporto. */
-export const TOUR_ORDER: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"];
+export const TOUR_ORDER: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "ADMIN"];
 export const LANE_ROLES: Role[] = ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER"];
 
 const ITER = "/procedure/BZ-001?tab=iter";
@@ -194,12 +193,13 @@ const ROLE_TOURS: Tour[] = [
     steps: [
       { path: "/", target: "section[aria-labelledby='att']", title: "Cosa richiede attenzione", body: "Procedure rosse e ambra del Piano PN Giovani, Donne e Lavoro (82 reali) e dei casi dimostrativi, con la prossima scadenza.", can: ["Aprire una procedura dall'elenco"] },
       { path: "/procedure/CD-02?tab=iter", target: PASSO, title: "Presa in carico", body: "La memoria di CD-02 è stata consegnata il 28/09/2026: tocca a te prendere in carico la pratica entro il 02/10/2026.", tryIt: "Registra il passo con nota «Funzionario assegnato: dott. Verdi»." },
-      { path: "/portafoglio?health=RED,AMBER", target: ".table-wrap", title: "Portafoglio filtrato", body: "Il filtro è nell'indirizzo della pagina. La colonna Health spiega il motivo; «Riprogrammazione richiesta» segnala una data chiave scaduta.", can: ["Filtrare, ordinare, esportare"] },
+      { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Portafoglio filtrato", body: "Qui sono le procedure rosse; per le ambra scegli un altro valore in Health. Il filtro è nell'indirizzo della pagina. La colonna Health spiega il motivo; «Riprogrammazione richiesta» segnala una data chiave scaduta.", can: ["Filtrare, ordinare, esportare"] },
       { path: "/procedure/OP01-S5?tab=iter", target: ".iter-board", title: "Una procedura reale nello schema", body: "OP01-S5 viene dal workbook: le date del Piano (V3 baseline, V4 corrente) sono mappate sulle date chiave; i passi intermedi sono dedotti. La memoria è scaduta e blocca il processo." },
       { path: "/procedure/OP01-S5/riprogrammazione", target: ".stepper", title: "Simulazione di riprogrammazione", body: "Cinque passi: causa, cronoprogramma, finanza per annualità, alternative (più rapida, minimo impatto, manuale), decisione. Salvare non cambia nulla: serve l'approvazione di un'altra persona.", tryIt: "Scegli l'alternativa più rapida, arriva alla decisione e salva." },
       { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Quattro occhi", body: "Hai inviato RS-CD05-001 (aggiudicazione al 14/12/2026): sposta spesa sul 2027–2028 oltre la disponibilità. Non puoi approvarla tu: decide il Direttore Generale. Accanto c'è la bozza automatica creata dal sistema al T+1." },
       { path: "/alert", target: "nav.tabs", title: "Centro alert", body: "Alert dei passi (T-1 mese … T+1) e anomalie di dato. Puoi sospendere l'escalation fino a una data, con motivo.", can: ["Prendere in carico, risolvere, sospendere", "Esportare in CSV"] },
-      { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Il fascicolo reale", body: "I 6 atti di gara forniti sono associati a OP04-S18 per CIG; tre scansioni sono state lette con OCR locale e i campi sono in validazione.", can: ["Caricare nuovi atti", "Aprire i PDF originali"] },
+      { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Il fascicolo reale", body: "I 6 atti di gara forniti sono associati a OP04-S18 per CIG; tre scansioni sono state lette con OCR locale.", can: ["Caricare nuovi atti", "Aprire i PDF originali"] },
+      { path: "/procedure/OP04-S18?tab=documents", target: "[data-tour='classifica']", title: "Correggere la classificazione", body: "Se un atto è classificato male, scegli il documento, il nuovo tipo e, se serve, la procedura giusta, e scrivi la motivazione. La correzione è nell'audit e il passo dell'Iter che attende quell'atto si aggiorna.", can: ["Correggere tipo e procedura di un documento"] },
     ],
   },
   {
@@ -235,7 +235,7 @@ const ROLE_TOURS: Tour[] = [
     title: "Direttore Generale", persona: "Direttore Generale (attore di supporto: firma le determine e decide le riprogrammazioni)",
     goal: "Ha la visione d'insieme e decide le riprogrammazioni, anche forzando con motivazione le criticità di bilancio.",
     cases: ["CD-05 – riprogrammazione che sfora il bilancio 2027/2028", "Portafoglio reale PN GDL: 82 procedure"],
-    next: "VALIDATOR",
+    next: "ADMIN",
     steps: [
       { path: "/", target: "section[aria-label='Indicatori principali']", title: "Dashboard direzionale", body: "Procedure monitorate per health, alert critici, programmato, contratti stipulati e importo a rischio, alla data di riferimento in alto.", can: ["Aprire l'elenco corrispondente a ogni indicatore"] },
       { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Le procedure in rosso", body: "Le date chiave scadute rendono rossa la procedura; la colonna «A rischio» mostra la spesa scoperta o in slittamento." },
@@ -246,20 +246,6 @@ const ROLE_TOURS: Tour[] = [
     ],
   },
   {
-    id: "VALIDATOR", role: "VALIDATOR", login: "validatore",
-    title: "Validatore", persona: "Validatore / operatore di monitoraggio (attore di supporto)",
-    goal: "Controlla i dati proposti dal sistema (estrazioni dai documenti, associazioni) e approva le riprogrammazioni senza criticità.",
-    cases: ["CD-07 – importo dell'ordine letto male dall'OCR (48.300 € invece di 48.800 €)", "OP04-S18 – 5 associazioni di documenti", "CD-06 – riprogrammazione senza criticità"],
-    next: "ADMIN",
-    steps: [
-      { path: "/validazione", target: ".table-wrap", title: "Coda di validazione", body: "Ogni proposta mostra valore proposto e validato, fonte con estratto e affidabilità. In CD-07 l'OCR ha letto 48.300,00 € sull'ordine MePA contro i 48.800,00 € dell'aggiudicazione.", tryIt: "Rifiuta il conflitto di CD-07 con motivazione «Errore di lettura OCR: l'ordine riporta 48.800,00 €»." },
-      { path: "/procedure/CD-07?tab=documents", target: "main table.data", title: "Verifica sulla fonte", body: "Apri l'ordine MePA: ogni valore ha un'evidenza che punta al file e alla pagina di origine." },
-      { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Documenti reali e OCR", body: "Le associazioni per CIG hanno affidabilità alta; quelle per appartenenza al fascicolo sono in coda. Il pulsante di elaborazione esegue testo e OCR sui file in attesa.", can: ["Elaborare i documenti in attesa", "Caricare documenti"] },
-      { path: "/procedure/CD-06?tab=simulations", target: "[data-tour='simulazioni']", title: "Approvare una riprogrammazione", body: "RS-CD06-001 sposta l'aggiudicazione di CD-06 al 15/10/2026 senza criticità: puoi approvarla (non è tua). Le criticità bloccanti restano riservate al Direttore Generale.", tryIt: "Approva con motivazione «Proroga coerente con la convenzione Consip»." },
-      { path: "/audit", target: ".page-meta", title: "Audit con catena di hash", body: "Gli eventi sono concatenati da hash: un'alterazione del database interromperebbe la catena.", can: ["Filtrare per procedura, utente e azione"] },
-    ],
-  },
-  {
     id: "ADMIN", role: "ADMIN", login: "admin",
     title: "Amministratore", persona: "Amministratore della piattaforma",
     goal: "Configura data di riferimento, moduli, soglie, utenti; ripristina la demo.",
@@ -267,6 +253,7 @@ const ROLE_TOURS: Tour[] = [
     steps: [
       { path: "/admin", target: "[data-tour='refdate']", title: "Data di riferimento", body: "La demo ragiona su una data di business configurabile. Spostandola in avanti scattano reminder, alert ed escalation.", tryIt: "Imposta il 20/10/2026, guarda la dashboard, poi ripristina il 01/10/2026." },
       { path: "/admin", target: "[data-tour='moduli']", title: "Moduli visibili", body: "La demo mostra il Modulo 1 (dalla programmazione alla stipula). Il Modulo 2 (esecuzione, SAL, pagamenti) è sviluppabile in seguito e resta nascosto." },
+      { path: "/procedure/CD-02?tab=iter", target: PASSO, title: "Passi in demo", body: "Per far avanzare una pratica senza cambiare utente puoi registrare un passo al posto del suo owner (qui la presa in carico dell'Ufficio Gare). Il passo del Fornitore resta riservato all'operatore della pratica.", can: ["Registrare un passo per conto dell'owner"] },
       { path: "/admin", target: "[data-tour='impersona']", title: "Impersonazione", body: "Agisci come un altro utente senza uscire: la sessione è marcata e ogni azione resta attribuita anche a te." },
       { path: "/admin", target: "[data-tour='reset']", title: "Reset della demo", body: "Ricarica da zero il portafoglio reale con i casi dimostrativi, oppure le 12 procedure di collaudo. Tutte le sessioni vengono chiuse.", can: ["Scegliere il dataset e confermare digitando RESET"] },
       { path: "/admin", target: "[data-tour='import']", title: "Import del workbook", body: "Righe lette, importate e annullate, con le segnalazioni per riga e campo." },
@@ -293,9 +280,8 @@ export function pageHelp(pathname: string, tab: string | null): PageHelp | null 
   if (pathname === "/portafoglio") return HELP.portfolio!;
   if (pathname === "/procedure/nuova") return HELP.draft!;
   if (/^\/procedure\/[^/]+\/riprogrammazione$/.test(pathname)) return HELP.reschedule!;
-  if (/^\/procedure\/[^/]+$/.test(pathname)) return HELP[`procedure.${tab ?? "overview"}`] ?? HELP["procedure.overview"]!;
+  if (/^\/procedure\/[^/]+$/.test(pathname)) return HELP[`procedure.${tab ?? "iter"}`] ?? HELP["procedure.iter"]!;
   if (pathname === "/alert") return HELP.alerts!;
-  if (pathname === "/validazione") return HELP.validation!;
   if (pathname === "/assistente") return HELP.assistant!;
   if (pathname === "/audit") return HELP.audit!;
   if (pathname === "/admin") return HELP.admin!;
@@ -309,7 +295,7 @@ const STEP_ACTIONS: Partial<Record<Role, string[]>> = {
   PROCUREMENT_OFFICER: ["Registrare i passi della corsia Ufficio Gare (presa in carico, istruttoria, determine, stipula)"],
   FINANCE_OFFICER: ["Registrare prenotazioni e impegni per annualità"],
   SUPPLIER: ["Registrare l'invio dei documenti e la controfirma del contratto"],
-  VALIDATOR: ["Registrare un passo per conto dell'owner"],
+  ADMIN: ["Registrare un passo per conto dell'owner (solo in demo)"],
 };
 
 const HELP: Record<string, PageHelp> = {
@@ -337,7 +323,6 @@ const HELP: Record<string, PageHelp> = {
       PROCUREMENT_OFFICER: ["Esportare CSV/XLSX"],
       FINANCE_OFFICER: ["Esportare CSV/XLSX"],
       EXECUTIVE: ["Esportare CSV/XLSX"],
-      VALIDATOR: ["Esportare CSV/XLSX"],
       ADMIN: ["Creare una bozza", "Esportare CSV/XLSX"],
     },
   },
@@ -394,13 +379,12 @@ const HELP: Record<string, PageHelp> = {
   "procedure.documents": {
     title: "Scheda procedura · Documenti",
     summary: "Fascicolo con stato di elaborazione (testo, OCR) e affidabilità dell'associazione.",
-    sections: [["Fascicolo", "Documenti, tipo, pagine, elaborazione, metodo di associazione."], ["Proposte da validare", "Campi estratti in attesa di decisione."]],
+    sections: [["Fascicolo", "Documenti, pagine, elaborazione, metodo di associazione."], ["Correzione della classificazione", "Cambia il tipo di atto o sposta il documento in un'altra procedura, con motivazione."]],
     actions: {
       STRUCTURE_USER: ["Caricare memoria, documento tecnico e allegati"],
-      PROCUREMENT_OFFICER: ["Caricare determine, ordini e verbali"],
+      PROCUREMENT_OFFICER: ["Caricare determine, ordini e verbali", "Correggere la classificazione dei documenti"],
       SUPPLIER: ["Caricare i documenti per la verifica dei requisiti"],
-      VALIDATOR: ["Caricare documenti", "Elaborare i documenti in attesa (OCR)"],
-      ADMIN: ["Caricare documenti", "Elaborare i documenti in attesa (OCR)"],
+      ADMIN: ["Caricare documenti", "Elaborare i documenti in attesa (OCR)", "Correggere la classificazione dei documenti"],
     },
   },
   "procedure.alerts": {
@@ -411,7 +395,6 @@ const HELP: Record<string, PageHelp> = {
       STRUCTURE_USER: ["Prendere in carico e risolvere"],
       PROCUREMENT_OFFICER: ["Prendere in carico, risolvere, sospendere l'escalation"],
       FINANCE_OFFICER: ["Prendere in carico e risolvere"],
-      VALIDATOR: ["Prendere in carico e risolvere"],
       EXECUTIVE: ["Sospendere l'escalation"],
     },
   },
@@ -422,7 +405,6 @@ const HELP: Record<string, PageHelp> = {
     actions: {
       PROCUREMENT_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
       FINANCE_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
-      VALIDATOR: ["Approvare o rifiutare (non le proprie, non con criticità bloccanti)"],
       EXECUTIVE: ["Approvare, anche con override motivato, o rifiutare"],
     },
   },
@@ -453,15 +435,8 @@ const HELP: Record<string, PageHelp> = {
       STRUCTURE_USER: ["Prendere in carico e risolvere"],
       PROCUREMENT_OFFICER: ["Prendere in carico, risolvere, sospendere"],
       FINANCE_OFFICER: ["Prendere in carico e risolvere"],
-      VALIDATOR: ["Prendere in carico e risolvere"],
       EXECUTIVE: ["Sospendere l'escalation"],
     },
-  },
-  validation: {
-    title: "Coda di validazione",
-    summary: "Proposte del sistema (estrazioni, conflitti, associazioni, riprogrammazioni dal workbook) da decidere.",
-    sections: [["Proposte", "Valore proposto e validato, fonte con estratto, metodo, affidabilità."], ["Schede", "Da decidere, approvate, corrette, rifiutate."]],
-    actions: { VALIDATOR: ["Approvare, correggere o rifiutare (motivazione obbligatoria per correggere e rifiutare)"], ADMIN: ["Consultare"] },
   },
   assistant: {
     title: "Assistente",
@@ -510,8 +485,8 @@ export const DEMO_CASES: { code: string; title: string; shows: string; who: Role
   { code: "CD-04", title: "Segreteria organizzativa degli eventi territoriali PN GDL", shows: "Fase 2 · documenti dell'operatore per la verifica dei requisiti", who: ["SUPPLIER"] },
   { code: "CD-08", title: "Campagna di comunicazione sui servizi per l'occupazione giovanile", shows: "Fase 2 · impegni di spesa dopo la determina di indizione", who: ["FINANCE_OFFICER"] },
   { code: "CD-05", title: "Valutazione indipendente del PN GDL 2021-2027", shows: "Fase 3 · aggiudicazione scaduta: riprogrammazione con sforamento, override del Direttore", who: ["PROCUREMENT_OFFICER", "EXECUTIVE"] },
-  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Fase 3 · riprogrammazione senza criticità approvata dal Validatore", who: ["VALIDATOR"] },
-  { code: "CD-07", title: "Servizi di hosting e gestione del portale istituzionale", shows: "Fase 3 · ordine da accettare e controfirmare; importo letto male dall'OCR", who: ["SUPPLIER", "VALIDATOR"] },
+  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Fase 3 · riprogrammazione senza criticità, da approvare dal Direttore Generale", who: ["EXECUTIVE"] },
+  { code: "CD-07", title: "Servizi di hosting e gestione del portale istituzionale", shows: "Fase 3 · ordine da accettare e controfirmare; l'importo letto dall'OCR differisce dall'aggiudicazione", who: ["SUPPLIER"] },
   { code: "OP01-S5", title: "Procedura reale del Piano", shows: "Memoria scaduta: simulazione di riprogrammazione guidata", who: ["PROCUREMENT_OFFICER"] },
-  { code: "OP04-S18", title: "Stage4EU – fascicolo reale", shows: "6 atti di gara reali associati per CIG, OCR, impegni letti dalla determina", who: ["PROCUREMENT_OFFICER", "VALIDATOR"] },
+  { code: "OP04-S18", title: "Stage4EU – fascicolo reale", shows: "6 atti di gara reali associati per CIG, OCR, impegni letti dalla determina", who: ["PROCUREMENT_OFFICER"] },
 ];

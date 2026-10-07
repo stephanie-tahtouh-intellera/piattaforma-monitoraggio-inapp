@@ -101,7 +101,7 @@ export default async function GuidePage() {
       </section>
 
       <h2 style={{ marginTop: 24 }}>Percorsi per attore</h2>
-      <p className="muted small">Le prime quattro sono le corsie dello schema; Direttore Generale, Validatore e Amministratore sono attori di supporto.</p>
+      <p className="muted small">Le prime quattro sono le corsie dello schema; Direttore Generale e Amministratore sono attori di supporto.</p>
       <div className="guide-grid">
         {TOUR_ORDER.map((r, i) => {
           const t = ROLE_TOUR[r];

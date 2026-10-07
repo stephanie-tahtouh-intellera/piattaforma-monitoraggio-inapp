@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DomainError } from "@/application/errors";
+import { DOC_TYPES } from "@/domain/model";
 import { formatDateIt, formatEuro } from "@/contracts/format";
 import { addDays, daysBetween, isoDate } from "@/domain/dates";
 import { can } from "@/server/authz";
@@ -9,7 +10,7 @@ import { db, pageActor, sp } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
 import { AnnualChart } from "@/ui/annual-chart";
 import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusChip } from "@/ui/badges";
-import { MOVEMENT_LABEL, OWNER_LABEL, SIM_STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
+import { DOC_TYPE_LABEL, MOVEMENT_LABEL, OWNER_LABEL, SIM_STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
 import { UploadForm } from "@/ui/upload-form";
 import { IterBoard, PhaseBar } from "@/ui/process";
@@ -32,7 +33,7 @@ export async function generateMetadata({ params }: { params: Promise<{ code: str
 export default async function ProcedurePage({ params, searchParams }: { params: Promise<{ code: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await pageActor();
   const { code } = await params;
-  const tab = sp((await searchParams).tab) ?? "overview";
+  const tab = sp((await searchParams).tab) ?? "iter";
   let d: ReturnType<typeof procedureDetail>;
   try {
     d = procedureDetail(db(), actor, decodeURIComponent(code));
@@ -51,9 +52,11 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   const p = d.procedure;
   const ev = d.evaluation;
   const module2 = d.process.module2;
+  // La scheda mostra solo Iter, Documenti e Audit. Le altre sezioni restano nel codice e raggiungibili da `?tab=`
+  // (collegamenti dell'assistente, della guida e delle simulazioni), ma non sono più nella barra.
   const tabs = d.supplierView
-    ? TABS.filter(([k]) => ["overview", "iter", "documents", ...(module2 ? ["finance"] : [])].includes(k))
-    : TABS.filter(([k]) => k !== "audit" || can(actor, "audit.read"));
+    ? TABS.filter(([k]) => ["iter", "documents", ...(module2 ? ["finance"] : [])].includes(k))
+    : TABS.filter(([k]) => k === "iter" || k === "documents" || (k === "audit" && can(actor, "audit.read")));
   const turn = d.process.activeStep;
   const ref = d.referenceDate;
 
@@ -169,12 +172,11 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           ) : null}
           <div className="table-wrap">
             <table className="data">
-              <thead><tr><th>Documento</th><th>Tipo</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
+              <thead><tr><th>Documento</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
               <tbody>
                 {(d.documents as any[]).map((x) => (
                   <tr key={x.id}>
                     <td>{x.title ?? x.file_name}</td>
-                    <td>{x.doc_type ?? "—"}{x.subtype ? ` · ${x.subtype}` : ""}</td>
                     <td className="num">{x.pages ?? "—"}</td>
                     <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{x.processing_state}</span>}</td>
                     <td>{x.association_method} · affidabilità {x.association_confidence}</td>
@@ -182,16 +184,27 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                     <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`}>Apri</a> : <span className="muted small">file non disponibile</span>}</td>
                   </tr>
                 ))}
-                {d.documents.length === 0 ? <tr><td colSpan={7} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
+                {d.documents.length === 0 ? <tr><td colSpan={6} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
               </tbody>
             </table>
           </div>
-          {d.validations.length ? (
-            <>
-              <h3 style={{ marginTop: 16 }}>Proposte da validare</h3>
-              <ul>{(d.validations as any[]).map((v) => <li key={v.id}>{v.kind} · {v.field}: proposto <strong>{v.proposed_value}</strong>{v.current_value ? ` (validato ${v.current_value})` : ""} — {v.status} {v.excerpt ? <span className="small muted">«{v.excerpt}»</span> : null}</li>)}</ul>
-              {can(actor, "validation.decide") ? <Link href="/validazione">Vai alla coda di validazione</Link> : null}
-            </>
+          {can(actor, "document.classify") && !p.cancelledAt && d.documents.length ? (
+            <div style={{ marginTop: 16 }} data-tour="classifica">
+              <h3>Correggi la classificazione di un documento</h3>
+              <p className="muted small">Cambia il tipo di atto o sposta il documento nella procedura giusta. La correzione richiede una motivazione ed è registrata nell'audit.</p>
+              <ActionForm
+                endpoint="/api/documents/classify"
+                submitLabel="Correggi classificazione"
+                variant="secondary"
+                successMessage="Classificazione corretta."
+                fields={[
+                  { name: "document_id", label: "Documento", type: "select", required: true, options: (d.documents as any[]).map((x) => ({ value: String(x.id), label: x.title ?? x.file_name })) },
+                  { name: "doc_type", label: "Nuovo tipo di atto", type: "select", options: [{ value: "", label: "Non cambiare" }, ...DOC_TYPES.map((t) => ({ value: t, label: DOC_TYPE_LABEL[t] ?? t }))] },
+                  { name: "procedure", label: "Sposta nella procedura (codice)", help: "Solo se il documento è nella procedura sbagliata, ad esempio OP04-S18." },
+                  { name: "note", label: "Motivazione", type: "textarea", required: true },
+                ]}
+              />
+            </div>
           ) : null}
         </section>
       ) : null}
@@ -426,4 +439,3 @@ function SalActions({ d, s, actor }: { d: ReturnType<typeof procedureDetail>; s:
     return <ActionForm endpoint={`${base}/payments`} submitLabel="Registra pagamento" fields={[{ name: "amount", label: "Importo", type: "amount", required: true, defaultValue: s.payable.replace(".", ","), help: `Liquidato non pagato: ${formatEuro(s.payable)}` }, date, { name: "reference", label: "Riferimento mandato (facoltativo)" }]} successMessage="Pagamento registrato." />;
   return <span className="muted small">—</span>;
 }
-

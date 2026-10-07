@@ -68,6 +68,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@node-rs/argon2",
+      "better-sqlite3",
       "esbuild",
       "sharp",
       "unrs-resolver"

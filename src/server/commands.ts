@@ -3,6 +3,7 @@ import { cancelProcedureTx, closeProcedureTx } from "@/application/procedure-eve
 import { calendarFromDb, engineSettings, runChecks } from "@/application/run-checks";
 import { resetDemo, type DatasetName } from "@/application/bootstrap";
 import { BusinessCalendar, addDays, isoDate, yearOf } from "@/domain/dates";
+import { DOC_TYPES } from "@/domain/model";
 import { Money, divRoundHalfUp } from "@/domain/money";
 import { serializeSimulation, simulate, type AlternativeKind } from "@/domain/reschedule";
 import { writeAudit } from "@/infrastructure/audit";
@@ -39,7 +40,7 @@ function parseLines(lines: StepExtras["lines"], programmed: Money): { year: numb
   return out;
 }
 
-/** US-031: completamento di una milestone (owner o validatore), data effettiva intangibile dopo. */
+/** US-031: completamento di una milestone (owner o amministratore per conto dell'owner), data effettiva intangibile dopo. */
 export function completeMilestone(db: Db, actor: Actor, code: string, milestone: string, date: string, note: string | null, extras: StepExtras = {}) {
   requireAction(actor, "milestone.update");
   const p = requireProcedure(db, actor, code);
@@ -48,7 +49,7 @@ export function completeMilestone(db: Db, actor: Actor, code: string, milestone:
   if (!def) throw new DomainError("NOT_FOUND", "Milestone non trovata", 404);
   const operatorCode = (db.prepare("SELECT operator_code FROM procedures WHERE id = ?").get(p.id) as { operator_code: string | null }).operator_code;
   if (!canCompleteStep(actor, def.owner, operatorCode)) {
-    throw new DomainError("FORBIDDEN", def.owner === "SUPPLIER" ? "Il passo spetta all'operatore economico della pratica" : "Solo l'owner della milestone o il validatore possono completarla", 403);
+    throw new DomainError("FORBIDDEN", def.owner === "SUPPLIER" ? "Il passo spetta all'operatore economico della pratica" : "Solo l'owner della milestone o l'amministratore possono completarla", 403);
   }
   const ref = configuredReferenceDate(db);
   const d = isoDate(date);
@@ -372,38 +373,42 @@ export function handleAlert(db: Db, actor: Actor, alertId: number, op: "acknowle
   });
 }
 
-/** US-023 / US-080: decisione del validatore; l'originale resta (BR-015). */
-export function decideValidation(db: Db, actor: Actor, id: number, outcome: "APPROVED" | "CORRECTED" | "REJECTED", value: string | null, note: string | null) {
-  requireAction(actor, "validation.decide");
-  const v = db.prepare("SELECT v.*, p.code FROM validation_items v JOIN procedures p ON p.id = v.procedure_id WHERE v.id = ?").get(id) as Record<string, any> | undefined;
-  if (!v) throw new DomainError("NOT_FOUND", "Elemento non trovato", 404);
-  requireProcedure(db, actor, v.code);
-  if (v.status !== "OPEN") throw new DomainError("INVALID_TRANSITION", "Elemento già deciso", 409);
-  if ((outcome === "CORRECTED" || outcome === "REJECTED") && !note?.trim()) throw new DomainError("VALIDATION_ERROR", "Motivazione obbligatoria", 422);
-  if (outcome === "CORRECTED" && !value) throw new DomainError("VALIDATION_ERROR", "Valore corretto obbligatorio", 422);
-  const now = systemNowIso();
+/** Correzione della classificazione di un documento: tipo di atto e, se serve, procedura (DEC-109). Audit con prima/dopo e motivazione. */
+export function classifyDocument(db: Db, actor: Actor, documentId: number, docTypeIn: string | null, procedureCode: string | null, note: string | null) {
+  requireAction(actor, "document.classify");
+  const d = db
+    .prepare("SELECT d.id, d.doc_type, d.subtype, d.procedure_id, p.code AS procedure_code FROM documents d LEFT JOIN procedures p ON p.id = d.procedure_id WHERE d.id = ?")
+    .get(documentId) as { id: number; doc_type: string | null; subtype: string | null; procedure_id: number | null; procedure_code: string | null } | undefined;
+  if (!d) throw new DomainError("NOT_FOUND", "Documento non trovato", 404);
+  if (d.procedure_code) requireProcedure(db, actor, d.procedure_code);
+  const docType = docTypeIn ?? d.doc_type;
+  if (!docType || !(DOC_TYPES as readonly string[]).includes(docType)) throw new DomainError("VALIDATION_ERROR", "Tipo di documento non valido", 422);
+  if (!note?.trim()) throw new DomainError("VALIDATION_ERROR", "Motivazione obbligatoria", 422);
+  const target = procedureCode && procedureCode !== d.procedure_code ? requireProcedure(db, actor, procedureCode) : null;
+  const typeChanged = docType !== d.doc_type;
+  if (!typeChanged && !target) throw new DomainError("VALIDATION_ERROR", "Nessuna modifica: indica un tipo o una procedura diversi", 422);
+  const finalCode = target?.code ?? d.procedure_code;
   tx(db, () => {
-    db.prepare("UPDATE validation_items SET status = ?, decision_value = ?, decided_by = ?, decided_at = ?, note = ? WHERE id = ?").run(outcome, value, actor.login, now, note, id);
-    db.prepare("INSERT INTO evidences (procedure_id, field, value, source_type, document_id, locator, excerpt, method, confidence, author, created_at) VALUES (?, ?, ?, 'MANUAL', ?, ?, ?, 'VALIDATION', '1.00', ?, ?)").run(
-      v.procedure_id,
-      v.field,
-      outcome === "REJECTED" ? v.current_value : (value ?? v.proposed_value),
-      v.document_id,
-      v.locator,
-      note ?? `Validazione: ${outcome}`,
-      actor.login,
-      now,
-    );
+    try {
+      db.prepare(
+        `UPDATE documents SET doc_type = ?, subtype = ?, procedure_id = ?, association_method = ?, association_confidence = ? WHERE id = ?`,
+      ).run(docType, typeChanged ? null : d.subtype, target?.id ?? d.procedure_id, "MANUAL", "1.00", documentId);
+    } catch (e) {
+      if (e instanceof Error && /UNIQUE/.test(e.message)) throw new DomainError("CONFLICT", "Lo stesso file è già nel fascicolo della procedura indicata", 409);
+      throw e;
+    }
+    if (target) db.prepare("UPDATE validation_items SET procedure_id = ?, current_value = NULL WHERE document_id = ?").run(target.id, documentId);
     audit(db, actor, {
-      action: `VALIDATION_${outcome}`,
-      entityType: "VALIDATION_ITEM",
-      entityId: String(id),
-      procedureCode: v.code,
-      before: { proposed: v.proposed_value, current: v.current_value },
-      after: { outcome, value: value ?? null },
+      action: "DOCUMENT_CLASSIFY",
+      entityType: "DOCUMENT",
+      entityId: String(documentId),
+      procedureCode: finalCode,
+      before: { docType: d.doc_type, procedure: d.procedure_code },
+      after: { docType, procedure: finalCode },
       reason: note,
     });
   });
+  for (const id of new Set([d.procedure_id, target?.id].filter((x): x is number => typeof x === "number"))) recheck(db, id);
 }
 
 export function cancelProcedure(db: Db, actor: Actor, code: string, reason: string) {

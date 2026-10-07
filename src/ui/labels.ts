@@ -74,7 +74,20 @@ export const RULE_LABEL: Record<string, string> = {
   PAYMENT_OVER_CONTRACT: "Pagato oltre contratto",
   COMMITTED_ON_CANCELLED: "Impegni su procedura annullata",
 };
-export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore", VALIDATOR: "Validatore" };
+export const DOC_TYPE_LABEL: Record<string, string> = {
+  MEMORIA: "Memoria",
+  DOCUMENTO_TECNICO: "Documento tecnico",
+  DOCUMENTI_OPERATORE: "Documenti dell'operatore",
+  DETERMINA_INDIZIONE: "Determina di indizione",
+  DETERMINA_AGGIUDICAZIONE: "Determina di aggiudicazione",
+  GARANZIA_DEFINITIVA: "Garanzia definitiva",
+  CONTRATTO: "Contratto",
+  ODA: "Ordine diretto (ODA)",
+  ADDENDUM: "Addendum",
+  DETERMINA_REVOCA: "Determina di revoca",
+  VERBALE_SAL: "Verbale di SAL",
+};
+export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore" };
 
 /** Fasi e corsie dello schema di processo INAPP (DEC-107). */
 export const STAGES: { n: number; title: string; sub: string; module: 1 | 2 }[] = [

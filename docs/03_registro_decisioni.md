@@ -143,3 +143,15 @@ Formato:
 - Data: 2026-10-02 · Autore: agente, su indicazione del cliente («nascondilo dalla demo»)
 - Decisione: configurazione `modules.execution` (Amministrazione → Moduli visibili, auditata). Default: nascosto per il portafoglio reale, visibile per il dataset di collaudo (i test del demo script su SAL e pagamenti restano validi). Con il Modulo 2 nascosto non compaiono piano SAL, liquidazioni, pagamenti, indicatore «Pagato» e fasi 4–5; la barra delle fasi termina con «Contratto stipulato». Le funzioni restano nel codice e nei test.
 - Stato: attiva.
+
+### DEC-109 — Ruolo Validatore soppresso; correzione della classificazione ai ruoli di corsia
+- Data: 2026-10-06 · Autore: agente, su indicazione del cliente («togli il ruolo»)
+- Decisione:
+  - il ruolo `VALIDATOR` e l'utente `validatore` non esistono più (modello, permessi, seed, login, tour, README); la migrazione `0004_remove_validator.sql` toglie l'utente dai database esistenti e riassegna all'Ufficio Gare le anomalie che avevano il Validatore come owner;
+  - **coda di validazione soppressa** (pagina `/validazione`, rotte `/api/validations`, comando `decideValidation`, permesso `validation.decide`): i valori letti dai documenti (importi, date, CIG, piano SAL) vengono ancora estratti e conservati come evidenza nel database, ma non sono più mostrati né decisi da nessuno (la sezione «Valori letti dai documenti», aggiunta in un primo momento, è stata tolta su richiesta del cliente); non modificano i dati;
+  - **correzione della classificazione** di un documento (tipo di atto ed eventuale spostamento in un'altra procedura) a Ufficio Gare e amministratore (permesso `document.classify`, rotta `POST /api/documents/classify`, comando `classifyDocument`): motivazione obbligatoria, audit `DOCUMENT_CLASSIFY` con prima/dopo, controllo object-level su procedura di origine e di destinazione;
+  - **passi in demo** registrati dall'amministratore al posto dell'owner di corsia (non per il Fornitore, che resta riservato all'operatore della pratica);
+  - le riprogrammazioni sono decise solo dal Direttore Generale (DEC-042 modificata); `documents.import` va a Ufficio Gare e amministratore.
+- Motivo: il Validatore non compare nello schema di processo INAPP (quattro corsie).
+- Effetti: superate le parti di US-022/US-023/US-080 che prevedono la decisione di un validatore sulle proposte; il test T-018 verifica ora la correzione della classificazione con audit. Il vincolo CHECK sui ruoli in `0001_init.sql` conserva il valore `VALIDATOR` ma nessuna riga può usarlo.
+- Stato: attiva. Da confermare con INAPP se la correzione della classificazione debba spettare anche alla Struttura richiedente.

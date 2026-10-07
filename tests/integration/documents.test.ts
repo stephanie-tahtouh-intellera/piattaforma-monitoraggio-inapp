@@ -57,12 +57,12 @@ describe("[US-112] protezione degli upload", () => {
       { name: "ok/determina_indizione.pdf", data: realPdf("contratto.pdf") },
       { name: "nota.exe", data: Buffer.from("MZ") },
     ]);
-    const r = await storeUpload(db, "validatore", pid, "P-003", "fascicolo.zip", z);
+    const r = await storeUpload(db, "admin", pid, "P-003", "fascicolo.zip", z);
     expect(r.stored.length).toBe(1);
     expect(r.rejected.join(" ")).toMatch(/ZIP slip/);
     expect(r.rejected.join(" ")).toMatch(/nota\.exe/);
     expect((db.prepare("SELECT COUNT(*) n FROM audit_events WHERE action='UPLOAD_REJECTED'").get() as { n: number }).n).toBeGreaterThanOrEqual(1);
-    const again = await storeUpload(db, "validatore", pid, "P-003", "fascicolo.zip", z);
+    const again = await storeUpload(db, "admin", pid, "P-003", "fascicolo.zip", z);
     expect(again.stored.length).toBe(0);
   });
 });
@@ -92,8 +92,8 @@ describe("[T-015] OCR di fallback su un atto reale senza layer di testo", () => 
 
   test("documento caricato: pagine OCR salvate e proposte in coda, nessuna sovrascrittura", async () => {
     const pid = (db.prepare("SELECT id FROM procedures WHERE code='P-012'").get() as { id: number }).id;
-    const r = await storeUpload(db, "validatore", pid, "P-012", "determina_indizione_scansione.pdf", realPdf("determina_indizione.pdf"));
-    const out = await processDocument(db, r.stored[0]!, "validatore");
+    const r = await storeUpload(db, "admin", pid, "P-012", "determina_indizione_scansione.pdf", realPdf("determina_indizione.pdf"));
+    const out = await processDocument(db, r.stored[0]!, "admin");
     expect(out.state).toBe("OCR_DONE");
     expect(out.ocrPages).toBe(4);
     const pages = db.prepare("SELECT method FROM document_pages WHERE document_id = ?").all(r.stored[0]!) as { method: string }[];

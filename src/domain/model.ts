@@ -7,7 +7,6 @@ export type Role =
   | "FINANCE_OFFICER"
   | "SUPPLIER"
   | "EXECUTIVE"
-  | "VALIDATOR"
   | "ADMIN";
 
 export const ROLES: Role[] = [
@@ -16,9 +15,23 @@ export const ROLES: Role[] = [
   "FINANCE_OFFICER",
   "SUPPLIER",
   "EXECUTIVE",
-  "VALIDATOR",
   "ADMIN",
 ];
+
+/** Tipi di atto con cui si classifica un documento del fascicolo (correggibili da Ufficio Gare e amministratore). */
+export const DOC_TYPES = [
+  "MEMORIA",
+  "DOCUMENTO_TECNICO",
+  "DOCUMENTI_OPERATORE",
+  "DETERMINA_INDIZIONE",
+  "DETERMINA_AGGIUDICAZIONE",
+  "GARANZIA_DEFINITIVA",
+  "CONTRATTO",
+  "ODA",
+  "ADDENDUM",
+  "DETERMINA_REVOCA",
+  "VERBALE_SAL",
+] as const;
 
 /** Owner logico di una milestone (ruolo applicativo abbreviato). */
 export type OwnerRole = "STRUCTURE" | "PROCUREMENT" | "FINANCE" | "SUPPLIER";

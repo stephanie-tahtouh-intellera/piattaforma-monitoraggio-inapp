@@ -26,7 +26,6 @@
     { "login": "amministrazione", "name": "Amministrazione e Contabilità", "role": "FINANCE_OFFICER", "structureScope": "*" },
     { "login": "fornitore.alfa", "name": "Fornitore Demo Alfa S.r.l.", "role": "SUPPLIER", "structureScope": "*", "supplier": "SUP-ALFA" },
     { "login": "dirigente", "name": "Direttore Generale (demo)", "role": "EXECUTIVE", "structureScope": "*" },
-    { "login": "validatore", "name": "Validatore / Operatore di monitoraggio", "role": "VALIDATOR", "structureScope": "*" },
     { "login": "admin", "name": "Amministratore piattaforma", "role": "ADMIN", "structureScope": "*" }
   ]
 }

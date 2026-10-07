@@ -7,9 +7,8 @@ const USERS = [
   ["gare", "Ufficio Gare (RUP)", "simula e gestisce le gare"],
   ["amministrazione", "Amministrazione", "SAL, liquidazioni, pagamenti"],
   ["struttura.si", "Struttura richiedente", "Sistemi informativi"],
-  ["validatore", "Validatore", "coda di validazione"],
   ["fornitore.alfa", "Fornitore", "solo contratti assegnati"],
-  ["admin", "Amministratore", "configurazione e reset"],
+  ["admin", "Amministratore", "configurazione, reset e passi in demo"],
 ] as const;
 
 export function LoginForm({ initialLogin, startTour = false }: { initialLogin?: string | undefined; startTour?: boolean }) {

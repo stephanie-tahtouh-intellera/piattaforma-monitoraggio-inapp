@@ -120,7 +120,7 @@ export default async function AdminPage() {
             fields={[
               { name: "login", label: "Login", required: true },
               { name: "name", label: "Nome", required: true },
-              { name: "role", label: "Ruolo", type: "select", options: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"].map((r) => ({ value: r, label: r })) },
+              { name: "role", label: "Ruolo", type: "select", options: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "ADMIN"].map((r) => ({ value: r, label: r })) },
               { name: "structure_scope", label: "Ambito (codice struttura o *)", defaultValue: "*" },
               { name: "supplier", label: "Fornitore (solo per il ruolo SUPPLIER, es. SUP-ALFA)" },
               { name: "active", label: "Attivo", type: "checkbox", defaultValue: "true" },

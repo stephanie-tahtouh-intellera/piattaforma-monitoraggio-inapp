@@ -10,7 +10,7 @@ export const GET = route(({ db, actor }) => {
 });
 const B = z.object({
   login: z.string(), name: z.string().min(2).max(120),
-  role: z.enum(["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "VALIDATOR", "ADMIN"]),
+  role: z.enum(["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "EXECUTIVE", "ADMIN"]),
   structure_scope: z.string().max(60).default("*"), supplier: z.string().max(40).optional(), active: z.boolean().default(true),
 });
 export const POST = route(async ({ db, actor, req }) => {

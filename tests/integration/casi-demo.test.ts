@@ -5,7 +5,7 @@ import { openDb, setDbForTests, type Db } from "@/infrastructure/db/connection";
 import { login } from "@/server/auth";
 import { completeMilestone } from "@/server/commands";
 import { submitMemory } from "@/server/admin-commands";
-import { listProcedures, procedureDetail, validationQueue } from "@/server/queries";
+import { listProcedures, procedureDetail } from "@/server/queries";
 import { clock } from "../helpers/db";
 
 let db: Db;
@@ -70,14 +70,14 @@ describe("[DEC-105][DEC-107] casi dimostrativi del Modulo 1: ogni corsia ha un p
     expect(d.process.activeStep?.code).toBe("PRELIMINARY_INQUIRY");
   });
 
-  test("Direttore e Validatore: simulazioni in attesa di decisione; conflitto OCR in validazione", () => {
+  test("Direttore Generale: simulazioni in attesa di decisione; valore OCR in conflitto consultabile", () => {
     const s5 = (procedureDetail(db, actor("dirigente"), "CD-05").simulations as any[]).find((x) => x.created_by === "gare");
     expect([s5.status, s5.blocking]).toEqual(["SUBMITTED", 1]);
     expect(s5.result.criticalities.some((c: any) => c.code === "BUDGET_OVERFLOW")).toBe(true);
-    const s6 = (procedureDetail(db, actor("validatore"), "CD-06").simulations as any[]).find((x) => x.created_by === "gare");
+    const s6 = (procedureDetail(db, actor("dirigente"), "CD-06").simulations as any[]).find((x) => x.created_by === "gare");
     expect([s6.status, s6.blocking]).toEqual(["SUBMITTED", 0]);
-    const items = validationQueue(db, actor("validatore")) as any[];
-    expect(items.some((v) => v.procedure_code === "CD-07" && v.kind === "CONFLICT")).toBe(true);
+    const items = procedureDetail(db, actor("dirigente"), "CD-07").validations as any[];
+    expect(items.some((v) => v.kind === "CONFLICT")).toBe(true);
   });
 
   test("percorso completo della procedura guida BZ-001: dal piano alla stipula, ogni corsia nel suo turno", () => {

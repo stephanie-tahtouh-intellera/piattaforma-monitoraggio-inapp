@@ -2,12 +2,12 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { centsToString } from "@/contracts/format";
 import type { Db } from "@/infrastructure/db/connection";
 import { login, type Actor } from "@/server/auth";
-import { requireProcedure } from "@/server/authz";
+import { canCompleteStep, requireProcedure } from "@/server/authz";
 import {
   approveSimulation,
   cancelProcedure,
   createSimulation,
-  decideValidation,
+  classifyDocument,
   handleAlert,
   registerPayment,
   rejectSimulation,
@@ -111,8 +111,8 @@ describe("[US-054] approvazione riprogrammazione", () => {
     const gare = as("gare");
     const r = createSimulation(db, gare, "P-002", { source: "MEMORY_SUBMISSION", candidateDate: "2026-11-16", kind: "MANUAL", cause: "MEMORY_OVERDUE" });
     submitSimulation(db, gare, r.simulation_id);
-    expect(() => approveSimulation(db, as("validatore"), r.simulation_id, "ok")).toThrow(/override/);
-    expect(() => approveSimulation(db, as("validatore"), r.simulation_id, "ok", true)).toThrow(/Direttore Generale/);
+    expect(() => approveSimulation(db, as("amministrazione"), r.simulation_id, "ok", true)).toThrow(/non consentita/);
+    expect(() => approveSimulation(db, as("dirigente"), r.simulation_id, "ok")).toThrow(/override/);
     approveSimulation(db, as("dirigente"), r.simulation_id, "Accettato overflow con variazione di bilancio", true);
     const d = procedureDetail(db, as("dirigente"), "P-002");
     expect(d.evaluation.annualNeed).toEqual({ "2026": "50000.00", "2027": "430000.00" });
@@ -146,14 +146,28 @@ describe("alert, validazione, annullamento", () => {
     handleAlert(db, s, id, "resolve", "Memoria in firma", null);
     expect((db.prepare("SELECT status FROM alerts WHERE id=?").get(id) as any).status).toBe("RESOLVED");
   });
-  test("[T-018] correzione di un campo estratto: prima/dopo, autore, motivazione", () => {
-    const v = db.prepare("SELECT id FROM validation_items WHERE kind='CONFLICT'").get() as any;
-    expect(() => decideValidation(db, as("validatore"), v.id, "CORRECTED", "310000.00", "")).toThrow(/Motivazione/);
-    decideValidation(db, as("validatore"), v.id, "CORRECTED", "310000.00", "L'importo corretto è quello dell'aggiudicazione");
-    const a = db.prepare("SELECT actor, before_json, after_json, reason FROM audit_events WHERE action='VALIDATION_CORRECTED'").get() as any;
-    expect(a.actor).toBe("validatore");
-    expect(JSON.parse(a.before_json)).toEqual({ proposed: "310500.00", current: "310000.00" });
-    expect(a.reason).toMatch(/aggiudicazione/);
+  test("[T-018] correzione della classificazione di un documento: prima/dopo, autore, motivazione, ruoli (DEC-109)", () => {
+    const doc = db.prepare("SELECT d.id, d.doc_type, p.code FROM documents d JOIN procedures p ON p.id = d.procedure_id WHERE d.doc_type IS NOT NULL ORDER BY d.id LIMIT 1").get() as { id: number; doc_type: string; code: string };
+    const next = doc.doc_type === "ADDENDUM" ? "CONTRATTO" : "ADDENDUM";
+    expect(() => classifyDocument(db, as("struttura.si"), doc.id, next, null, "x")).toThrow(/non consentita/);
+    expect(() => classifyDocument(db, as("gare"), doc.id, next, null, "")).toThrow(/Motivazione/);
+    expect(() => classifyDocument(db, as("gare"), doc.id, "NON_ESISTE", null, "x")).toThrow(/Tipo di documento/);
+    expect(() => classifyDocument(db, as("gare"), doc.id, doc.doc_type, null, "x")).toThrow(/Nessuna modifica/);
+    classifyDocument(db, as("gare"), doc.id, next, null, "L'atto è un'altra tipologia");
+    const row = db.prepare("SELECT doc_type, subtype, association_method FROM documents WHERE id = ?").get(doc.id) as any;
+    expect(row).toEqual({ doc_type: next, subtype: null, association_method: "MANUAL" });
+    const a = db.prepare("SELECT actor, before_json, after_json, reason FROM audit_events WHERE action='DOCUMENT_CLASSIFY'").get() as any;
+    expect(a.actor).toBe("gare");
+    expect(JSON.parse(a.before_json)).toEqual({ docType: doc.doc_type, procedure: doc.code });
+    expect(JSON.parse(a.after_json)).toEqual({ docType: next, procedure: doc.code });
+    expect(a.reason).toMatch(/tipologia/);
+    classifyDocument(db, as("admin"), doc.id, doc.doc_type, null, "Ripristino");
+    expect((db.prepare("SELECT doc_type FROM documents WHERE id = ?").get(doc.id) as any).doc_type).toBe(doc.doc_type);
+  });
+  test("[DEC-109] il passo del ruolo di corsia può essere registrato dall'amministratore, non dal fornitore altrui", () => {
+    expect(canCompleteStep(as("admin"), "PROCUREMENT", null)).toBe(true);
+    expect(canCompleteStep(as("admin"), "SUPPLIER", null)).toBe(false);
+    expect(canCompleteStep(as("struttura.si"), "PROCUREMENT", null)).toBe(false);
   });
   test("[BR-020] annullamento rilascia solo le prenotazioni non impegnate", () => {
     const r = cancelProcedure(db, as("dirigente"), "P-004", "test");

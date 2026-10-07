@@ -236,7 +236,7 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
     module2,
     activeStep: activeStep ? { code: activeStep.code, label: activeStep.label, owner: activeStep.owner, due: activeStep.forecast, canComplete: activeStep.canComplete } : null,
     operator,
-    suppliers: actor.role === "PROCUREMENT_OFFICER" || actor.role === "VALIDATOR" ? (db.prepare("SELECT code, name FROM suppliers ORDER BY name").all() as { code: string; name: string }[]) : [],
+    suppliers: actor.role === "PROCUREMENT_OFFICER" || actor.role === "ADMIN" ? (db.prepare("SELECT code, name FROM suppliers ORDER BY name").all() as { code: string; name: string }[]) : [],
     reservations: byYear("RESERVATION"),
     commitments: byYear("COMMITMENT"),
   };
@@ -434,17 +434,6 @@ export function notificationsFor(db: Db, actor: Actor) {
        WHERE n.user_id = ? AND n.channel = 'IN_APP' ORDER BY n.id DESC LIMIT 50`,
     )
     .all(actor.userId, actor.userId);
-}
-
-export function validationQueue(db: Db, actor: Actor, status = "OPEN") {
-  const scope = scopeSql(actor);
-  return db
-    .prepare(
-      `SELECT v.*, p.code AS procedure_code, p.title AS procedure_title, d.file_name
-       FROM validation_items v JOIN procedures p ON p.id = v.procedure_id LEFT JOIN documents d ON d.id = v.document_id
-       WHERE ${scope.sql} AND v.status = ? ORDER BY CAST(v.confidence AS TEXT) ASC, v.id`,
-    )
-    .all(...scope.params, status);
 }
 
 export function auditList(db: Db, f: { procedure?: string; actor?: string; action?: string; limit?: number }) {

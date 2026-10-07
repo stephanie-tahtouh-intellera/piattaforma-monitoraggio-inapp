@@ -18,14 +18,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const scope = scopeSql(actor);
   const openAlerts = (d.prepare(`SELECT COUNT(*) AS n FROM alerts a JOIN procedures p ON p.id = a.procedure_id WHERE ${scope.sql} AND a.kind='ALERT' AND a.status IN ('OPEN')`).get(...scope.params) as { n: number }).n;
   const unread = (d.prepare("SELECT COUNT(*) AS n FROM alert_notifications n WHERE n.user_id = ? AND n.channel='IN_APP' AND NOT EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = ?)").get(actor.userId, actor.userId) as { n: number }).n;
-  const validations = (d.prepare(`SELECT COUNT(*) AS n FROM validation_items v JOIN procedures p ON p.id = v.procedure_id WHERE ${scope.sql} AND v.status='OPEN'`).get(...scope.params) as { n: number }).n;
   const dataset = (d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get() as { value: string } | undefined)?.value ?? "";
   const items: (NavItem | "sep")[] = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/portafoglio", label: "Portafoglio", icon: "portfolio" },
   ];
   if (actor.role !== "SUPPLIER") items.push({ href: "/alert", label: "Centro alert", icon: "alerts", count: openAlerts });
-  if (can(actor, "validation.decide") || actor.role === "ADMIN") items.push({ href: "/validazione", label: "Coda di validazione", icon: "validation", count: validations });
   if (can(actor, "assistant")) items.push({ href: "/assistente", label: "Assistente", icon: "assistant" });
   if (can(actor, "audit.read")) items.push("sep", { href: "/audit", label: "Audit", icon: "audit" });
   if (can(actor, "admin")) items.push({ href: "/admin", label: "Amministrazione", icon: "admin" });

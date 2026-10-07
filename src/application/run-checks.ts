@@ -147,7 +147,7 @@ export function runChecks(db: Db, clock: Clock, opts: { procedureIds?: number[];
           const r = db
             .prepare(
               `INSERT INTO alerts (procedure_id, kind, rule, target, due_key, severity, status, owner, title, message, created_at, updated_at)
-               VALUES (?, 'ANOMALY', ?, ?, '', ?, 'OPEN', 'VALIDATOR', ?, ?, ?, ?)`,
+               VALUES (?, 'ANOMALY', ?, ?, '', ?, 'OPEN', 'PROCUREMENT', ?, ?, ?, ?)`,
             )
             .run(pid, an.rule, an.target, an.severity, an.message, an.message, now, now);
           keepA.add(Number(r.lastInsertRowid));
