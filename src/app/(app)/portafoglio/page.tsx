@@ -65,7 +65,6 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <select id="f-health" name="health" defaultValue={f.health ?? ""}>
             <option value="">Tutti</option>
             {Object.entries(HEALTH_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            <option value="RED,AMBER">Rosso o ambra</option>
           </select>
         </div>
         <div className="field">

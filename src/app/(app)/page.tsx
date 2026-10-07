@@ -106,9 +106,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       <section className="card" aria-labelledby="att" style={{ marginTop: 16 }}>
         <div className="page-head" style={{ marginBottom: 8 }}>
           <h2 id="att">Richiede attenzione</h2>
-          <Link className="btn btn-secondary btn-sm" href="/portafoglio?health=RED,AMBER">
-            Vedi tutte
-          </Link>
+          <div className="actions">
+            <Link className="btn btn-secondary btn-sm" href="/portafoglio?health=RED">
+              Vedi le rosse
+            </Link>
+            <Link className="btn btn-secondary btn-sm" href="/portafoglio?health=AMBER">
+              Vedi le ambra
+            </Link>
+          </div>
         </div>
         <div className="table-wrap">
           <table className="data">
