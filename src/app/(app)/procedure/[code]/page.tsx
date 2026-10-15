@@ -13,6 +13,7 @@ import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusCh
 import { CRITICALITY_LABEL, DOC_TYPE_LABEL, MOVEMENT_LABEL, OWNER_LABEL, SIM_KIND_LABEL, SIM_STATUS_LABEL, TYPE_LABEL, humanize } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
 import { UploadForm } from "@/ui/upload-form";
+import { EconomicFrameCard } from "@/ui/economic-frame-card";
 import { IterBoard, PhaseBar } from "@/ui/process";
 
 const TABS = [
@@ -111,10 +112,12 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       {ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
         <section className="card" style={{ marginBottom: 16 }} id="memoria" data-tour="memoria">
           <h2>Consegna della memoria</h2>
-          <p className="muted">Alla consegna la baseline si congela e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
+          <p className="muted">Alla consegna la baseline si congela, con il quadro economico qui sotto, e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
+          {p.economicFrame ? <div style={{ margin: "12px 0" }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
           <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
         </section>
       ) : null}
+      {tab === "overview" && p.economicFrame && ev.status !== "DRAFT" ? <div style={{ marginBottom: 16 }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
       {tab === "overview" ? (
         <div className="grid grid-2">
           <section className="card">

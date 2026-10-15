@@ -12,6 +12,7 @@ import type { Actor } from "./auth";
 import { can, canCompleteStep, requireProcedure, scopeSql } from "./authz";
 import { executionModuleEnabled } from "@/application/modules";
 import { STATUS_STAGE } from "@/domain/model";
+import { computeEconomicFrame, frameToJson } from "@/domain/economic-frame";
 
 const money = (c: number | bigint | null | undefined) => centsToString(c ?? null);
 
@@ -340,6 +341,11 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       closedAt: p.closed_at,
       version: p.version,
       anacFee: money(p.anac_fee_cents),
+      // Quadro economico (DEC-111): presente solo per le procedure create con la base di gara
+      economicFrame:
+        p.base_cents === null || p.base_cents === undefined
+          ? null
+          : frameToJson(computeEconomicFrame({ base: Money.ofCents(BigInt(p.base_cents)), vatPct: BigInt(p.vat_pct_hundredths), anacFee: Money.ofCents(BigInt(p.anac_fee_cents)), hasDec: p.has_dec === 1, incentivePct: BigInt(p.incentive_pct_hundredths) })),
     },
     evaluation: {
       status: ev.status,

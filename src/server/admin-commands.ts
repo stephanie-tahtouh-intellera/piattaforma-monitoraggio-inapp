@@ -5,6 +5,7 @@ import { ARGON_OPTS, familyOfDataset } from "@/application/seed-loader";
 import { addDays, addMonths, isoDate, type IsoDate } from "@/domain/dates";
 import { selectTemplate } from "@/domain/milestones";
 import { DEFAULT_SETTINGS, ROLES, type AwardCriterion, type EngineSettings, type Instrument, type ProcedureType, type Role } from "@/domain/model";
+import { computeEconomicFrame, DEFAULT_INCENTIVE_PCT, DEFAULT_VAT_PCT } from "@/domain/economic-frame";
 import { Money } from "@/domain/money";
 import { writeAudit } from "@/infrastructure/audit";
 import { configuredReferenceDate, dbClock, systemNowIso } from "@/infrastructure/clock";
@@ -22,7 +23,10 @@ export interface DraftInput {
   type: ProcedureType;
   awardCriterion?: AwardCriterion | undefined;
   instrument?: Instrument | undefined;
-  programmed: string;
+  /** Importo programmato IVA inclusa (percorso senza quadro economico, usato da seed e test). */
+  programmed?: string | undefined;
+  /** Quadro economico (DEC-111): se presente, il programmato è calcolato e `programmed` è ignorato. */
+  frame?: { base: string; vatPct?: bigint | undefined; anacFee?: string | undefined; hasDec: boolean; incentivePct?: bigint | undefined } | undefined;
   annual: Record<string, string>;
   memoryDue: string;
 }
@@ -31,10 +35,14 @@ export interface DraftInput {
 export function createDraft(db: Db, actor: Actor, input: DraftInput): { code: string } {
   if (!(actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")) throw new DomainError("FORBIDDEN", "Solo la Struttura richiedente può creare una bozza", 403);
   const structure = actor.role === "STRUCTURE_USER" && actor.structureScope !== "*" ? actor.structureScope : "PN_GDL";
-  const programmed = Money.parse(input.programmed);
+  if (!input.frame && !input.programmed) throw new DomainError("VALIDATION_ERROR", "Indica la base di gara o l'importo programmato", 422);
+  const frame = input.frame
+    ? computeEconomicFrame({ base: Money.parse(input.frame.base), vatPct: input.frame.vatPct ?? DEFAULT_VAT_PCT, anacFee: Money.parse(input.frame.anacFee || "0"), hasDec: input.frame.hasDec, incentivePct: input.frame.incentivePct ?? DEFAULT_INCENTIVE_PCT })
+    : null;
+  const programmed = frame ? frame.total : Money.parse(input.programmed!);
   const annual = Object.entries(input.annual).filter(([, v]) => v && v !== "0").map(([y, v]) => ({ year: Number(y), amount: Money.parse(v) }));
   const sum = Money.sum(annual.map((a) => a.amount));
-  if (!sum.eq(programmed)) throw new DomainError("VALIDATION_ERROR", `Il riparto per annualità (${sum.toString()}) deve coincidere con l'importo programmato (${programmed.toString()})`, 422);
+  if (!sum.eq(programmed)) throw new DomainError("VALIDATION_ERROR", `Il riparto per annualità (${sum.toString()}) deve coincidere con l'importo a disposizione della struttura (${programmed.toString()})`, 422);
   const memoryDue = isoDate(input.memoryDue);
   if (memoryDue < configuredReferenceDate(db)) throw new DomainError("VALIDATION_ERROR", "La data obiettivo della memoria non può essere nel passato", 422);
   const templates = loadTemplates();
@@ -48,10 +56,12 @@ export function createDraft(db: Db, actor: Actor, input: DraftInput): { code: st
     const pid = Number(
       db
         .prepare(
-          `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents, cig, cup, is_draft, created_by, created_at)
-           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?)`,
+          `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents, cig, cup, is_draft, created_by, created_at,
+             base_cents, vat_pct_hundredths, anac_fee_cents, has_dec, incentive_pct_hundredths, incentive_cents)
+           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(code, input.title, structure, input.type, input.awardCriterion ?? null, input.instrument ?? null, template.code, programmed.cents, actor.login, now).lastInsertRowid,
+        .run(code, input.title, structure, input.type, input.awardCriterion ?? null, input.instrument ?? null, template.code, programmed.cents, actor.login, now,
+          frame ? frame.base.cents : null, Number(frame ? frame.vatPct : DEFAULT_VAT_PCT), frame ? frame.anacFee.cents : 0, frame?.hasDec ? 1 : 0, Number(frame?.hasDec ? frame.incentivePct : 0n), frame ? frame.incentive.cents : 0).lastInsertRowid,
     );
     const vid = Number(
       db

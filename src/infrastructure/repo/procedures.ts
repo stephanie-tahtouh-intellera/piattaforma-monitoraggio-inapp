@@ -28,6 +28,11 @@ export interface ProcedureRow {
   template_code: string;
   programmed_cents: number;
   anac_fee_cents: number;
+  base_cents: number | null;
+  vat_pct_hundredths: number;
+  has_dec: number;
+  incentive_pct_hundredths: number;
+  incentive_cents: number;
   documents_tracked: number;
   is_draft: number;
   cig: string | null;
@@ -150,7 +155,8 @@ export function loadAggregate(db: Db, procedureId: number): ProcedureAggregate {
     cancelled: p.cancelled_at !== null,
     closed: p.closed_at !== null,
     programmed: cents(p.programmed_cents),
-    costComponents: cents(p.anac_fee_cents),
+    // Tassa gara e incentivi sono costi fuori contratto inclusi nel programmato (DEC-035, DEC-111)
+    costComponents: cents(p.anac_fee_cents + p.incentive_cents),
     template,
     milestones,
     contract: c

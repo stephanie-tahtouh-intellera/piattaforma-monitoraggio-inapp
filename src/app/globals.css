@@ -357,3 +357,14 @@ pre.iter { white-space: pre-wrap; background: var(--neutral-25); border: 1px sol
 .map-step:hover { border-color: var(--brand-blue); background: var(--brand-tint); }
 .map-step:focus-visible { outline: 3px solid var(--ds-color-focus); outline-offset: 2px; }
 .map-n { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--brand-navy); color: #fff; font-weight: var(--ds-font-weight-semibold); }
+
+/* Nuova bozza: modulo a sinistra, quadro economico calcolato a destra (DEC-111) */
+.draft-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-6); align-items: start; }
+.draft-form h2 { font-size: var(--ds-text-lg); margin: var(--space-3) 0 0; }
+.frame-card { position: sticky; top: calc(var(--layout-demo-banner-h) + var(--layout-header-h) + var(--space-4)); background: var(--brand-tint); border: 1px solid var(--brand-tint-border); border-radius: var(--ds-radius); padding: var(--space-4); }
+.frame-card h2 { margin-top: 0; }
+.frame-kv { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-4); margin: 0; }
+.frame-kv dt, .frame-kv dd { margin: 0; }
+.frame-kv .sub { font-size: 12px; color: var(--ds-color-text-muted); padding-left: var(--space-3); }
+.frame-kv .total { border-top: 1px solid var(--ds-color-border-strong); padding-top: var(--space-2); font-weight: 700; color: var(--brand-navy); }
+@media (max-width: 1100px) { .draft-grid { grid-template-columns: minmax(0, 1fr); } .frame-card { position: static; } }
