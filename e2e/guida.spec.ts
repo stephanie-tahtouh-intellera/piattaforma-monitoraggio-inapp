@@ -101,21 +101,25 @@ test.describe.serial("[DEC-106] guida demo", () => {
       2: () => register(() => note("Funzionario assegnato: dott.ssa Bianchi")),
       3: () => register(() => note("PN GDL – Priorità 1")),
       4: () => register(() => passo.getByLabel("Operatore economico a cui richiedere i documenti").selectOption("SUP-ALFA")),
-      5: () => register(() => note("DGUE, DURC e dichiarazioni inviati")),
-      6: () => register(),
-      7: () => register(() => note("Det. n. 312 del 01/10/2026")),
-      8: () => register(),
+      // 5: il caricamento dei documenti sta nello stesso pannello del passo (DEC-110: nessun file nel test, basta il modulo)
+      5: async () => {
+        await expect(page.locator("[data-tour='upload-passo']")).toBeVisible();
+      },
+      6: () => register(() => note("DGUE, DURC e dichiarazioni inviati")),
+      7: () => register(),
+      8: () => register(() => note("Det. n. 312 del 01/10/2026")),
       9: () => register(),
       10: () => register(),
-      11: () => register(() => passo.getByLabel(/Importo di aggiudicazione/).fill("84.180,00")),
-      12: () => register(),
+      11: () => register(),
+      12: () => register(() => passo.getByLabel(/Importo di aggiudicazione/).fill("84.180,00")),
       13: () => register(),
-      14: () => register(undefined, "Accetto l'ordine e controfirmo il contratto"),
-      16: async () => {
+      14: () => register(),
+      15: () => register(undefined, "Accetto l'ordine e controfirmo il contratto"),
+      // DEC-110: l'override sulle criticità bloccanti è dell'Ufficio Gare; la conferma è già spuntata
+      17: async () => {
         const row = page.locator("tbody tr", { hasText: "RS-CD05-001" });
-        await row.getByLabel(/Override/).check();
-        await row.getByLabel("Motivazione (obbligatorio)").fill("Copertura 2028 nella prossima variazione di bilancio");
-        await row.getByRole("button", { name: "Approva" }).click();
+        await row.getByLabel("Motivazione dell'override (obbligatorio)").fill("Copertura 2028 nella prossima variazione di bilancio");
+        await row.getByRole("button", { name: "Approva con override" }).click();
         await expect(row).toContainText("Approvata");
       },
     };
@@ -129,7 +133,7 @@ test.describe.serial("[DEC-106] guida demo", () => {
       }
       await checkStep(page, PROCESS_TOUR, i);
       await actions[i]?.();
-      if (i === 15) {
+      if (i === 16) {
         await expect(page.locator(".phase-bar .is-end")).toContainText("Contratto stipulato");
         await axe(page);
       }

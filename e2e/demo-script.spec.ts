@@ -47,7 +47,7 @@ test.describe.serial("[DEMO] demo script della specifica §13.3", () => {
   test("[T-006][T-007] Ufficio Gare simula P-002: 150.000 € spostati, eccedenza 2027 di 80.000 €", async ({ page }) => {
     await loginAs(page, "gare");
     await page.goto("/procedure/P-002/riprogrammazione");
-    await page.getByLabel("Nuova data proposta (obbligatorio)").fill("2026-11-16");
+    await page.getByLabel("Nuova data proposta (obbligatorio)").fill("16/11/2026");
     await page.getByRole("button", { name: "Calcola simulazione" }).click();
     await expect(page.getByRole("heading", { name: /2\. Cronoprogramma \(7 date cambiate\)/ })).toBeVisible();
     await page.getByRole("button", { name: "Avanti" }).click();
@@ -59,10 +59,10 @@ test.describe.serial("[DEMO] demo script della specifica §13.3", () => {
     await expect(page.getByText(/salvata\. Nessun dato corrente è stato modificato/)).toBeVisible();
   });
 
-  test("[T-009] il Direttore Generale approva la bozza automatica: nuova versione, baseline intatta", async ({ page }) => {
-    await loginAs(page, "dirigente");
+  test("[T-009][DEC-110] l'Ufficio Gare approva la bozza automatica: nuova versione, baseline intatta", async ({ page }) => {
+    await loginAs(page, "gare");
     await page.goto("/procedure/P-002?tab=simulations");
-    const row = page.locator("tbody tr", { hasText: "FASTEST" });
+    const row = page.locator("tbody tr", { hasText: "Più rapida" });
     await row.getByLabel(/Motivazione/).first().fill("Memoria attesa entro il 12/10, nessuno spostamento tra annualità");
     await row.getByRole("button", { name: "Approva" }).click();
     await expect(row).toContainText("Approvata");
