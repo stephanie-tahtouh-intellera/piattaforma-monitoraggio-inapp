@@ -3,8 +3,8 @@ import { useState } from "react";
 import { requestTourStart } from "@/ui/tour/state";
 
 const USERS = [
-  ["dirigente", "Direttore Generale", "approva le riprogrammazioni"],
-  ["gare", "Ufficio Gare (RUP)", "simula e gestisce le gare"],
+  ["dirigente", "Direttore Generale", "visione d'insieme, firma le determine"],
+  ["gare", "Ufficio Gare (RUP)", "gestisce le gare, decide le riprogrammazioni"],
   ["amministrazione", "Amministrazione", "SAL, liquidazioni, pagamenti"],
   ["struttura.si", "Struttura richiedente", "Sistemi informativi"],
   ["fornitore.alfa", "Fornitore", "solo contratti assegnati"],
@@ -47,7 +47,7 @@ export function LoginForm({ initialLogin, startTour = false }: { initialLogin?: 
       <div className="field">
         <label htmlFor="password">Password</label>
         <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
-        <span className="help">Password demo: Demo2026! (configurabile con DEMO_PASSWORD)</span>
+        <span className="help">Password demo: Demo2026! (configurabile)</span>
       </div>
       <label className="check">
         <input type="checkbox" checked={tour} onChange={(e) => setTour(e.target.checked)} /> Avvia la guida demo del ruolo dopo l'accesso

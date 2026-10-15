@@ -3,7 +3,8 @@ import { formatEuro } from "@/contracts/format";
 import type { procedureDetail } from "@/server/queries";
 import { ActionForm, type FieldDef } from "./action-form";
 import { DateIt } from "./badges";
-import { LANES, OWNER_LABEL, STAGES } from "./labels";
+import { UploadForm } from "./upload-form";
+import { DOC_TYPE_LABEL, LANES, OWNER_LABEL, STAGES, humanize } from "./labels";
 
 type Detail = ReturnType<typeof procedureDetail>;
 type Step = Detail["timeline"][number];
@@ -37,9 +38,21 @@ export function PhaseBar({ stage, module2, signed }: { stage: number | null; mod
   );
 }
 
-function StepCard({ s, docTypes }: { s: Step; docTypes: Set<string> }) {
+/** Un riquadro con `href` è un'azione che l'utente può fare ora: porta al modulo corrispondente nella pagina. */
+function StepLink({ href, label, children }: { href?: string | undefined; label: string; children: React.ReactNode }) {
+  if (!href) return <>{children}</>;
+  return (
+    <a className="step-link" href={href} aria-label={`Vai al modulo: ${label}`}>
+      {children}
+      <span className="step-cta" aria-hidden>Vai al modulo →</span>
+    </a>
+  );
+}
+
+function StepCard({ s, docTypes, href }: { s: Step; docTypes: Set<string>; href?: string | undefined }) {
   const cls = s.actual ? "step done" : s.active ? `step active${s.state === "OVERDUE" ? " overdue" : ""}` : "step";
   return (
+    <StepLink href={href} label={s.label}>
     <div className={cls}>
       <div className="step-title">
         {s.key ? <span className="key-mark" title="Data chiave" aria-label="Data chiave">◆</span> : null}
@@ -58,18 +71,25 @@ function StepCard({ s, docTypes }: { s: Step; docTypes: Set<string> }) {
         <ul className="step-docs">
           {s.expectedDocuments.map((d) => (
             <li key={d.type}>
-              {docTypes.has(d.type) ? "✓" : "○"} {d.type.replace(/_/g, " ").toLowerCase()}
+              {docTypes.has(d.type) ? "✓" : "○"} {DOC_TYPE_LABEL[d.type] ?? humanize(d.type)}
             </li>
           ))}
         </ul>
       ) : null}
       {s.active ? <div className="step-turn">Tocca a: {OWNER_LABEL[s.owner] ?? s.owner}</div> : null}
     </div>
+    </StepLink>
   );
 }
 
+/** Destinazione del riquadro: la consegna della memoria per la bozza, il modulo del passo in corso per gli altri. */
+function stepHref(s: Step, draft: boolean, canSubmitMemory: boolean) {
+  if (draft) return s.code === "MEMORY_SUBMISSION" && canSubmitMemory ? "#memoria" : undefined;
+  return s.active && s.canComplete ? "#passo" : undefined;
+}
+
 /** Vista a corsie della singola procedura (schema di processo INAPP, Modulo 1). */
-export function IterBoard({ d }: { d: Detail }) {
+export function IterBoard({ d, canSubmitMemory = false, canUpload = false }: { d: Detail; canSubmitMemory?: boolean; canUpload?: boolean }) {
   const module2 = d.process.module2;
   const stages = STAGES.filter((s) => s.module === 1 || module2);
   const docTypes = new Set((d.documents as { doc_type: string | null }[]).map((x) => x.doc_type ?? ""));
@@ -105,14 +125,16 @@ export function IterBoard({ d }: { d: Detail }) {
                   return (
                     <td key={st.n}>
                       {plan ? (
-                        <div className={draft ? "step active" : "step done"}>
-                          <div className="step-title">Inserimento nel piano di programmazione</div>
-                          <div className="step-meta">{draft ? "Bozza in corso" : "Nel piano"}</div>
-                          {draft ? <div className="step-turn">Tocca a: Struttura</div> : null}
-                        </div>
+                        <StepLink href={draft && canSubmitMemory ? "#memoria" : undefined} label="Consegna della memoria">
+                          <div className={draft ? "step active" : "step done"}>
+                            <div className="step-title">Inserimento nel piano di programmazione</div>
+                            <div className="step-meta">{draft ? "Bozza in corso" : "Nel piano"}</div>
+                            {draft ? <div className="step-turn">Tocca a: Struttura</div> : null}
+                          </div>
+                        </StepLink>
                       ) : null}
                       {steps.map((s) => (
-                        <StepCard key={s.code} s={s} docTypes={docTypes} />
+                        <StepCard key={s.code} s={s} docTypes={docTypes} href={stepHref(s, draft, canSubmitMemory)} />
                       ))}
                     </td>
                   );
@@ -140,7 +162,7 @@ export function IterBoard({ d }: { d: Detail }) {
           </table>
         </>
       ) : null}
-      <StepPanel d={d} />
+      <StepPanel d={d} canUpload={canUpload} />
     </section>
   );
 }
@@ -177,14 +199,14 @@ function stepFields(d: Detail, s: Step): FieldDef[] {
 }
 
 /** Pannello del passo in corso: chi deve agire e, se tocca all'utente, il modulo di registrazione. */
-export function StepPanel({ d }: { d: Detail }) {
+export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boolean }) {
   const s = d.timeline.find((t) => t.active);
   if (d.evaluation.status === "DRAFT") return null;
   if (!s) {
     return <div className="step-panel done" data-tour="passo">Tutti i passi del Modulo 1 sono completati: il contratto è stipulato.</div>;
   }
   return (
-    <div className="step-panel" data-tour="passo">
+    <div className="step-panel" id="passo" data-tour="passo">
       <h3>
         Passo in corso: {s.label}
       </h3>
@@ -193,6 +215,16 @@ export function StepPanel({ d }: { d: Detail }) {
         {s.forecast ? <> · entro il <DateIt v={s.forecast} /></> : null}
         {s.blocked && s.blockerReason ? <> · <span className="badge badge-AMBER">{s.blockerReason}</span></> : null}
       </p>
+      {s.canComplete && canUpload && s.expectedDocuments.length ? (
+        <div className="step-upload" data-tour="upload-passo">
+          <h4>1. Carica i documenti</h4>
+          <p className="small muted">
+            Documenti attesi: {s.expectedDocuments.map((x) => DOC_TYPE_LABEL[x.type] ?? humanize(x.type)).join(", ")}. I file sono controllati per tipo, firma del contenuto e dimensione.
+          </p>
+          <UploadForm code={d.procedure.code} />
+          <h4>2. Registra il passo</h4>
+        </div>
+      ) : null}
       {s.canComplete ? (
         <ActionForm
           endpoint={`/api/procedures/${d.procedure.code}/milestones/${s.code}/complete`}

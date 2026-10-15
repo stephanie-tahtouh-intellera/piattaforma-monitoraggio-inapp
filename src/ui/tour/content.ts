@@ -65,7 +65,7 @@ const PROCESS: Tour = {
       path: "/procedure/BZ-001", target: ".phase-bar", role: "STRUCTURE_USER", stage: 0,
       title: "0 · Piano: inserimento nel piano di programmazione",
       body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto 2026/2027 e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
-      can: ["Creare altre bozze dal portafoglio («Nuova procedura in bozza»)"],
+      can: ["Creare altre bozze con «Nuova procedura in bozza» (in alto a destra, anche da Dashboard e Portafoglio)"],
     },
     {
       path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,
@@ -92,9 +92,15 @@ const PROCESS: Tour = {
       tryIt: "Scegli «Fornitore Demo Alfa S.r.l.» e registra il passo.",
     },
     {
+      path: ITER, target: "[data-tour='upload-passo']", role: "SUPPLIER", stage: 2,
+      title: "2 · Il fornitore carica i documenti",
+      body: "Il fornitore vede solo le pratiche in cui è operatore e solo i passi della propria corsia. Nel passo in corso, nello stesso riquadro, carica i documenti per la verifica dei requisiti (DGUE, DURC, dichiarazioni): PDF o ZIP, controllati per tipo, firma del contenuto e dimensione.",
+      tryIt: "Scegli un PDF qualsiasi e premi il pulsante di caricamento: il documento compare nel fascicolo e nell'elenco dei documenti attesi.",
+    },
+    {
       path: ITER, target: PASSO, role: "SUPPLIER", stage: 2,
-      title: "2 · Il fornitore invia i documenti",
-      body: "Il fornitore vede solo le pratiche in cui è operatore e solo i passi della propria corsia. Allega i documenti nella sezione Documenti (facoltativo nella demo) e registra l'invio.",
+      title: "2 · Il fornitore registra l'invio",
+      body: "Dopo il caricamento, nello stesso riquadro, il fornitore registra il passo con data e nota: la pratica torna all'Ufficio Gare per la verifica dei requisiti.",
       tryIt: "Registra il passo con nota «DGUE, DURC e dichiarazioni inviati».",
     },
     {
@@ -158,9 +164,9 @@ const PROCESS: Tour = {
       can: ["Consultare Iter, Finanza (prenotazioni e impegni) e Audit", "Scaricare il report PDF"],
     },
     {
-      path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", role: "EXECUTIVE",
+      path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", role: "PROCUREMENT_OFFICER",
       title: "Quando una data chiave salta",
-      body: "CD-05 ha la determina di aggiudicazione scaduta il 14/09/2026: l'Ufficio Gare ha proposto di spostarla al 14/12/2026 (RS-CD05-001). Lo spostamento porta pagamenti oltre la disponibilità 2027 e 2028: solo il Direttore Generale può approvare, con override motivato.",
+      body: "CD-05 ha la determina di aggiudicazione scaduta il 14/09/2026: l'Amministrazione ha proposto di spostarla al 14/12/2026 (RS-CD05-001). Lo spostamento porta pagamenti oltre la disponibilità 2027 e 2028: solo l'Ufficio Gare può approvarla, con override motivato.",
       tryIt: "Sulla riga RS-CD05-001 spunta l'override e approva con motivazione «Copertura 2028 nella prossima variazione di bilancio».",
     },
   ],
@@ -187,8 +193,8 @@ const ROLE_TOURS: Tour[] = [
   {
     id: "PROCUREMENT_OFFICER", role: "PROCUREMENT_OFFICER", login: "gare",
     title: "Ufficio Gare", persona: "Ufficio Gare (regia della procedura; il RUP è nominato con la determina di indizione)",
-    goal: "Prende in carico le pratiche, conduce istruttoria, indizione e affidamento fino alla stipula; propone le riprogrammazioni.",
-    cases: ["CD-02 – presa in carico da fare", "OP01-S5 – procedura reale con memoria scaduta da riprogrammare", "CD-05 – riprogrammazione inviata con sforamento del bilancio", "OP04-S18 – fascicolo reale Stage4EU"],
+    goal: "Prende in carico le pratiche, conduce istruttoria, indizione e affidamento fino alla stipula; decide le riprogrammazioni proposte da altri: le approva, le rifiuta o le approva in deroga (override) se hanno criticità bloccanti.",
+    cases: ["CD-02 – presa in carico da fare", "OP01-S5 – procedura reale con memoria scaduta da riprogrammare", "CD-05 – riprogrammazione con sforamento del bilancio da approvare con override", "OP04-S18 – fascicolo reale Stage4EU"],
     next: "FINANCE_OFFICER",
     steps: [
       { path: "/", target: "section[aria-labelledby='att']", title: "Cosa richiede attenzione", body: "Procedure rosse e ambra del Piano PN Giovani, Donne e Lavoro (82 reali) e dei casi dimostrativi, con la prossima scadenza.", can: ["Aprire una procedura dall'elenco"] },
@@ -196,7 +202,7 @@ const ROLE_TOURS: Tour[] = [
       { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Portafoglio filtrato", body: "Qui sono le procedure rosse; per le ambra scegli un altro valore in Health. Il filtro è nell'indirizzo della pagina. La colonna Health spiega il motivo; «Riprogrammazione richiesta» segnala una data chiave scaduta.", can: ["Filtrare, ordinare, esportare"] },
       { path: "/procedure/OP01-S5?tab=iter", target: ".iter-board", title: "Una procedura reale nello schema", body: "OP01-S5 viene dal workbook: le date del Piano (V3 baseline, V4 corrente) sono mappate sulle date chiave; i passi intermedi sono dedotti. La memoria è scaduta e blocca il processo." },
       { path: "/procedure/OP01-S5/riprogrammazione", target: ".stepper", title: "Simulazione di riprogrammazione", body: "Cinque passi: causa, cronoprogramma, finanza per annualità, alternative (più rapida, minimo impatto, manuale), decisione. Salvare non cambia nulla: serve l'approvazione di un'altra persona.", tryIt: "Scegli l'alternativa più rapida, arriva alla decisione e salva." },
-      { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Quattro occhi", body: "Hai inviato RS-CD05-001 (aggiudicazione al 14/12/2026): sposta spesa sul 2027–2028 oltre la disponibilità. Non puoi approvarla tu: decide il Direttore Generale. Accanto c'è la bozza automatica creata dal sistema al T+1." },
+      { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Decidere con override", body: "L'Amministrazione ha inviato RS-CD05-001 (aggiudicazione al 14/12/2026): sposta spesa sul 2027–2028 oltre la disponibilità. Puoi approvarla solo con override motivato, oppure rifiutarla. Chi propone non può decidere: quattro occhi.", tryIt: "Sulla riga RS-CD05-001 conferma l'override e approva con motivazione «Copertura 2028 nella prossima variazione di bilancio»." },
       { path: "/alert", target: "nav.tabs", title: "Centro alert", body: "Alert dei passi (T-1 mese … T+1) e anomalie di dato. Puoi sospendere l'escalation fino a una data, con motivo.", can: ["Prendere in carico, risolvere, sospendere", "Esportare in CSV"] },
       { path: "/procedure/OP04-S18?tab=documents", target: "main table.data", title: "Il fascicolo reale", body: "I 6 atti di gara forniti sono associati a OP04-S18 per CIG; tre scansioni sono state lette con OCR locale.", can: ["Caricare nuovi atti", "Aprire i PDF originali"] },
       { path: "/procedure/OP04-S18?tab=documents", target: "[data-tour='classifica']", title: "Correggere la classificazione", body: "Se un atto è classificato male, scegli il documento, il nuovo tipo e, se serve, la procedura giusta, e scrivi la motivazione. La correzione è nell'audit e il passo dell'Iter che attende quell'atto si aggiorna.", can: ["Correggere tipo e procedura di un documento"] },
@@ -224,7 +230,7 @@ const ROLE_TOURS: Tour[] = [
     next: "EXECUTIVE",
     steps: [
       { path: "/portafoglio", target: ".table-wrap", title: "Solo le tue pratiche", body: "Vedi le procedure in cui sei operatore individuato o contraente (CD-04 e CD-07). Il controllo è sul server, per ogni pagina e API." },
-      { path: "/procedure/CD-04?tab=documents", target: "[data-tour='upload']", title: "Carica i documenti", body: "Allega DGUE, DURC e dichiarazioni: i file sono controllati per tipo, firma del contenuto e dimensione.", can: ["Caricare PDF o ZIP"] },
+      { path: "/procedure/CD-04?tab=iter", target: "[data-tour='upload-passo']", title: "Carica i documenti", body: "Nel passo in corso allega DGUE, DURC e dichiarazioni: i file sono controllati per tipo, firma del contenuto e dimensione. Lo stesso caricamento è anche nella scheda Documenti.", can: ["Caricare PDF o ZIP"] },
       { path: "/procedure/CD-04?tab=iter", target: PASSO, title: "Invio per la verifica dei requisiti", body: "Il passo è nella tua corsia: registrandolo, la pratica torna all'Ufficio Gare per la verifica.", tryIt: "Registra l'invio con nota «Documentazione caricata»." },
       { path: "/procedure/CD-07?tab=iter", target: PASSO, title: "Accettazione dell'ordine e controfirma", body: "CD-07 è aggiudicata a te per 48.800,00 €: accettando l'ordine il contratto è stipulato e la procedura chiude il Modulo 1.", tryIt: "Premi «Accetto l'ordine e controfirmo il contratto»." },
       { path: "/procedure/CD-05", title: "Prova: una procedura non tua", body: "CD-05 riguarda un altro operatore: la piattaforma risponde «Accesso non consentito» senza mostrare dati." },
@@ -232,17 +238,15 @@ const ROLE_TOURS: Tour[] = [
   },
   {
     id: "EXECUTIVE", role: "EXECUTIVE", login: "dirigente",
-    title: "Direttore Generale", persona: "Direttore Generale (attore di supporto: firma le determine e decide le riprogrammazioni)",
-    goal: "Ha la visione d'insieme e decide le riprogrammazioni, anche forzando con motivazione le criticità di bilancio.",
-    cases: ["CD-05 – riprogrammazione che sfora il bilancio 2027/2028", "Portafoglio reale PN GDL: 82 procedure"],
+    title: "Direttore Generale", persona: "Direttore Generale (attore di supporto: firma le determine, visione d'insieme)",
+    goal: "Ha la visione d'insieme sul portafoglio e sull'audit; firma le determine. Le riprogrammazioni le decide l'Ufficio Gare.",
+    cases: ["Portafoglio reale PN GDL: 82 procedure"],
     next: "ADMIN",
     steps: [
       { path: "/", target: "section[aria-label='Indicatori principali']", title: "Dashboard direzionale", body: "Procedure monitorate per health, alert critici, programmato, contratti stipulati e importo a rischio, alla data di riferimento in alto.", can: ["Aprire l'elenco corrispondente a ogni indicatore"] },
       { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Le procedure in rosso", body: "Le date chiave scadute rendono rossa la procedura; la colonna «A rischio» mostra la spesa scoperta o in slittamento." },
-      { path: "/procedure/CD-05?tab=simulations", target: "[data-tour='simulazioni']", title: "Decidere con override", body: "RS-CD05-001 sposta l'aggiudicazione di CD-05 al 14/12/2026 e sfora la disponibilità 2027 e 2028: puoi approvarla solo con override motivato, oppure rifiutarla.", tryIt: "Spunta l'override e approva con motivazione «Copertura 2028 nella prossima variazione di bilancio»." },
-      { path: "/procedure/CD-05?tab=iter", target: ".iter-board", title: "Effetto sulle date chiave", body: "Dopo l'approvazione le date previste dei passi successivi si spostano; la baseline resta quella originale." },
       { path: "/alert?view=critical", target: "nav.tabs", title: "Alert critici", body: "Le date chiave superate arrivano a te in escalation. Puoi sospendere l'escalation fino a una data.", can: ["Sospendere l'escalation con motivo"] },
-      { path: "/audit", target: "form.filters", title: "Tracciabilità", body: "Filtra per azione «SIMULATION_APPROVE_OVERRIDE» o «STEP_AWARD»: ogni decisione ha autore, data, motivazione e valori prima/dopo." },
+      { path: "/audit", target: "form.filters", title: "Tracciabilità", body: "Filtra per azione, per esempio «Simulazione approvata in deroga» o «Passo: aggiudicazione»: ogni decisione ha autore, data, motivazione e valori prima/dopo." },
     ],
   },
   {
@@ -403,9 +407,9 @@ const HELP: Record<string, PageHelp> = {
     summary: "Riprogrammazioni delle date chiave: simulate, inviate, approvate o rifiutate.",
     sections: [["Simulazioni", "Passo e nuova data, date cambiate, importo spostato, criticità, stato e autore."]],
     actions: {
-      PROCUREMENT_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
+      PROCUREMENT_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione", "Approvare, rifiutare o approvare con override le riprogrammazioni proposte da altri"],
       FINANCE_OFFICER: ["Creare una nuova simulazione", "Inviare in approvazione"],
-      EXECUTIVE: ["Approvare, anche con override motivato, o rifiutare"],
+      EXECUTIVE: ["Consultare portafoglio, alert e audit"],
     },
   },
   "procedure.audit": {
@@ -484,8 +488,8 @@ export const DEMO_CASES: { code: string; title: string; shows: string; who: Role
   { code: "CD-03", title: "Rilevazione CATI per l'indagine sulla qualità del lavoro", shows: "Fase 1 · verifica importi e prenotazioni, in scadenza oggi", who: ["FINANCE_OFFICER"] },
   { code: "CD-04", title: "Segreteria organizzativa degli eventi territoriali PN GDL", shows: "Fase 2 · documenti dell'operatore per la verifica dei requisiti", who: ["SUPPLIER"] },
   { code: "CD-08", title: "Campagna di comunicazione sui servizi per l'occupazione giovanile", shows: "Fase 2 · impegni di spesa dopo la determina di indizione", who: ["FINANCE_OFFICER"] },
-  { code: "CD-05", title: "Valutazione indipendente del PN GDL 2021-2027", shows: "Fase 3 · aggiudicazione scaduta: riprogrammazione con sforamento, override del Direttore", who: ["PROCUREMENT_OFFICER", "EXECUTIVE"] },
-  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Fase 3 · riprogrammazione senza criticità, da approvare dal Direttore Generale", who: ["EXECUTIVE"] },
+  { code: "CD-05", title: "Valutazione indipendente del PN GDL 2021-2027", shows: "Fase 3 · aggiudicazione scaduta: riprogrammazione con sforamento, override dell'Ufficio Gare", who: ["FINANCE_OFFICER", "PROCUREMENT_OFFICER"] },
+  { code: "CD-06", title: "Rinnovo licenze software statistiche (Consip)", shows: "Fase 3 · riprogrammazione senza criticità, da approvare dall'Ufficio Gare", who: ["FINANCE_OFFICER", "PROCUREMENT_OFFICER"] },
   { code: "CD-07", title: "Servizi di hosting e gestione del portale istituzionale", shows: "Fase 3 · ordine da accettare e controfirmare; l'importo letto dall'OCR differisce dall'aggiudicazione", who: ["SUPPLIER"] },
   { code: "OP01-S5", title: "Procedura reale del Piano", shows: "Memoria scaduta: simulazione di riprogrammazione guidata", who: ["PROCUREMENT_OFFICER"] },
   { code: "OP04-S18", title: "Stage4EU – fascicolo reale", shows: "6 atti di gara reali associati per CIG, OCR, impegni letti dalla determina", who: ["PROCUREMENT_OFFICER"] },

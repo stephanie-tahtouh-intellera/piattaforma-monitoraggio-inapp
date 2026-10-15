@@ -19,11 +19,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const openAlerts = (d.prepare(`SELECT COUNT(*) AS n FROM alerts a JOIN procedures p ON p.id = a.procedure_id WHERE ${scope.sql} AND a.kind='ALERT' AND a.status IN ('OPEN')`).get(...scope.params) as { n: number }).n;
   const unread = (d.prepare("SELECT COUNT(*) AS n FROM alert_notifications n WHERE n.user_id = ? AND n.channel='IN_APP' AND NOT EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = ?)").get(actor.userId, actor.userId) as { n: number }).n;
   const dataset = (d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get() as { value: string } | undefined)?.value ?? "";
+  const scopeName = actor.structureScope === "*" ? null : ((d.prepare("SELECT name FROM structures WHERE code = ?").get(actor.structureScope) as { name: string } | undefined)?.name ?? actor.structureScope.replaceAll("_", " "));
   const items: (NavItem | "sep")[] = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/portafoglio", label: "Portafoglio", icon: "portfolio" },
   ];
-  if (actor.role !== "SUPPLIER") items.push({ href: "/alert", label: "Centro alert", icon: "alerts", count: openAlerts });
+  if (actor.role !== "SUPPLIER") items.push({ href: "/alert", label: "Centro alert", icon: "alerts", count: openAlerts, hint: `${openAlerts} alert aperti` });
   if (can(actor, "assistant")) items.push({ href: "/assistente", label: "Assistente", icon: "assistant" });
   if (can(actor, "audit.read")) items.push("sep", { href: "/audit", label: "Audit", icon: "audit" });
   if (can(actor, "admin")) items.push({ href: "/admin", label: "Amministrazione", icon: "admin" });
@@ -53,12 +54,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="header-right">
             <span className="refdate">Dati al {formatDateIt(ref)}</span>
             {actor.role !== "SUPPLIER" ? (
-              <Link href="/alert?view=mine" className="bell" aria-label={`Notifiche: ${unread} non lette`}>
+              <Link href="/alert?view=mine" className="bell" aria-label={`Notifiche: ${unread} non lette`} title={`Notifiche non lette: ${unread}`}>
                 <Bell size={20} aria-hidden />
                 {unread ? <span className="count">{unread}</span> : null}
               </Link>
             ) : null}
-            <span>
+            <span className="user-name">
               {actor.name}
               {actor.impersonatedBy ? <span className="small"> (impersonato da {actor.impersonatedBy})</span> : null}
             </span>
@@ -68,7 +69,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </header>
       <div className="shell">
-        <SideNav items={items} footer={`Ruolo attivo: ${ROLE_LABEL[actor.role]}${actor.structureScope !== "*" ? ` · ambito ${actor.structureScope}` : ""}`} />
+        <SideNav items={items} footer={`Ruolo attivo: ${ROLE_LABEL[actor.role]}${scopeName ? ` · ambito ${scopeName}` : ""}`} />
         <main id="contenuto" tabIndex={-1}>
           {children}
         </main>

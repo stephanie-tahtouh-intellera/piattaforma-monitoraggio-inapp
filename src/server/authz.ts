@@ -10,7 +10,6 @@ export type Action =
   | "milestone.update"
   | "simulation.create"
   | "simulation.decide"
-  | "simulation.override"
   | "contract.edit"
   | "sal.plan"
   | "sal.submit"
@@ -32,8 +31,7 @@ const M: Record<Action, Role[]> = {
   "procedure.draft": ["STRUCTURE_USER", "ADMIN"],
   "milestone.update": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "SUPPLIER", "ADMIN"],
   "simulation.create": ["PROCUREMENT_OFFICER", "FINANCE_OFFICER"],
-  "simulation.decide": ["EXECUTIVE"],
-  "simulation.override": ["EXECUTIVE"],
+  "simulation.decide": ["PROCUREMENT_OFFICER"],
   "contract.edit": ["PROCUREMENT_OFFICER"],
   "sal.plan": ["STRUCTURE_USER", "PROCUREMENT_OFFICER"],
   "sal.submit": ["STRUCTURE_USER", "SUPPLIER"],

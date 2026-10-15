@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { formatEuro } from "@/contracts/format";
+import { humanize } from "./labels";
 
 /** Upload PDF/XLSX/ZIP con esito per file (US-020). */
 export function UploadForm({ code }: { code: string }) {
@@ -22,7 +23,7 @@ export function UploadForm({ code }: { code: string }) {
       const proc = (data.processed as { state: string; fields: number; ocrPages: number }[]) ?? [];
       setMsg({
         ok: true,
-        text: `${data.stored.length} file acquisiti${data.rejected.length ? `, ${data.rejected.length} rifiutati (${data.rejected.join("; ")})` : ""}. ${proc.map((p) => `${p.state}, ${p.fields} campi proposti${p.ocrPages ? `, OCR su ${p.ocrPages} pagine` : ""}`).join(" · ")}`,
+        text: `${data.stored.length} file acquisiti${data.rejected.length ? `, ${data.rejected.length} rifiutati (${data.rejected.join("; ")})` : ""}. ${proc.map((p) => `${humanize(p.state)}, ${p.fields} campi proposti${p.ocrPages ? `, OCR su ${p.ocrPages} pagine` : ""}`).join(" · ")}`,
       });
       router.refresh();
     }

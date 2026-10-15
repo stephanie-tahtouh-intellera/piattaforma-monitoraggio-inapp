@@ -10,7 +10,7 @@ import { db, pageActor, sp } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
 import { AnnualChart } from "@/ui/annual-chart";
 import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusChip } from "@/ui/badges";
-import { DOC_TYPE_LABEL, MOVEMENT_LABEL, OWNER_LABEL, SIM_STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
+import { CRITICALITY_LABEL, DOC_TYPE_LABEL, MOVEMENT_LABEL, OWNER_LABEL, SIM_KIND_LABEL, SIM_STATUS_LABEL, TYPE_LABEL, humanize } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
 import { UploadForm } from "@/ui/upload-form";
 import { IterBoard, PhaseBar } from "@/ui/process";
@@ -92,6 +92,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           {can(actor, "simulation.create") && d.rescheduleSource && !p.cancelledAt && !p.closedAt ? (
             <Link className="btn btn-primary" href={`/procedure/${p.code}/riprogrammazione`}>Avvia simulazione di riprogrammazione</Link>
           ) : null}
+          {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? <Link className="btn btn-secondary" href="/procedure/nuova">Nuova procedura in bozza</Link> : null}
           {can(actor, "export") ? <a className="btn btn-secondary" href={`/api/exports/procedures/${p.code}.pdf`}>Report PDF</a> : null}
         </div>
       </section>
@@ -108,7 +109,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       </nav>
 
       {ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
-        <section className="card" style={{ marginBottom: 16 }} data-tour="memoria">
+        <section className="card" style={{ marginBottom: 16 }} id="memoria" data-tour="memoria">
           <h2>Consegna della memoria</h2>
           <p className="muted">Alla consegna la baseline si congela e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
           <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
@@ -157,7 +158,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         </div>
       ) : null}
 
-      {tab === "iter" ? <IterBoard d={d} /> : null}
+      {tab === "iter" ? <IterBoard d={d} canSubmitMemory={ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")} canUpload={!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import"))} /> : null}
 
       {tab === "timeline" ? <Timeline d={d} /> : null}
 
@@ -178,7 +179,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                   <tr key={x.id}>
                     <td>{x.title ?? x.file_name}</td>
                     <td className="num">{x.pages ?? "—"}</td>
-                    <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{x.processing_state}</span>}</td>
+                    <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{humanize(x.processing_state)}</span>}</td>
                     <td>{x.association_method} · affidabilità {x.association_confidence}</td>
                     <td><DateIt v={x.uploaded_at?.slice(0, 10)} /></td>
                     <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`}>Apri</a> : <span className="muted small">file non disponibile</span>}</td>
@@ -228,17 +229,21 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                 {(d.simulations as any[]).map((s) => (
                   <tr key={s.code}>
                     <td className="mono">{s.code}</td>
-                    <td>{s.kind}</td>
-                    <td>{s.source_milestone} → <DateIt v={s.candidate_date} /></td>
+                    <td>{SIM_KIND_LABEL[s.kind] ?? humanize(s.kind)}</td>
+                    <td>{d.timeline.find((m) => m.code === s.source_milestone)?.label ?? humanize(s.source_milestone)} → <DateIt v={s.candidate_date} /></td>
                     <td className="num">{s.result.date_changes}</td>
                     <td className="num"><Euro v={s.result.amount_shifted} /></td>
-                    <td>{s.result.criticalities.length ? s.result.criticalities.map((c: any, i: number) => <div key={i} className={`badge ${c.severity === "BLOCKING" ? "badge-RED" : "badge-AMBER"}`}>{c.code} {c.year ?? ""} {c.amount ? formatEuro(c.amount) : ""}</div>) : <span className="muted">nessuna</span>}</td>
+                    <td>{s.result.criticalities.length ? s.result.criticalities.map((c: any, i: number) => <div key={i} className={`badge ${c.severity === "BLOCKING" ? "badge-RED" : "badge-AMBER"}`}>{CRITICALITY_LABEL[c.code] ?? humanize(c.code)} {c.year ?? ""} {c.amount ? formatEuro(c.amount) : ""}</div>) : <span className="muted">nessuna</span>}</td>
                     <td><span className="chip">{SIM_STATUS_LABEL[s.status] ?? s.status}</span>{s.decision_reason ? <div className="small muted">«{s.decision_reason}» – {s.decided_by}</div> : null}</td>
                     <td>{s.created_by}</td>
                     <td>
                       {["DRAFT", "SUBMITTED"].includes(s.status) && can(actor, "simulation.decide") ? (
                         <div className="stack">
-                          <ActionForm endpoint={`/api/reschedules/${s.code}/approve`} submitLabel="Approva" fields={[{ name: "reason", label: "Motivazione", type: "textarea", required: true, help: "Comparirà nell'audit" }, ...(s.blocking ? [{ name: "override", label: "Override delle criticità bloccanti (solo Direttore Generale)", type: "checkbox" as const }] : [])]} successMessage="Riprogrammazione approvata: nuova versione creata." />
+                          {s.blocking ? (
+                            <ActionForm endpoint={`/api/reschedules/${s.code}/approve`} submitLabel="Approva con override" fields={[{ name: "reason", label: "Motivazione dell'override", type: "textarea", required: true, help: "Comparirà nell'audit" }, { name: "override", label: "Confermo l'override delle criticità bloccanti", type: "checkbox" as const, defaultValue: "true" }]} successMessage="Riprogrammazione approvata in deroga: nuova versione creata." />
+                          ) : (
+                            <ActionForm endpoint={`/api/reschedules/${s.code}/approve`} submitLabel="Approva" fields={[{ name: "reason", label: "Motivazione", type: "textarea", required: true, help: "Comparirà nell'audit" }]} successMessage="Riprogrammazione approvata: nuova versione creata." />
+                          )}
                           <ActionForm endpoint={`/api/reschedules/${s.code}/reject`} submitLabel="Rifiuta" variant="danger" fields={[{ name: "reason", label: "Motivo del rifiuto", type: "textarea", required: true }]} />
                         </div>
                       ) : s.status === "DRAFT" && can(actor, "simulation.create") ? (

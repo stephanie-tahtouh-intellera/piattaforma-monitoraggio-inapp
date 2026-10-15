@@ -2,6 +2,7 @@ import { centsToString } from "@/contracts/format";
 import { BusinessCalendar, daysBetween, type IsoDate } from "@/domain/dates";
 import { evaluateProcedure } from "@/domain/evaluate";
 import { mapToRecord } from "@/domain/finance";
+import { Money } from "@/domain/money";
 import { alternatives, fastestCandidate } from "@/domain/reschedule";
 import { calendarFromDb, engineSettings } from "@/application/run-checks";
 import { configuredReferenceDate } from "@/infrastructure/clock";
@@ -13,6 +14,12 @@ import { executionModuleEnabled } from "@/application/modules";
 import { STATUS_STAGE } from "@/domain/model";
 
 const money = (c: number | bigint | null | undefined) => centsToString(c ?? null);
+
+/** Scostamento (previsione − baseline) e margine (disponibilità − previsione) per annualità: aritmetica solo qui, nel server. */
+const yearGaps = (need: string | null, baseline: string | null, available: string | null) => ({
+  delta: need === null || baseline === null ? null : Money.parse(need).sub(Money.parse(baseline)).toString(),
+  margin: need === null || available === null ? null : Money.parse(available).sub(Money.parse(need)).toString(),
+});
 
 export interface PortfolioFilters {
   q?: string;
@@ -141,6 +148,15 @@ export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: 
        WHERE ${w} AND s.status <> 'CANCELLED' GROUP BY y.year ORDER BY y.year`,
     )
     .all(...params) as { year: number; need: number; available: number }[];
+  // Fabbisogno delle sole procedure con baseline: le bozze non hanno un riferimento, quindi non generano scostamento.
+  const needBaselined = db
+    .prepare(
+      `SELECT y.year, SUM(y.need_cents) AS need
+       FROM procedure_snapshot_year y JOIN procedures p ON p.id = y.procedure_id JOIN procedure_snapshot s ON s.procedure_id = p.id
+       WHERE ${w} AND s.status <> 'CANCELLED' AND EXISTS (SELECT 1 FROM procedure_versions v WHERE v.procedure_id = p.id AND v.is_baseline = 1)
+       GROUP BY y.year`,
+    )
+    .all(...params) as { year: number; need: number }[];
   const baselineYears = db
     .prepare(
       `SELECT CAST(substr(fl.date,1,4) AS INTEGER) AS year, SUM(fl.amount_cents) AS amount
@@ -167,12 +183,13 @@ export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: 
       atRisk: { total: money(k.at_risk ?? 0), uncovered: money(k.uncovered ?? 0), slipping: money(k.slipping ?? 0) },
       health: { GREEN: k.green ?? 0, AMBER: k.amber ?? 0, RED: k.red ?? 0, NEUTRAL: k.neutral ?? 0 },
     },
-    annual: years.map((y) => ({
-      year: y.year,
-      need: money(y.need),
-      available: money(y.available),
-      baseline: money(baselineYears.find((b) => b.year === y.year)?.amount ?? 0),
-    })),
+    annual: years.map((y) => {
+      const need = money(y.need);
+      const available = money(y.available);
+      const baseline = money(baselineYears.find((b) => b.year === y.year)?.amount ?? 0);
+      const comparable = money(needBaselined.find((b) => b.year === y.year)?.need ?? 0);
+      return { year: y.year, need, available, baseline, ...yearGaps(need, baseline, available), delta: yearGaps(comparable, baseline, null).delta };
+    }),
     byStatus,
     attention: attention.items,
   };
@@ -340,12 +357,12 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       annualNeed: mapToRecord(ev.annualNeed),
       available: mapToRecord(ev.available),
       overflows: ev.overflows.map((o) => ({ year: o.year, amount: o.amount.toString() })),
-      years: years.map((y) => ({
-        year: y,
-        need: (ev.annualNeed.get(y)?.toString()) ?? "0.00",
-        available: supplierView ? null : (ev.available.get(y)?.toString() ?? "0.00"),
-        baseline: centsToString(baseByYear.get(y) ?? 0n),
-      })),
+      years: years.map((y) => {
+        const need = (ev.annualNeed.get(y)?.toString()) ?? "0.00";
+        const available = supplierView ? null : (ev.available.get(y)?.toString() ?? "0.00");
+        const baseline = centsToString(baseByYear.get(y) ?? 0n);
+        return { year: y, need, available, baseline, ...yearGaps(need, baseline, available) };
+      }),
     },
     process,
     rescheduleSource,

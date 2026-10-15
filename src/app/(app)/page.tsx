@@ -1,4 +1,4 @@
-import { OctagonAlert } from "lucide-react";
+import { OctagonAlert, Plus } from "lucide-react";
 import Link from "next/link";
 import { executionModuleEnabled } from "@/application/modules";
 import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact } from "@/contracts/format";
@@ -9,6 +9,13 @@ import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { HEALTH_LABEL, STATUS_LABEL } from "@/ui/labels";
 
 export const metadata = { title: "Dashboard" };
+
+/** Ordine del processo: quello di STATUS_LABEL (Bozza … Chiusa, Annullata per ultima). */
+const STATUS_ORDER = Object.keys(STATUS_LABEL);
+const statusOrder = (s: string) => {
+  const i = STATUS_ORDER.indexOf(s);
+  return i === -1 ? STATUS_ORDER.length : i;
+};
 
 function Kpi({ label, value, sub, href, extra, aria }: { label: string; value: string | number; sub: string; href: string; extra?: React.ReactNode; aria: string }) {
   return (
@@ -37,26 +44,33 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div>
           <h1>Dashboard direzionale</h1>
           <div className="page-meta">
-            Data di riferimento {ref} · ultimo ricalcolo {formatDateTimeIt(data.updatedAt)} · fonte: run_checks deterministico
+            Data di riferimento {ref} · Ultimo aggiornamento {formatDateTimeIt(data.updatedAt)}
           </div>
         </div>
-        <form className="actions" method="get">
-          <label htmlFor="structure" className="sr-only">
-            Struttura
-          </label>
-          <select id="structure" name="structure" defaultValue={structure ?? ""}>
-            <option value="">Tutte le strutture</option>
-            {structures.map((s) => (
-              <option key={s.code} value={s.code}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <button className="btn btn-secondary btn-sm">Applica</button>
-        </form>
+        <div className="actions head-actions">
+          <form className="actions" method="get">
+            <label htmlFor="structure" className="sr-only">
+              Struttura
+            </label>
+            <select id="structure" name="structure" defaultValue={structure ?? ""}>
+              <option value="">Tutte le strutture</option>
+              {structures.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn btn-secondary btn-sm">Applica</button>
+          </form>
+          {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? (
+            <Link className="btn btn-primary" href="/procedure/nuova">
+              <Plus aria-hidden /> Nuova memoria
+            </Link>
+          ) : null}
+        </div>
       </div>
 
-      <section aria-label="Indicatori principali" className="grid grid-4">
+      <section aria-label="Indicatori principali" className="grid kpi-grid">
         <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href="/portafoglio" aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
         <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href="/portafoglio?health=RED" aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
         <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href="/portafoglio?reschedule=1" aria={`Procedure da riprogrammare: ${k.toReschedule}`} />
@@ -74,7 +88,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         />
       </section>
 
-      <div className="grid grid-2" style={{ marginTop: 16 }}>
+      <div className="grid dash-split">
         <section className="card" aria-labelledby="ann">
           <h2 id="ann">Fabbisogno per annualità</h2>
           <AnnualChart rows={data.annual} />
@@ -90,7 +104,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </tr>
             </thead>
             <tbody>
-              {data.byStatus.map((s) => (
+              {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
                 <tr key={s.status}>
                   <td>
                     <Link href={`/portafoglio?status=${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</Link>

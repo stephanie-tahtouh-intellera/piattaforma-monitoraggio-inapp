@@ -169,6 +169,7 @@ export function submitSimulation(db: Db, actor: Actor, simCode: string) {
 
 /** US-054 / DEC-042-043: quattro occhi, override motivato, controllo di versione, nuova ProcedureVersion. */
 export function approveSimulation(db: Db, actor: Actor, simCode: string, reason: string, override = false) {
+  // DEC-110: approvazione, rifiuto e override sulle criticità bloccanti spettano all'Ufficio Gare.
   requireAction(actor, "simulation.decide");
   const s = getSim(db, simCode);
   const p = requireProcedure(db, actor, s.procedure_code);
@@ -180,8 +181,10 @@ export function approveSimulation(db: Db, actor: Actor, simCode: string, reason:
     throw new DomainError("STALE_SIMULATION", "La previsione è cambiata dopo la simulazione: ricalcolarla", 409);
   }
   if (s.blocking === 1) {
-    if (!override) throw new DomainError("BLOCKING_CRITICALITY_REQUIRES_OVERRIDE", "La simulazione ha criticità bloccanti: serve un override motivato", 409);
-    if (!can(actor, "simulation.override")) throw new DomainError("FORBIDDEN", "Solo il Direttore Generale può forzare criticità bloccanti", 403);
+    if (!override) throw new DomainError("BLOCKING_CRITICALITY_REQUIRES_OVERRIDE", "La simulazione ha criticità bloccanti: serve un override motivato dell'Ufficio Gare", 409);
+  } else if (override) {
+    // L'override non è una scorciatoia per aggirare l'approvazione ordinaria.
+    throw new DomainError("VALIDATION_ERROR", "L'override è ammesso solo per simulazioni con criticità bloccanti", 422);
   }
   // Ricalcolo a partire dalla versione corrente (deterministico)
   const ref = configuredReferenceDate(db);

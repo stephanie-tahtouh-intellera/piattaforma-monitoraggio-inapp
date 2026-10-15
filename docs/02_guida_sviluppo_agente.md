@@ -406,7 +406,7 @@ Precisazioni: `POST /api/jobs/run-checks` risponde `202 {job_id}`; `GET /api/doc
 | `gare` | `PROCUREMENT_OFFICER` (Ufficio Gare; RUP nominato per procedura) | tutte le strutture |
 | `amministrazione` | `FINANCE_OFFICER` | tutte |
 | `fornitore.alfa` | `SUPPLIER` | solo il contratto P-004 (Fornitore Demo Alfa S.r.l.) |
-| `dirigente` | `EXECUTIVE` (Direttore Generale demo: firma determine, ordini e addendum; approva le riprogrammazioni) | tutte |
+| `dirigente` | `EXECUTIVE` (Direttore Generale demo: firma determine, ordini e addendum; non decide le riprogrammazioni, DEC-110) | tutte |
 | ~~`validatore`~~ | ruolo soppresso (DEC-109): classificazione dei documenti all'Ufficio Gare, passi in demo all'amministratore | — |
 | `admin` | `ADMIN` | tutte e configurazione |
 
@@ -422,8 +422,7 @@ E-mail: `<login>@demo.invalid`. Caselle funzionali (DEC-062): `struttura.<codice
 | Creare/modificare bozza, consegnare memoria | S | — | — | — | — | — | ✓ |
 | Completare/aggiornare una milestone | owner S | owner | owner | — | — | ✓ | — |
 | Creare/inviare una simulazione | — | ✓ | ✓ | — | — | — | — |
-| Approvare/rifiutare una simulazione (≠ autore) | — | — | — | — | ✓ | ✓ | — |
-| Override di una criticità bloccante | — | — | — | — | ✓ | — | — |
+| Approvare/rifiutare una simulazione (≠ autore), anche con override (DEC-110) | — | ✓ | — | — | — | — | — |
 | Registrare/modificare contratto e addendum | — | ✓ | — | — | — | — | — |
 | Definire il piano SAL | S | ✓ | — | — | — | — | — |
 | Presentare un SAL e caricare deliverable | S | — | — | contratti propri | — | — | — |

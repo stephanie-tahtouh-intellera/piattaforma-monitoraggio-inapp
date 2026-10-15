@@ -3,6 +3,7 @@ import { verifyAuditChain } from "@/infrastructure/audit";
 import { can } from "@/server/authz";
 import { auditList } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
+import { AUDIT_ACTION_LABEL, humanize } from "@/ui/labels";
 import { AuditTable } from "@/ui/tables";
 
 export const metadata = { title: "Audit" };
@@ -30,7 +31,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
           <label htmlFor="a-a">Azione</label>
           <select id="a-a" name="action" defaultValue={f.action ?? ""}>
             <option value="">Tutte</option>
-            {actions.map((a) => <option key={a}>{a}</option>)}
+            {actions.map((a) => <option key={a} value={a}>{AUDIT_ACTION_LABEL[a] ?? humanize(a)}</option>)}
           </select>
         </div>
         <button className="btn btn-primary">Filtra</button>

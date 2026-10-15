@@ -90,7 +90,8 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
   if (st.mode === "closed") {
     return (
       <button type="button" className="tour-launcher" onClick={() => save({ ...st, tour: st.tour ?? role, mode: "help" })} aria-label="Apri la guida demo">
-        <Compass size={18} aria-hidden /> Guida demo
+        <Compass size={20} aria-hidden />
+        <span className="tour-launcher-label">Guida demo</span>
       </button>
     );
   }

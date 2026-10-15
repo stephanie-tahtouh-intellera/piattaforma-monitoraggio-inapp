@@ -20,12 +20,13 @@ function seedActor(db: Db, login: string): Actor {
  * Azioni iniziali dei casi dimostrativi (DEC-105), eseguite con i comandi applicativi
  * così che stato, versioni e audit siano identici a quelli prodotti dalla UI:
  * - bozza BZ-001 della Struttura Sistemi informativi: la procedura che il percorso demo porta dal piano alla stipula;
- * - CD-05: simulazione con criticità bloccanti inviata dall'Ufficio Gare → override del Direttore Generale;
- * - CD-06: simulazione senza criticità inviata dall'Ufficio Gare → approvazione del Validatore.
+ * - CD-05: simulazione con criticità bloccanti inviata dall'Amministrazione → override dell'Ufficio Gare (DEC-110);
+ * - CD-06: simulazione senza criticità inviata dall'Amministrazione → approvazione dell'Ufficio Gare (DEC-110).
  */
 export function applyDemoActions(db: Db): void {
   const struttura = seedActor(db, "struttura.si");
   const gare = seedActor(db, "gare");
+  const amministrazione = seedActor(db, "amministrazione");
   const draft = createDraft(db, struttura, {
     title: "Rinnovo licenze e supporto della piattaforma di business intelligence",
     type: "DIRECT_AWARD_MEPA",
@@ -48,9 +49,10 @@ export function applyDemoActions(db: Db): void {
        VALUES (?, ?, ?, ?, ?, ?, ?, 'struttura.si', ?, 'UPLOAD', '1.00')`,
     ).run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, systemNowIso());
   }
-  const plans: { code: string; source: string; date: string; cause: string; notes: string }[] = [
+  const plans: { code: string; by: typeof gare; source: string; date: string; cause: string; notes: string }[] = [
     {
       code: "CD-05",
+      by: amministrazione,
       source: "AWARD",
       date: "2026-12-14",
       cause: "MILESTONE_OVERDUE",
@@ -58,6 +60,7 @@ export function applyDemoActions(db: Db): void {
     },
     {
       code: "CD-06",
+      by: amministrazione,
       source: "AWARD",
       date: "2026-10-15",
       cause: "MILESTONE_OVERDUE",
@@ -65,7 +68,7 @@ export function applyDemoActions(db: Db): void {
     },
   ];
   for (const s of plans) {
-    const sim = createSimulation(db, gare, s.code, { source: s.source, candidateDate: s.date, kind: "MANUAL", cause: s.cause, notes: s.notes });
-    submitSimulation(db, gare, sim.simulation_id);
+    const sim = createSimulation(db, s.by, s.code, { source: s.source, candidateDate: s.date, kind: "MANUAL", cause: s.cause, notes: s.notes });
+    submitSimulation(db, s.by, sim.simulation_id);
   }
 }

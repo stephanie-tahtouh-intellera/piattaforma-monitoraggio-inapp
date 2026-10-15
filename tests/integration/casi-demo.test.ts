@@ -70,11 +70,11 @@ describe("[DEC-105][DEC-107] casi dimostrativi del Modulo 1: ogni corsia ha un p
     expect(d.process.activeStep?.code).toBe("PRELIMINARY_INQUIRY");
   });
 
-  test("Direttore Generale: simulazioni in attesa di decisione; valore OCR in conflitto consultabile", () => {
-    const s5 = (procedureDetail(db, actor("dirigente"), "CD-05").simulations as any[]).find((x) => x.created_by === "gare");
+  test("Ufficio Gare: simulazioni in attesa di decisione; valore OCR in conflitto consultabile", () => {
+    const s5 = (procedureDetail(db, actor("dirigente"), "CD-05").simulations as any[]).find((x) => x.created_by === "amministrazione");
     expect([s5.status, s5.blocking]).toEqual(["SUBMITTED", 1]);
     expect(s5.result.criticalities.some((c: any) => c.code === "BUDGET_OVERFLOW")).toBe(true);
-    const s6 = (procedureDetail(db, actor("dirigente"), "CD-06").simulations as any[]).find((x) => x.created_by === "gare");
+    const s6 = (procedureDetail(db, actor("gare"), "CD-06").simulations as any[]).find((x) => x.created_by === "amministrazione");
     expect([s6.status, s6.blocking]).toEqual(["SUBMITTED", 0]);
     const items = procedureDetail(db, actor("dirigente"), "CD-07").validations as any[];
     expect(items.some((v) => v.kind === "CONFLICT")).toBe(true);

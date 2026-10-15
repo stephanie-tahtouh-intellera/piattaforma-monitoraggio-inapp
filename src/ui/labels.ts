@@ -87,6 +87,61 @@ export const DOC_TYPE_LABEL: Record<string, string> = {
   DETERMINA_REVOCA: "Determina di revoca",
   VERBALE_SAL: "Verbale di SAL",
 };
+/** Ultima risorsa per un codice senza etichetta: niente underscore né maiuscole tecniche. */
+export const humanize = (code: string | null | undefined) => {
+  const s = (code ?? "").replace(/_/g, " ").trim().toLowerCase();
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : "—";
+};
+export const AUDIT_ACTION_LABEL: Record<string, string> = {
+  SEED: "Caricamento dati demo",
+  RESET_DEMO: "Ripristino della demo",
+  RUN_CHECKS: "Ricalcolo dei controlli",
+  LOGIN: "Accesso",
+  LOGIN_FAILED: "Accesso non riuscito",
+  LOGOUT: "Uscita",
+  IMPORT: "Importazione",
+  IMPORT_DOCUMENTS: "Importazione documenti",
+  EXPORT: "Esportazione",
+  DRAFT_CREATE: "Creazione bozza",
+  MEMORY_SUBMIT: "Consegna memoria",
+  MILESTONE_COMPLETE: "Passo completato",
+  CANCEL: "Annullamento",
+  CLOSE: "Chiusura",
+  DOCUMENT_UPLOAD: "Caricamento documento",
+  DOCUMENT_PROCESSED: "Documento elaborato",
+  DOCUMENT_CLASSIFY: "Classificazione documento",
+  UPLOAD_REJECTED: "Caricamento rifiutato",
+  SIMULATION_CREATE: "Simulazione creata",
+  SIMULATION_SUBMIT: "Simulazione inviata",
+  SIMULATION_APPROVE: "Simulazione approvata",
+  SIMULATION_APPROVE_OVERRIDE: "Simulazione approvata in deroga",
+  SIMULATION_REJECT: "Simulazione rifiutata",
+  ALERT_ACKNOWLEDGE: "Alert preso in carico",
+  ALERT_RESOLVE: "Alert risolto",
+  ALERT_SUSPEND: "Escalation sospesa",
+  LIQUIDATION: "Liquidazione",
+  PAYMENT: "Pagamento",
+  PAYMENT_REVERSE: "Storno del pagamento",
+  CONFIG_UPDATE: "Configurazione modificata",
+  CONFIG_MODULES: "Moduli modificati",
+  PERMISSION_CHANGE: "Permessi modificati",
+  STEP_AWARD: "Passo: aggiudicazione",
+  STEP_SIGN: "Passo: controfirma del contratto",
+  STEP_RESERVATIONS: "Passo: prenotazioni di spesa",
+  STEP_COMMITMENTS: "Passo: impegni di spesa",
+  STEP_OPERATOR: "Passo: operatore individuato",
+};
+export const ENTITY_LABEL: Record<string, string> = {
+  PROCEDURE: "Procedura", SIMULATION: "Simulazione", DATASET: "Dati", DOCUMENT: "Documento", SESSION: "Sessione", USER: "Utente", ALERT: "Alert", STRUCTURE: "Struttura", SYSTEM: "Sistema", CONTRACT: "Contratto", SAL: "SAL", MILESTONE: "Passo",
+};
+export const SIM_KIND_LABEL: Record<string, string> = { FASTEST: "Più rapida", MIN_ANNUAL_IMPACT: "Minore impatto annuale", MANUAL: "Proposta manuale" };
+export const CRITICALITY_LABEL: Record<string, string> = {
+  BUDGET_OVERFLOW: "Disponibilità superata",
+  COMMITMENT_MISMATCH: "Impegni non allineati",
+  FUNDING_END_EXCEEDED: "Oltre la fine del finanziamento",
+  MILESTONE_BEYOND_LIMIT: "Passo oltre il limite",
+};
+export const OUTBOX_LABEL: Record<string, string> = { PENDING: "in coda", SENT: "inviate", FAILED: "non riuscite" };
 export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore" };
 
 /** Fasi e corsie dello schema di processo INAPP (DEC-107). */
@@ -118,7 +173,7 @@ export const ERROR_MESSAGE: Record<string, string> = {
   CSRF_REJECTED: "Richiesta non valida: ricarica la pagina e riprova.",
   FOUR_EYES_VIOLATION: "Chi ha proposto la riprogrammazione non può approvarla.",
   STALE_SIMULATION: "La procedura è cambiata dopo la simulazione: ricalcolala prima di decidere.",
-  BLOCKING_CRITICALITY_REQUIRES_OVERRIDE: "Ci sono criticità bloccanti: serve un override motivato del Direttore Generale.",
+  BLOCKING_CRITICALITY_REQUIRES_OVERRIDE: "Ci sono criticità bloccanti: serve un override motivato dell'Ufficio Gare.",
 };
 
 export function daysText(days: number | null | undefined): string {

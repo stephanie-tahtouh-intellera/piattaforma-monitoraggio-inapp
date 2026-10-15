@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { api } from "./api-client";
+import { DateInput } from "./date-input";
 
 export interface FieldDef {
   name: string;
@@ -91,13 +92,15 @@ export function ActionForm({
               <select id={id} name={f.name} defaultValue={f.defaultValue}>
                 {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-            ) : f.type === "checkbox" ? null : (
+            ) : f.type === "checkbox" ? null : f.type === "date" ? (
+              <DateInput id={id} name={f.name} defaultValue={f.defaultValue ?? ""} required={f.required} describedBy={f.help ? `${id}-h` : undefined} />
+            ) : (
               <input
                 id={id}
                 name={f.name}
-                type={f.type === "date" ? "date" : "text"}
+                type="text"
                 inputMode={f.type === "amount" ? "decimal" : undefined}
-                style={f.type === "amount" ? { textAlign: "right", width: 200 } : f.type === "date" ? { width: 170 } : undefined}
+                style={f.type === "amount" ? { textAlign: "right", width: 200 } : undefined}
                 required={f.required}
                 defaultValue={f.defaultValue}
                 aria-describedby={f.help ? `${id}-h` : undefined}

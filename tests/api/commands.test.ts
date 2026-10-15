@@ -92,8 +92,8 @@ describe("[US-054] approvazione riprogrammazione", () => {
 
   test("[T-009] approvazione: nuova versione, baseline intatta, flag chiuso, audit", () => {
     const sim = db.prepare("SELECT code FROM simulations WHERE created_by='system' AND procedure_id=(SELECT id FROM procedures WHERE code='P-002')").get() as { code: string };
-    expect(() => approveSimulation(db, as("dirigente"), sim.code, "")).toThrow(/Motivazione/);
-    approveSimulation(db, as("dirigente"), sim.code, "Memoria attesa entro il 12/10");
+    expect(() => approveSimulation(db, as("gare"), sim.code, "")).toThrow(/Motivazione/);
+    approveSimulation(db, as("gare"), sim.code, "Memoria attesa entro il 12/10");
     const d = procedureDetail(db, as("dirigente"), "P-002");
     expect(d.versions.map((v) => v.version_no)).toEqual([1, 2]);
     const mem = d.timeline.find((t) => t.code === "MEMORY_SUBMISSION")!;
@@ -107,33 +107,46 @@ describe("[US-054] approvazione riprogrammazione", () => {
     expect((db.prepare("SELECT COUNT(*) n FROM audit_events WHERE action='SIMULATION_APPROVE'").get() as any).n).toBe(1);
   });
 
-  test("[DEC-042] quattro occhi e override delle criticità bloccanti", () => {
-    const gare = as("gare");
-    const r = createSimulation(db, gare, "P-002", { source: "MEMORY_SUBMISSION", candidateDate: "2026-11-16", kind: "MANUAL", cause: "MEMORY_OVERDUE" });
-    submitSimulation(db, gare, r.simulation_id);
-    expect(() => approveSimulation(db, as("amministrazione"), r.simulation_id, "ok", true)).toThrow(/non consentita/);
-    expect(() => approveSimulation(db, as("dirigente"), r.simulation_id, "ok")).toThrow(/override/);
-    approveSimulation(db, as("dirigente"), r.simulation_id, "Accettato overflow con variazione di bilancio", true);
+  test("[DEC-042, DEC-110] quattro occhi e override delle criticità bloccanti: decide l'Ufficio Gare", () => {
+    const fin = as("amministrazione");
+    const r = createSimulation(db, fin, "P-002", { source: "MEMORY_SUBMISSION", candidateDate: "2026-11-16", kind: "MANUAL", cause: "MEMORY_OVERDUE" });
+    submitSimulation(db, fin, r.simulation_id);
+    // chi propone non può forzare, e l'Amministrazione non ha il permesso di override
+    expect(() => approveSimulation(db, fin, r.simulation_id, "ok", true)).toThrow(/non consentita/);
+    // il Direttore Generale non decide più le riprogrammazioni
+    expect(() => approveSimulation(db, as("dirigente"), r.simulation_id, "ok", true)).toThrow(/non consentita/);
+    // con criticità bloccanti l'approvazione ordinaria non basta: serve l'override dell'Ufficio Gare
+    expect(() => approveSimulation(db, as("gare"), r.simulation_id, "ok")).toThrow(/override/);
+    approveSimulation(db, as("gare"), r.simulation_id, "Accettato overflow con variazione di bilancio", true);
     const d = procedureDetail(db, as("dirigente"), "P-002");
     expect(d.evaluation.annualNeed).toEqual({ "2026": "50000.00", "2027": "430000.00" });
     expect(d.evaluation.overflows).toEqual([{ year: 2027, amount: "80000.00" }]);
     expect(d.evaluation.atRisk.uncovered).toBe("80000.00");
   });
 
+  test("[DEC-110] l'override non aggira l'approvazione ordinaria e vale solo con criticità bloccanti", () => {
+    const fin = as("amministrazione");
+    const r = createSimulation(db, fin, "P-005", { source: "CONTRACT_SIGNED", candidateDate: "2026-11-12", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
+    submitSimulation(db, fin, r.simulation_id);
+    expect(r.criticalities.some((c: any) => c.severity === "BLOCKING")).toBe(false);
+    expect(() => approveSimulation(db, as("gare"), r.simulation_id, "ok", true)).toThrow(/solo per simulazioni con criticità bloccanti/);
+  });
+
   test("[T-010] rifiuto motivato: piano invariato, proposta conservata", () => {
     const r = createSimulation(db, as("amministrazione"), "P-008", { source: "AWARD", candidateDate: "2026-11-20", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
     expect(r.criticalities[0]?.amount).toBe("100000.00");
-    rejectSimulation(db, as("dirigente"), r.simulation_id, "Overflow non sostenibile");
+    expect(() => rejectSimulation(db, as("dirigente"), r.simulation_id, "Overflow non sostenibile")).toThrow(/non consentita/);
+    rejectSimulation(db, as("gare"), r.simulation_id, "Overflow non sostenibile");
     const s = db.prepare("SELECT status, decision_reason FROM simulations WHERE code = ?").get(r.simulation_id);
     expect(s).toEqual({ status: "REJECTED", decision_reason: "Overflow non sostenibile" });
     expect(procedureDetail(db, as("dirigente"), "P-008").versions.length).toBe(1);
   });
 
   test("[STALE] approvazione su versione cambiata", () => {
-    const a = createSimulation(db, as("gare"), "P-005", { source: "CONTRACT_SIGNED", candidateDate: "2026-11-12", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
-    const b = createSimulation(db, as("gare"), "P-005", { source: "CONTRACT_SIGNED", candidateDate: "2026-10-20", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
-    approveSimulation(db, as("dirigente"), a.simulation_id, "ok");
-    expect(() => approveSimulation(db, as("dirigente"), b.simulation_id, "ok")).toThrow(/stato SUPERSEDED/);
+    const a = createSimulation(db, as("amministrazione"), "P-005", { source: "CONTRACT_SIGNED", candidateDate: "2026-11-12", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
+    const b = createSimulation(db, as("amministrazione"), "P-005", { source: "CONTRACT_SIGNED", candidateDate: "2026-10-20", kind: "MANUAL", cause: "MILESTONE_OVERDUE" });
+    approveSimulation(db, as("gare"), a.simulation_id, "ok");
+    expect(() => approveSimulation(db, as("gare"), b.simulation_id, "ok")).toThrow(/stato SUPERSEDED/);
   });
 });
 

@@ -2,19 +2,23 @@ import Link from "next/link";
 import { formatDateTimeIt } from "@/contracts/format";
 import { ActionForm } from "./action-form";
 import { DateIt, SeverityBadge } from "./badges";
-import { ALERT_STATUS_LABEL, OWNER_LABEL, RULE_LABEL } from "./labels";
+import { ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE_LABEL, humanize } from "./labels";
 
 export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; showProcedure?: boolean }) {
   return (
     <div className="table-wrap">
-      <table className="data">
+      <table className="data alerts-table">
+        <colgroup>
+          {showProcedure ? <col className="c-proc" /> : null}
+          <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-level" /><col className="c-due" /><col className="c-state" /><col className="c-owner" /><col className="c-actions" />
+        </colgroup>
         <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Livello</th><th>Scadenza</th><th>Stato</th><th>Owner</th><th>Azioni</th></tr></thead>
         <tbody>
           {alerts.map((a) => (
             <tr key={a.id}>
-              {showProcedure ? <td className="mono"><Link href={`/procedure/${a.procedure_code}?tab=alerts`}>{a.procedure_code}</Link><div className="small muted clamp2" title={a.procedure_title}>{a.procedure_title}</div></td> : null}
+              {showProcedure ? <td><Link className="mono" href={`/procedure/${a.procedure_code}?tab=alerts`}>{a.procedure_code}</Link><div className="small muted clamp2" title={a.procedure_title}>{a.procedure_title}</div></td> : null}
               <td>{a.kind === "ANOMALY" ? "Anomalia" : "Alert"}</td>
-              <td>{RULE_LABEL[a.rule] ?? a.rule}<div className="small muted">{a.title}{a.message && a.message !== a.title ? ` — ${a.message}` : ""}</div></td>
+              <td>{RULE_LABEL[a.rule] ?? humanize(a.rule)}<div className="small muted">{a.title}{a.message && a.message !== a.title ? ` — ${a.message}` : ""}</div></td>
               <td><SeverityBadge value={a.severity} /></td>
               <td>{a.current_level ?? "—"}</td>
               <td><DateIt v={a.due_date} /></td>
@@ -50,8 +54,8 @@ export function AuditTable({ rows }: { rows: any[] }) {
             <tr key={r.id}>
               <td>{formatDateTimeIt(r.at)}</td>
               <td>{r.actor}{r.impersonated_by ? <div className="small muted">imp. {r.impersonated_by}</div> : null}</td>
-              <td className="mono">{r.action}</td>
-              <td className="small">{r.entity_type} {r.entity_id}</td>
+              <td title={r.action}>{AUDIT_ACTION_LABEL[r.action] ?? humanize(r.action)}</td>
+              <td className="small">{ENTITY_LABEL[r.entity_type] ?? humanize(r.entity_type)} {r.entity_id}</td>
               <td className="small" style={{ maxWidth: 360 }}>{r.before_json ? <div>prima: <code>{String(r.before_json).slice(0, 160)}</code></div> : null}{r.after_json ? <div>dopo: <code>{String(r.after_json).slice(0, 160)}</code></div> : null}</td>
               <td>{r.reason ?? "—"}</td>
               <td className="mono small">{r.correlation_id}</td>

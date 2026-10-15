@@ -7,6 +7,7 @@ import { executionModuleEnabled } from "@/application/modules";
 import Link from "next/link";
 import { db, pageActor } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
+import { OUTBOX_LABEL, humanize } from "@/ui/labels";
 
 export const metadata = { title: "Amministrazione" };
 
@@ -76,7 +77,7 @@ export default async function AdminPage() {
             <dt>Worker</dt>
             <dd>{s.worker ? `heartbeat ${formatDateTimeIt(s.worker.lastBeat)}` : "non attivo (avvialo con pnpm worker)"}</dd>
             <dt>Outbox e-mail</dt>
-            <dd>{(s.outbox as any[]).map((o) => `${o.status}: ${o.n}`).join(" · ") || "vuota"}</dd>
+            <dd>{(s.outbox as any[]).map((o) => `${o.n} ${OUTBOX_LABEL[o.status] ?? humanize(o.status).toLowerCase()}`).join(" · ") || "vuota"}</dd>
             <dt>Ultimo import</dt>
             <dd>{imp ? `${imp.source_file} · ${rep.imported} righe importate, ${rep.issues.length} segnalazioni` : "—"}</dd>
           </dl>

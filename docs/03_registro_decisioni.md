@@ -155,3 +155,15 @@ Formato:
 - Motivo: il Validatore non compare nello schema di processo INAPP (quattro corsie).
 - Effetti: superate le parti di US-022/US-023/US-080 che prevedono la decisione di un validatore sulle proposte; il test T-018 verifica ora la correzione della classificazione con audit. Il vincolo CHECK sui ruoli in `0001_init.sql` conserva il valore `VALIDATOR` ma nessuna riga può usarlo.
 - Stato: attiva. Da confermare con INAPP se la correzione della classificazione debba spettare anche alla Struttura richiedente.
+
+### DEC-110 — Decisione sulle riprogrammazioni (approvazione, rifiuto, override) all'Ufficio Gare
+- Data: 2026-10-12 · Autore: agente, su indicazione del cliente («l'override va tolto al Direttore Generale e dato all'Ufficio Gare… metti tutto a Ufficio Gare»)
+- Decisione:
+  - il permesso `simulation.decide` passa da `EXECUTIVE` a `PROCUREMENT_OFFICER` e copre approvazione, rifiuto e override; il permesso separato `simulation.override` è abolito. Il Direttore Generale non decide più le riprogrammazioni (resta in sola lettura su portafoglio, alert e audit, con la sospensione dell'escalation);
+  - l'override è ammesso solo se la simulazione ha criticità bloccanti (errore di validazione negli altri casi); con criticità bloccanti l'approvazione ordinaria è rifiutata;
+  - restano i quattro occhi (DEC-042): chi ha creato o inviato la simulazione non può deciderla;
+  - scheda procedura: all'Ufficio Gare compaiono «Approva» (o «Approva con override» se bloccante) e «Rifiuta»;
+  - casi dimostrativi: le simulazioni RS-CD05-001 (bloccante) e quella di CD-06 sono inviate dall'Amministrazione, così l'Ufficio Gare può deciderle; guida demo e test aggiornati.
+- Motivo: indicazione del cliente sulla ripartizione dei poteri.
+- Effetti: DEC-042 e DEC-109 modificate (la riga «le riprogrammazioni sono decise solo dal Direttore Generale» non è più valida); matrice dei permessi della guida §7.3 aggiornata; test `[DEC-042, DEC-110]` e `[DEC-110]` in `tests/api/commands.test.ts`.
+- Stato: attiva. Rischio da confermare con INAPP: se a proporre è l'unico utente dell'Ufficio Gare, nessuno può decidere (quattro occhi); nella demo propone l'Amministrazione, in produzione servirebbe un secondo utente dello stesso ruolo.

@@ -27,7 +27,7 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 ## Utenti demo (password `Demo2026!`, configurabile con `DEMO_PASSWORD`)
 | Utente | Ruolo |
 |---|---|
-| `dirigente` | Direttore Generale: approva/rifiuta riprogrammazioni, override |
+| `dirigente` | Direttore Generale: visione d'insieme, firma le determine (non decide le riprogrammazioni, DEC-110) |
 | `gare` | Ufficio Gare (RUP): simulazioni, contratti, SAL |
 | `amministrazione` | Amministrazione: fatture, liquidazioni, pagamenti |
 | `struttura.si` | Struttura Sistemi informativi (vede solo la propria struttura) |

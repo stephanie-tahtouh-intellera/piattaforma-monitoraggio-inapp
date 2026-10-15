@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatDateIt, formatEuro } from "@/contracts/format";
 import { api } from "./api-client";
+import { DateInput } from "./date-input";
+import { SIM_KIND_LABEL } from "./labels";
 
 interface Sim {
   source_milestone: string;
@@ -24,7 +26,7 @@ interface Alt {
 }
 
 const STEPS = ["Causa", "Cronoprogramma", "Finanza", "Alternative", "Decisione"];
-const KIND_LABEL: Record<string, string> = { FASTEST: "Più rapida", MIN_ANNUAL_IMPACT: "Minore impatto annuale", MANUAL: "Proposta manuale" };
+const KIND_LABEL = SIM_KIND_LABEL;
 
 /** Wizard a 5 passi (spec §9.4, 07 §6.9): l'anteprima non modifica alcun dato; il salvataggio crea una bozza. */
 export function RescheduleWizard(props: {
@@ -138,7 +140,7 @@ export function RescheduleWizard(props: {
             </div>
             <div className="field">
               <label htmlFor="cand">Nuova data proposta (obbligatorio)</label>
-              <input id="cand" type="date" value={candidate} min={props.referenceDate} onChange={(e) => setCandidate(e.target.value)} />
+              <DateInput id="cand" value={candidate} min={props.referenceDate} onChange={setCandidate} />
               <span className="help">Data più rapida ammissibile: {props.fastest ? formatDateIt(props.fastest) : "n.d."} (riferimento + preavviso minimo, giorno lavorativo).</span>
             </div>
             <div className="field">
@@ -239,7 +241,7 @@ export function RescheduleWizard(props: {
             Alternativa <strong>{KIND_LABEL[current.kind]}</strong>: {label(source)} al {formatDateIt(current.result.candidate_date)}, {current.result.date_changes} date cambiate, {formatEuro(current.result.amount_shifted)} spostati tra annualità.
           </p>
           {current.result.criticalities.some((c) => c.severity === "BLOCKING") ? (
-            <div className="alert-box error">Sono presenti criticità bloccanti: l'approvazione richiederà un override motivato del Direttore Generale.</div>
+            <div className="alert-box error">Sono presenti criticità bloccanti: l'approvazione richiederà un override motivato dell'Ufficio Gare.</div>
           ) : (
             <div className="alert-box success">Nessuna criticità bloccante.</div>
           )}
