@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatEuro } from "@/contracts/format";
+import { AmountInput } from "./amount-input";
 import { api } from "./api-client";
 import { DateInput } from "./date-input";
 
@@ -88,9 +89,9 @@ export function DraftForm({ types, referenceDate }: { types: { value: string; la
           </div>
           <div className="field"><label htmlFor="d-due">Data obiettivo della memoria (obbligatorio)</label><DateInput id="d-due" value={f.due} onChange={(v) => set("due", v)} min={referenceDate} required /></div>
           <h2>Quadro economico</h2>
-          <div className="field"><label htmlFor="d-base">Base di gara, IVA esclusa (obbligatorio)</label><input id="d-base" type="text" inputMode="decimal" required style={{ textAlign: "right", width: 200 }} value={f.base} onChange={(e) => set("base", e.target.value)} /></div>
+          <div className="field"><label htmlFor="d-base">Base di gara, IVA esclusa (obbligatorio)</label><AmountInput id="d-base" required value={f.base} onChange={(v) => set("base", v)} /></div>
           <div className="field"><label htmlFor="d-vat">Aliquota IVA %</label><input id="d-vat" type="text" inputMode="decimal" style={{ textAlign: "right", width: 100 }} value={f.vat} onChange={(e) => set("vat", e.target.value)} /><span className="help">22% come nel workbook INAPP (da validare).</span></div>
-          <div className="field"><label htmlFor="d-anac">Tassa gara (contributo ANAC)</label><input id="d-anac" type="text" inputMode="decimal" style={{ textAlign: "right", width: 200 }} value={f.anac} onChange={(e) => set("anac", e.target.value)} /><span className="help">Importo a carico della stazione appaltante; 0 se la procedura ne è esente.</span></div>
+          <div className="field"><label htmlFor="d-anac">Tassa gara (contributo ANAC)</label><AmountInput id="d-anac" value={f.anac} onChange={(v) => set("anac", v)} /><span className="help">Importo a carico della stazione appaltante; 0 se la procedura ne è esente.</span></div>
           <div className="field" style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <input id="d-dec" type="checkbox" checked={f.hasDec} onChange={(e) => set("hasDec", e.target.checked)} />
             <label htmlFor="d-dec">È previsto un DEC (direttore dell&apos;esecuzione): maturano gli incentivi per funzioni tecniche</label>
@@ -98,33 +99,49 @@ export function DraftForm({ types, referenceDate }: { types: { value: string; la
           {f.hasDec ? (
             <div className="field"><label htmlFor="d-inc">Incentivi % sulla base di gara</label><input id="d-inc" type="text" inputMode="decimal" style={{ textAlign: "right", width: 100 }} value={f.incentive} onChange={(e) => set("incentive", e.target.value)} /><span className="help">Tetto del 2% (D.Lgs. 36/2023, art. 45); da validare.</span></div>
           ) : null}
+          <div className="frame-card narrow-only" aria-label="Quadro economico calcolato"><FramePreview frame={frame} frameErr={frameErr} /></div>
           <h2>Riparto per annualità</h2>
           {(["y2026", "y2027", "y2028", "y2029"] as const).map((k) => (
-            <div className="field" key={k}><label htmlFor={`d-${k}`}>Riparto {k.slice(1)}</label><input id={`d-${k}`} type="text" inputMode="decimal" style={{ textAlign: "right", width: 200 }} value={f[k]} onChange={(e) => set(k, e.target.value)} /></div>
+            <div className="field" key={k}><label htmlFor={`d-${k}`}>Riparto {k.slice(1)}</label><AmountInput id={`d-${k}`} value={f[k]} onChange={(v) => set(k, v)} /></div>
           ))}
           <p className="help">La somma del riparto deve coincidere con l&apos;importo a disposizione della struttura.</p>
-        </div>
-        <aside className="frame-card" aria-live="polite" aria-label="Quadro economico calcolato">
-          <h2>Importo a disposizione della struttura</h2>
-          {frameErr ? <div className="alert-box error">{frameErr}</div> : null}
           {frame ? (
-            <dl className="kv frame-kv">
-              <dt>Base di gara</dt><dd className="num">{formatEuro(frame.base)}</dd>
-              <dt>IVA {frame.vat_pct}%</dt><dd className="num">{formatEuro(frame.vat)}</dd>
-              <dt>Importo contrattuale (IVA inclusa)</dt><dd className="num">{formatEuro(frame.gross)}</dd>
-              <dt>Tassa gara</dt><dd className="num">{formatEuro(frame.anac_fee)}</dd>
-              <dt>Incentivi {frame.has_dec ? `${frame.incentive_pct}%` : "(nessun DEC)"}</dt><dd className="num">{formatEuro(frame.incentive)}</dd>
-              {frame.has_dec ? (<><dt className="sub">di cui personale</dt><dd className="num sub">{formatEuro(frame.incentive_personnel)}</dd><dt className="sub">di cui fondo innovazione</dt><dd className="num sub">{formatEuro(frame.incentive_fund)}</dd></>) : null}
-              <dt className="total">Totale da programmare</dt><dd className="num total">{formatEuro(frame.total)}</dd>
-            </dl>
-          ) : !frameErr ? (
-            <p className="muted">Inserisci la base di gara per vedere il quadro economico completo di IVA, tassa gara e incentivi.</p>
+            <div className="actions" role="group" aria-label="Assegna tutto il totale a un anno">
+              <span className="small muted">Assegna tutto il totale a:</span>
+              {(["y2026", "y2027", "y2028", "y2029"] as const).map((k) => (
+                <button key={k} type="button" className="btn btn-secondary btn-sm" onClick={() => setF((x) => ({ ...x, y2026: "", y2027: "", y2028: "", y2029: "", [k]: formatEuro(frame.total).replace(/s*€/, "") }))}>{k.slice(1)}</button>
+              ))}
+            </div>
           ) : null}
-        </aside>
+        </div>
+        <aside className="frame-card wide-only" aria-label="Quadro economico calcolato"><FramePreview frame={frame} frameErr={frameErr} /></aside>
       </div>
       <div style={{ marginTop: 16 }}>
         <button className="btn btn-primary" type="submit" disabled={busy || !frame} aria-busy={busy}>{busy ? "Salvataggio in corso…" : "Crea bozza"}</button>
       </div>
     </form>
+  );
+}
+
+/** Riquadro del quadro economico: i valori arrivano già calcolati dal server (DEC-111). */
+function FramePreview({ frame, frameErr }: { frame: Frame | null; frameErr: string | null }) {
+  return (
+    <div aria-live="polite">
+      <h2>Importo a disposizione della struttura</h2>
+      {frameErr ? <div className="alert-box error">{frameErr}</div> : null}
+      {frame ? (
+        <dl className="kv frame-kv">
+          <dt>Base di gara</dt><dd className="num">{formatEuro(frame.base)}</dd>
+          <dt>IVA {frame.vat_pct}%</dt><dd className="num">{formatEuro(frame.vat)}</dd>
+          <dt>Importo contrattuale (IVA inclusa)</dt><dd className="num">{formatEuro(frame.gross)}</dd>
+          <dt>Tassa gara</dt><dd className="num">{formatEuro(frame.anac_fee)}</dd>
+          <dt>Incentivi {frame.has_dec ? `${frame.incentive_pct}%` : "(nessun DEC)"}</dt><dd className="num">{formatEuro(frame.incentive)}</dd>
+          {frame.has_dec ? (<><dt className="sub">di cui personale</dt><dd className="num sub">{formatEuro(frame.incentive_personnel)}</dd><dt className="sub">di cui fondo innovazione</dt><dd className="num sub">{formatEuro(frame.incentive_fund)}</dd></>) : null}
+          <dt className="total">Totale da programmare</dt><dd className="num total">{formatEuro(frame.total)}</dd>
+        </dl>
+      ) : !frameErr ? (
+        <p className="muted">Inserisci la base di gara per vedere il quadro economico completo di IVA, tassa gara e incentivi.</p>
+      ) : null}
+    </div>
   );
 }

@@ -62,10 +62,16 @@ const PROCESS: Tour = {
   cases: ["BZ-001 – Rinnovo licenze e supporto della piattaforma di business intelligence (85.400,00 €)"],
   steps: [
     {
-      path: "/procedure/BZ-001", target: ".phase-bar", role: "STRUCTURE_USER", stage: 0,
-      title: "0 · Piano: inserimento nel piano di programmazione",
-      body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto 2026/2027 e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
+      path: "/procedure/nuova", target: "main section.card", role: "STRUCTURE_USER", stage: 0,
+      title: "0 · Piano: creazione della bozza",
+      body: "Si parte dalla bozza: la Struttura inserisce oggetto, tipologia, data obiettivo della memoria e quadro economico (base di gara, IVA, tassa gara, riparto per annualità). La bozza non genera date effettive: la baseline si congela solo alla consegna della memoria.",
+      tryIt: "Compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
       can: ["Creare altre bozze con «Nuova procedura in bozza» (in alto a destra, anche da Dashboard e Portafoglio)"],
+    },
+    {
+      path: "/procedure/BZ-001", target: ".phase-bar", role: "STRUCTURE_USER", stage: 0,
+      title: "0 · La bozza nel piano di programmazione",
+      body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto 2026/2027 e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
     },
     {
       path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,

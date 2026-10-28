@@ -1,6 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AmountInput } from "./amount-input";
 import { api } from "./api-client";
 import { DateInput } from "./date-input";
 
@@ -94,13 +95,13 @@ export function ActionForm({
               </select>
             ) : f.type === "checkbox" ? null : f.type === "date" ? (
               <DateInput id={id} name={f.name} defaultValue={f.defaultValue ?? ""} required={f.required} describedBy={f.help ? `${id}-h` : undefined} />
+            ) : f.type === "amount" ? (
+              <AmountInput id={id} name={f.name} defaultValue={f.defaultValue ?? ""} required={f.required} describedBy={f.help ? `${id}-h` : undefined} />
             ) : (
               <input
                 id={id}
                 name={f.name}
                 type="text"
-                inputMode={f.type === "amount" ? "decimal" : undefined}
-                style={f.type === "amount" ? { textAlign: "right", width: 200 } : undefined}
                 required={f.required}
                 defaultValue={f.defaultValue}
                 aria-describedby={f.help ? `${id}-h` : undefined}
