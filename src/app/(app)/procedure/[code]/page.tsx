@@ -35,9 +35,9 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   const actor = await pageActor();
   const { code } = await params;
   const tab = sp((await searchParams).tab) ?? "iter";
-  let d: ReturnType<typeof procedureDetail>;
+  let d: Awaited<ReturnType<typeof procedureDetail>>;
   try {
-    d = procedureDetail(db(), actor, decodeURIComponent(code));
+    d = await procedureDetail(await db(), actor, decodeURIComponent(code));
   } catch (e) {
     if (e instanceof DomainError && e.status === 404) notFound();
     if (e instanceof DomainError && e.status === 403)
@@ -273,7 +273,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   );
 }
 
-function Timeline({ d }: { d: ReturnType<typeof procedureDetail> }) {
+function Timeline({ d }: { d: Awaited<ReturnType<typeof procedureDetail>> }) {
   const dates = d.timeline.flatMap((m) => [m.baseline, m.forecast, m.actual]).filter(Boolean) as string[];
   dates.push(d.referenceDate);
   const min = isoDate([...dates].sort()[0]!);
@@ -321,7 +321,7 @@ function Timeline({ d }: { d: ReturnType<typeof procedureDetail> }) {
   );
 }
 
-function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: Parameters<typeof can>[0] }) {
+function Finance({ d, actor }: { d: Awaited<ReturnType<typeof procedureDetail>>; actor: Parameters<typeof can>[0] }) {
   const ev = d.evaluation;
   return (
     <div className="stack">
@@ -428,7 +428,7 @@ function Finance({ d, actor }: { d: ReturnType<typeof procedureDetail>; actor: P
   );
 }
 
-function SalActions({ d, s, actor }: { d: ReturnType<typeof procedureDetail>; s: ReturnType<typeof procedureDetail>["sals"][number]; actor: Parameters<typeof can>[0] }) {
+function SalActions({ d, s, actor }: { d: Awaited<ReturnType<typeof procedureDetail>>; s: Awaited<ReturnType<typeof procedureDetail>>["sals"][number]; actor: Parameters<typeof can>[0] }) {
   if (!d.contract?.signed) return <span className="muted small">contratto non stipulato</span>;
   const base = `/api/procedures/${d.procedure.code}/sals/${s.seq}`;
   const date = { name: "date", label: "Data", type: "date" as const, required: true, defaultValue: d.referenceDate };

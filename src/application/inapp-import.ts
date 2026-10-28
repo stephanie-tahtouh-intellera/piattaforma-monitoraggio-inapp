@@ -18,8 +18,8 @@ export function inappWorkbookPath(): string {
 export async function importInappWorkbook(db: Db, clock: Clock): Promise<SeedDataset> {
   const file = inappWorkbookPath();
   const { procedures, report } = await readInappWorkbook(file, loadTemplates(), new BusinessCalendar(), clock.referenceDate());
-  tx(db, () => {
-    db.prepare("INSERT INTO import_reports (dataset, source_file, summary_json, created_by, created_at) VALUES ('inapp', ?, ?, 'seed', ?)").run(
+  await tx(db, async (db) => {
+    await db.prepare("INSERT INTO import_reports (dataset, source_file, summary_json, created_by, created_at) VALUES ('inapp', ?, ?, 'seed', ?)").run(
       path.basename(file),
       JSON.stringify(report),
       clock.nowIso(),
@@ -58,7 +58,7 @@ export async function attachRealDocuments(db: Db, clock: Clock): Promise<{ attac
   let cigSource: string | null = null;
   for (const [f, t] of texts) {
     for (const cig of findCigs(t.pages.map((p) => p.text).join("\n"))) {
-      const row = db.prepare("SELECT id, code, cig FROM procedures WHERE upper(cig) = ?").get(cig) as { id: number; code: string; cig: string } | undefined;
+      const row = (await db.prepare("SELECT id, code, cig FROM procedures WHERE upper(cig) = ?").get(cig)) as { id: number; code: string; cig: string } | undefined;
       if (row) {
         target = row;
         cigSource = f;
@@ -70,7 +70,7 @@ export async function attachRealDocuments(db: Db, clock: Clock): Promise<{ attac
   if (!target) return { attached: 0, procedure: null };
   const now = clock.nowIso();
   let attached = 0;
-  tx(db, () => {
+  await tx(db, async (db) => {
     for (const f of files) {
       const full = path.join(dir, f);
       const buf = readFileSync(full);
@@ -80,10 +80,11 @@ export async function attachRealDocuments(db: Db, clock: Clock): Promise<{ attac
       const byCig = f === cigSource || findCigs(t.pages.map((p) => p.text).join("\n")).includes(target!.cig.toUpperCase());
       const method = byCig ? "CIG" : "FASCICOLO";
       const conf = byCig ? "0.98" : "0.80";
-      const info = db
+      const info = await db
         .prepare(
-          `INSERT OR IGNORE INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, subtype, title, pages, processing_state, association_method, association_confidence, uploaded_by, uploaded_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'seed', ?)`,
+          `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, subtype, title, pages, processing_state, association_method, association_confidence, uploaded_by, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'seed', ?)
+           ON CONFLICT (sha256, procedure_id) DO NOTHING`,
         )
         .run(
           target!.id,
@@ -102,20 +103,30 @@ export async function attachRealDocuments(db: Db, clock: Clock): Promise<{ attac
         );
       if (!info.changes) continue;
       const docId = Number(info.lastInsertRowid);
-      for (const p of t.pages) db.prepare("INSERT OR REPLACE INTO document_pages (document_id, page_no, text, method, confidence) VALUES (?, ?, ?, ?, ?)").run(docId, p.page, p.text, p.method, p.method === "TEXT_LAYER" ? "1.00" : null);
-      db.prepare(
-        "INSERT INTO evidences (procedure_id, field, value, source_type, document_id, locator, excerpt, method, confidence, author, created_at) VALUES (?, 'document.association', ?, 'DOCUMENT', ?, ?, ?, ?, ?, 'system', ?)",
-      ).run(target!.id, target!.code, docId, byCig ? "CIG nel testo" : "stesso fascicolo", byCig ? `CIG ${target!.cig}` : `Fascicolo "Documenti Gara"`, method, conf, now);
+      for (const p of t.pages)
+        await db
+          .prepare(
+            "INSERT INTO document_pages (document_id, page_no, text, method, confidence) VALUES (?, ?, ?, ?, ?) ON CONFLICT (document_id, page_no) DO UPDATE SET text = excluded.text, method = excluded.method, confidence = excluded.confidence",
+          )
+          .run(docId, p.page, p.text, p.method, p.method === "TEXT_LAYER" ? "1.00" : null);
+      await db
+        .prepare(
+          "INSERT INTO evidences (procedure_id, field, value, source_type, document_id, locator, excerpt, method, confidence, author, created_at) VALUES (?, 'document.association', ?, 'DOCUMENT', ?, ?, ?, ?, ?, 'system', ?)",
+        )
+        .run(target!.id, target!.code, docId, byCig ? "CIG nel testo" : "stesso fascicolo", byCig ? `CIG ${target!.cig}` : `Fascicolo "Documenti Gara"`, method, conf, now);
       if (!byCig) {
-        db.prepare(
-          `INSERT OR IGNORE INTO validation_items (procedure_id, kind, field, proposed_value, document_id, locator, excerpt, method, confidence, created_at)
-           VALUES (?, 'ASSOCIATION', 'document.procedure', ?, ?, ?, ?, 'FASCICOLO', ?, ?)`,
-        ).run(target!.id, target!.code, docId, f, "Associazione proposta per appartenenza al fascicolo (sotto soglia di affidabilità)", conf, now);
+        await db
+          .prepare(
+            `INSERT INTO validation_items (procedure_id, kind, field, proposed_value, document_id, locator, excerpt, method, confidence, created_at)
+           VALUES (?, 'ASSOCIATION', 'document.procedure', ?, ?, ?, ?, 'FASCICOLO', ?, ?)
+           ON CONFLICT (procedure_id, kind, field, document_id, proposed_value) DO NOTHING`,
+          )
+          .run(target!.id, target!.code, docId, f, "Associazione proposta per appartenenza al fascicolo (sotto soglia di affidabilità)", conf, now);
       }
       attached++;
     }
-    db.prepare("UPDATE procedures SET documents_tracked = 1 WHERE id = ?").run(target!.id);
-    writeAudit(db, { actor: "system", action: "IMPORT_DOCUMENTS", entityType: "PROCEDURE", entityId: target!.code, procedureCode: target!.code, after: { files: files.length, attached }, at: now });
+    await db.prepare("UPDATE procedures SET documents_tracked = 1 WHERE id = ?").run(target!.id);
+    await writeAudit(db, { actor: "system", action: "IMPORT_DOCUMENTS", entityType: "PROCEDURE", entityId: target!.code, procedureCode: target!.code, after: { files: files.length, attached }, at: now });
   });
   return { attached, procedure: target.code };
 }

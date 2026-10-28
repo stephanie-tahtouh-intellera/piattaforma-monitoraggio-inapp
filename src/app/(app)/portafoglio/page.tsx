@@ -25,10 +25,10 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     reschedule: sp(q.reschedule), alerts: sp(q.alerts), sort: sp(q.sort) ?? "health", dir: sp(q.dir) ?? "asc",
     page: Number(sp(q.page) ?? "1"), size: Number(sp(q.size) ?? "25"),
   };
-  const d = db();
-  const r = listProcedures(d, actor, f);
-  const structures = d.prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all() as { code: string; name: string }[];
-  const years = (d.prepare("SELECT DISTINCT year FROM procedure_snapshot_year ORDER BY year").all() as { year: number }[]).map((x) => x.year);
+  const d = await db();
+  const r = await listProcedures(d, actor, f);
+  const structures = (await d.prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all()) as { code: string; name: string }[];
+  const years = ((await d.prepare("SELECT DISTINCT year FROM procedure_snapshot_year ORDER BY year").all()) as { year: number }[]).map((x) => x.year);
   const qs = (patch: Record<string, string | undefined>) => {
     const u = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...f, ...patch })) if (v !== undefined && v !== "" && !(k === "page" && v === 1)) u.set(k, String(v));

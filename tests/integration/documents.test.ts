@@ -51,7 +51,7 @@ describe("[US-112] protezione degli upload", () => {
     expect(() => sniff("script.exe", Buffer.from("%PDF-1.7"))).toThrow(/non ammesso/);
   });
   test("ZIP slip e path traversal rifiutati e auditati, file validi acquisiti, idempotenza per hash", async () => {
-    const pid = (db.prepare("SELECT id FROM procedures WHERE code='P-003'").get() as { id: number }).id;
+    const pid = ((await db.prepare("SELECT id FROM procedures WHERE code='P-003'").get()) as { id: number }).id;
     const z = zip([
       { name: "../../evil.pdf", data: Buffer.from("%PDF-1.4 evil") },
       { name: "ok/determina_indizione.pdf", data: realPdf("contratto.pdf") },
@@ -61,7 +61,7 @@ describe("[US-112] protezione degli upload", () => {
     expect(r.stored.length).toBe(1);
     expect(r.rejected.join(" ")).toMatch(/ZIP slip/);
     expect(r.rejected.join(" ")).toMatch(/nota\.exe/);
-    expect((db.prepare("SELECT COUNT(*) n FROM audit_events WHERE action='UPLOAD_REJECTED'").get() as { n: number }).n).toBeGreaterThanOrEqual(1);
+    expect(((await db.prepare("SELECT COUNT(*) n FROM audit_events WHERE action='UPLOAD_REJECTED'").get()) as { n: number }).n).toBeGreaterThanOrEqual(1);
     const again = await storeUpload(db, "admin", pid, "P-003", "fascicolo.zip", z);
     expect(again.stored.length).toBe(0);
   });
@@ -91,16 +91,16 @@ describe("[T-015] OCR di fallback su un atto reale senza layer di testo", () => 
   }, 120000);
 
   test("documento caricato: pagine OCR salvate e proposte in coda, nessuna sovrascrittura", async () => {
-    const pid = (db.prepare("SELECT id FROM procedures WHERE code='P-012'").get() as { id: number }).id;
+    const pid = ((await db.prepare("SELECT id FROM procedures WHERE code='P-012'").get()) as { id: number }).id;
     const r = await storeUpload(db, "admin", pid, "P-012", "determina_indizione_scansione.pdf", realPdf("determina_indizione.pdf"));
     const out = await processDocument(db, r.stored[0]!, "admin");
     expect(out.state).toBe("OCR_DONE");
     expect(out.ocrPages).toBe(4);
-    const pages = db.prepare("SELECT method FROM document_pages WHERE document_id = ?").all(r.stored[0]!) as { method: string }[];
+    const pages = (await db.prepare("SELECT method FROM document_pages WHERE document_id = ?").all(r.stored[0]!)) as { method: string }[];
     expect(pages.every((p) => p.method === "OCR")).toBe(true);
-    const gross = (db.prepare("SELECT gross_cents FROM contracts WHERE procedure_id = ?").get(pid) as { gross_cents: number }).gross_cents;
+    const gross = ((await db.prepare("SELECT gross_cents FROM contracts WHERE procedure_id = ?").get(pid)) as { gross_cents: number }).gross_cents;
     expect(gross).toBe(18000000); // BR-015: il validato non cambia
-    expect((db.prepare("SELECT COUNT(*) n FROM validation_items WHERE document_id = ?").get(r.stored[0]!) as { n: number }).n).toBeGreaterThan(0);
+    expect(((await db.prepare("SELECT COUNT(*) n FROM validation_items WHERE document_id = ?").get(r.stored[0]!)) as { n: number }).n).toBeGreaterThan(0);
   }, 300000);
 });
 

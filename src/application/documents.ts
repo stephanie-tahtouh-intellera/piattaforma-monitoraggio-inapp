@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { Money } from "@/domain/money";
 import { writeAudit } from "@/infrastructure/audit";
@@ -8,6 +8,7 @@ import { projectRoot } from "@/infrastructure/config/templates";
 import { tx, type Db } from "@/infrastructure/db/connection";
 import { ocrPdfPages } from "@/infrastructure/documents/ocr";
 import { extractPdfText, findCigs } from "@/infrastructure/documents/pdf-text";
+import { storageAdapter } from "@/infrastructure/documents/storage";
 import { DomainError } from "./errors";
 
 export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
@@ -15,18 +16,25 @@ const ZIP_MAX_ENTRIES = 200;
 const ZIP_MAX_TOTAL = 100 * 1024 * 1024;
 
 export function storageRoot(): string {
-  return process.env.STORAGE_PATH ?? path.join(path.dirname(process.env.DATABASE_PATH ?? path.join(projectRoot(), ".data", "x")), "storage");
+  return process.env.STORAGE_PATH ?? path.join(projectRoot(), ".data", "storage");
 }
 
-/** Percorso fisico di un documento (mai esposto al client, US-081). */
+function shaOfStorageTag(filePath: string): string | null {
+  if (!filePath.startsWith("storage:")) return null;
+  return filePath.slice(8).replace(/[^a-f0-9]/g, "");
+}
+
+/**
+ * Percorso fisico locale di un documento (mai esposto al client, US-081). Usato solo per i
+ * documenti del seed (inapp:/casi:/scenario), bundle in sola lettura. I documenti caricati a
+ * runtime ("storage:") passano dallo storage adapter (disco locale o Vercel Blob, DEC-113).
+ */
 export function documentFile(filePath: string): string {
   const root = projectRoot();
   if (filePath.startsWith("inapp:")) return path.join(root, "seed", "inapp", "documenti", path.basename(filePath.slice(6)));
   if (filePath.startsWith("casi:")) return path.join(root, "seed", "inapp", "casi-demo", ...filePath.slice(5).split("/").filter((x) => x && x !== ".."));
-  if (filePath.startsWith("storage:")) {
-    const sha = filePath.slice(8).replace(/[^a-f0-9]/g, "");
-    return path.join(storageRoot(), sha.slice(0, 2), sha);
-  }
+  const sha = shaOfStorageTag(filePath);
+  if (sha) return path.join(storageRoot(), sha.slice(0, 2), sha);
   return path.join(root, "seed", "scenarios", "documents", ...filePath.split("/").filter((x) => x && x !== ".."));
 }
 
@@ -59,21 +67,21 @@ const TYPE_BY_NAME: [RegExp, string][] = [
 ];
 export const classifyByName = (name: string) => TYPE_BY_NAME.find(([re]) => re.test(name))?.[1] ?? null;
 
-function rejectAudit(db: Db, actor: string, code: string, name: string, reason: string) {
-  tx(db, () => writeAudit(db, { actor, action: "UPLOAD_REJECTED", entityType: "DOCUMENT", entityId: normalizeFileName(name), procedureCode: code, reason, at: systemNowIso() }));
+async function rejectAudit(db: Db, actor: string, code: string, name: string, reason: string) {
+  await tx(db, (tdb) => writeAudit(tdb, { actor, action: "UPLOAD_REJECTED", entityType: "DOCUMENT", entityId: normalizeFileName(name), procedureCode: code, reason, at: systemNowIso() }));
 }
 
 /** Upload di un PDF/XLSX o di uno ZIP (estratto con limiti anti ZIP slip/bomb). Idempotente per hash (BR-016). */
 export async function storeUpload(db: Db, actor: string, procedureId: number, code: string, name: string, buf: Buffer): Promise<{ stored: number[]; rejected: string[] }> {
   if (buf.length > MAX_UPLOAD_BYTES) {
-    rejectAudit(db, actor, code, name, "dimensione oltre il limite");
+    await rejectAudit(db, actor, code, name, "dimensione oltre il limite");
     throw new DomainError("UPLOAD_REJECTED", "File oltre il limite di 20 MB", 413);
   }
   let kind: ReturnType<typeof sniff>;
   try {
     kind = sniff(name, buf);
   } catch (e) {
-    rejectAudit(db, actor, code, name, "tipo non ammesso");
+    await rejectAudit(db, actor, code, name, "tipo non ammesso");
     throw e;
   }
   const files: { name: string; buf: Buffer }[] = [];
@@ -83,7 +91,7 @@ export async function storeUpload(db: Db, actor: string, procedureId: number, co
     for (const e of entries) {
       if (e.rejected) {
         rejected.push(`${e.name}: ${e.rejected}`);
-        rejectAudit(db, actor, code, e.name, e.rejected);
+        await rejectAudit(db, actor, code, e.name, e.rejected);
         continue;
       }
       try {
@@ -95,23 +103,22 @@ export async function storeUpload(db: Db, actor: string, procedureId: number, co
     }
   } else files.push({ name, buf });
 
+  const adapter = storageAdapter(storageRoot());
   const stored: number[] = [];
   for (const f of files) {
     const sha = createHash("sha256").update(f.buf).digest("hex");
-    const dir = path.join(storageRoot(), sha.slice(0, 2));
-    mkdirSync(dir, { recursive: true });
-    const dest = path.join(dir, sha);
-    if (!existsSync(dest)) writeFileSync(dest, f.buf);
+    await adapter.write(sha, f.buf);
     const clean = normalizeFileName(f.name);
-    const id = tx(db, () => {
-      const r = db
+    const id = await tx(db, async (tdb) => {
+      const r = await tdb
         .prepare(
-          `INSERT OR IGNORE INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, processing_state, association_method, association_confidence, uploaded_by, uploaded_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'STORED', 'UPLOAD', '1.00', ?, ?)`,
+          `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, processing_state, association_method, association_confidence, uploaded_by, uploaded_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 'STORED', 'UPLOAD', '1.00', ?, ?)
+           ON CONFLICT (sha256, procedure_id) DO NOTHING`,
         )
         .run(procedureId, `storage:${sha}`, clean, sha, f.buf.length, classifyByName(clean), clean.replace(/\.[a-z]+$/i, ""), actor, systemNowIso());
       if (r.changes) {
-        writeAudit(db, { actor, action: "DOCUMENT_UPLOAD", entityType: "DOCUMENT", entityId: clean, procedureCode: code, after: { sha256: sha, bytes: f.buf.length }, at: systemNowIso() });
+        await writeAudit(tdb, { actor, action: "DOCUMENT_UPLOAD", entityType: "DOCUMENT", entityId: clean, procedureCode: code, after: { sha256: sha, bytes: f.buf.length }, at: systemNowIso() });
         return Number(r.lastInsertRowid);
       }
       return null;
@@ -226,19 +233,32 @@ export function extractFields(pages: { page: number; text: string; method: strin
   return out;
 }
 
+/** Legge un documento (seed bundle o storage adapter) restituendo i byte, o null se assente. */
+export async function tryReadStoredFile(filePath: string): Promise<Buffer | null> {
+  const sha = shaOfStorageTag(filePath);
+  try {
+    if (sha) return await storageAdapter(storageRoot()).read(sha);
+    return readFileSync(documentFile(filePath));
+  } catch {
+    return null;
+  }
+}
+
 /** Elaborazione del documento: testo → OCR di fallback → estrazione → coda di validazione (nessun overwrite, BR-015). */
 export async function processDocument(db: Db, docId: number, actor = "worker"): Promise<{ pages: number; ocrPages: number; fields: number; state: string }> {
-  const doc = db.prepare("SELECT d.*, p.code, p.cig AS proc_cig FROM documents d JOIN procedures p ON p.id = d.procedure_id WHERE d.id = ?").get(docId) as Record<string, any> | undefined;
+  const doc = (await db.prepare("SELECT d.*, p.code, p.cig AS proc_cig FROM documents d JOIN procedures p ON p.id = d.procedure_id WHERE d.id = ?").get(docId)) as
+    | Record<string, any>
+    | undefined;
   if (!doc) throw new DomainError("NOT_FOUND", "Documento non trovato", 404);
-  const file = documentFile(doc.file_path);
-  if (!existsSync(file) || !String(doc.file_name).toLowerCase().endsWith(".pdf")) return { pages: 0, ocrPages: 0, fields: 0, state: doc.processing_state };
-  const { pages, totalPages } = await extractPdfText(file);
+  const buf = String(doc.file_name).toLowerCase().endsWith(".pdf") ? await tryReadStoredFile(doc.file_path) : null;
+  if (!buf) return { pages: 0, ocrPages: 0, fields: 0, state: doc.processing_state };
+  const { pages, totalPages } = await extractPdfText(buf);
   const missing = pages.filter((p) => p.method === "NONE").map((p) => p.page);
   let ocr: Awaited<ReturnType<typeof ocrPdfPages>> = [];
   let state = missing.length ? "OCR_PENDING" : "TEXT_EXTRACTED";
   if (missing.length) {
     try {
-      ocr = await ocrPdfPages(file, missing);
+      ocr = await ocrPdfPages(buf, missing);
       state = "OCR_DONE";
     } catch (e) {
       state = "OCR_FAILED";
@@ -250,15 +270,24 @@ export async function processDocument(db: Db, docId: number, actor = "worker"): 
     return o ? { page: p.page, text: o.text, method: "OCR", confidence: o.confidence } : { page: p.page, text: p.text, method: p.method, confidence: p.method === "TEXT_LAYER" ? "1.00" : null };
   });
   const fields = extractFields(all.filter((p) => p.text));
-  const contract = db.prepare("SELECT gross_cents, net_cents FROM contracts WHERE procedure_id = ?").get(doc.procedure_id) as { gross_cents: number; net_cents: number } | undefined;
+  const contract = (await db.prepare("SELECT gross_cents, net_cents FROM contracts WHERE procedure_id = ?").get(doc.procedure_id)) as
+    | { gross_cents: number; net_cents: number }
+    | undefined;
   const now = systemNowIso();
-  tx(db, () => {
-    for (const p of all) db.prepare("INSERT OR REPLACE INTO document_pages (document_id, page_no, text, method, confidence) VALUES (?, ?, ?, ?, ?)").run(docId, p.page, p.text, p.method, p.confidence);
-    db.prepare("UPDATE documents SET pages = ?, processing_state = ? WHERE id = ?").run(totalPages, state, docId);
+  await tx(db, async (db) => {
+    for (const p of all)
+      await db
+        .prepare(
+          "INSERT INTO document_pages (document_id, page_no, text, method, confidence) VALUES (?, ?, ?, ?, ?) ON CONFLICT (document_id, page_no) DO UPDATE SET text = excluded.text, method = excluded.method, confidence = excluded.confidence",
+        )
+        .run(docId, p.page, p.text, p.method, p.confidence);
+    await db.prepare("UPDATE documents SET pages = ?, processing_state = ? WHERE id = ?").run(totalPages, state, docId);
     for (const f of fields) {
       const commitYear = /^commitment\.(\d{4})$/.exec(f.field)?.[1];
       const committed = commitYear
-        ? (db.prepare("SELECT SUM(amount_cents) AS s FROM financial_movements WHERE procedure_id = ? AND type = 'COMMITMENT' AND year = ?").get(doc.procedure_id, Number(commitYear)) as { s: number | null }).s
+        ? ((await db.prepare("SELECT SUM(amount_cents) AS s FROM financial_movements WHERE procedure_id = ? AND type = 'COMMITMENT' AND year = ?").get(doc.procedure_id, Number(commitYear))) as {
+            s: number | null;
+          }).s
         : null;
       const current =
         f.field === "cig"
@@ -272,25 +301,33 @@ export async function processDocument(db: Db, docId: number, actor = "worker"): 
                 : null;
       const kind = current !== null && current !== f.value ? "CONFLICT" : "EXTRACTED_FIELD";
       const status = current !== null && current === f.value ? "APPROVED" : "OPEN";
-      db.prepare(
-        `INSERT OR IGNORE INTO validation_items (procedure_id, kind, field, proposed_value, current_value, document_id, locator, excerpt, method, confidence, status, decided_by, decided_at, note, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      ).run(doc.procedure_id, kind, f.field, f.value, current, docId, `pag. ${f.page}`, f.excerpt.slice(0, 300), f.method, f.confidence, status, status === "APPROVED" ? "system" : null, status === "APPROVED" ? now : null, status === "APPROVED" ? "Coincide con il valore validato" : null, now);
-      db.prepare(
-        "INSERT INTO evidences (procedure_id, field, value, source_type, document_id, locator, excerpt, method, confidence, author, created_at) VALUES (?, ?, ?, 'DOCUMENT', ?, ?, ?, ?, ?, ?, ?)",
-      ).run(doc.procedure_id, `extracted.${f.field}`, f.value, docId, `pag. ${f.page}`, f.excerpt.slice(0, 300), f.method, f.confidence, actor, now);
+      await db
+        .prepare(
+          `INSERT INTO validation_items (procedure_id, kind, field, proposed_value, current_value, document_id, locator, excerpt, method, confidence, status, decided_by, decided_at, note, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (procedure_id, kind, field, document_id, proposed_value) DO NOTHING`,
+        )
+        .run(doc.procedure_id, kind, f.field, f.value, current, docId, `pag. ${f.page}`, f.excerpt.slice(0, 300), f.method, f.confidence, status, status === "APPROVED" ? "system" : null, status === "APPROVED" ? now : null, status === "APPROVED" ? "Coincide con il valore validato" : null, now);
+      await db
+        .prepare(
+          "INSERT INTO evidences (procedure_id, field, value, source_type, document_id, locator, excerpt, method, confidence, author, created_at) VALUES (?, ?, ?, 'DOCUMENT', ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(doc.procedure_id, `extracted.${f.field}`, f.value, docId, `pag. ${f.page}`, f.excerpt.slice(0, 300), f.method, f.confidence, actor, now);
     }
-    writeAudit(db, { actor, action: "DOCUMENT_PROCESSED", entityType: "DOCUMENT", entityId: String(docId), procedureCode: doc.code, after: { state, pages: totalPages, ocrPages: ocr.length, fields: fields.length }, at: now });
+    await writeAudit(db, { actor, action: "DOCUMENT_PROCESSED", entityType: "DOCUMENT", entityId: String(docId), procedureCode: doc.code, after: { state, pages: totalPages, ocrPages: ocr.length, fields: fields.length }, at: now });
   });
   return { pages: totalPages, ocrPages: ocr.length, fields: fields.length, state };
 }
 
 export async function processPendingDocuments(db: Db, actor = "worker"): Promise<{ processed: number }> {
-  const ids = (db.prepare("SELECT id FROM documents WHERE processing_state IN ('STORED','OCR_PENDING') ORDER BY id").all() as { id: number }[]).map((r) => r.id);
+  const ids = ((await db.prepare("SELECT id FROM documents WHERE processing_state IN ('STORED','OCR_PENDING') ORDER BY id").all()) as { id: number }[]).map((r) => r.id);
   for (const id of ids) await processDocument(db, id, actor);
   return { processed: ids.length };
 }
 
-export function readStoredFile(filePath: string): Buffer {
-  return readFileSync(documentFile(filePath));
+/** Legge i byte di un documento; lancia se assente (uso: route di download, dove l'assenza è un errore). */
+export async function readStoredFile(filePath: string): Promise<Buffer> {
+  const buf = await tryReadStoredFile(filePath);
+  if (!buf) throw new DomainError("NOT_FOUND", "File non trovato", 404);
+  return buf;
 }

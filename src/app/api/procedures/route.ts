@@ -31,7 +31,7 @@ const Draft = z.object({
 /** US-013: creazione bozza (Struttura). */
 export const POST = route(async ({ db, actor, req }) => {
   const b = await body(req, Draft);
-  const r = createDraft(db, actor!, {
+  const r = await createDraft(db, actor!, {
     title: b.title, type: b.type, awardCriterion: b.award_criterion, programmed: b.programmed, memoryDue: b.memory_due,
     frame: b.base ? { base: b.base, vatPct: b.vat_pct ? parsePct(b.vat_pct) : undefined, anacFee: b.anac_fee, hasDec: b.has_dec ?? false, incentivePct: b.incentive_pct ? parsePct(b.incentive_pct) : undefined } : undefined,
     annual: { "2026": b.y2026 ?? "", "2027": b.y2027 ?? "", "2028": b.y2028 ?? "", "2029": b.y2029 ?? "" },

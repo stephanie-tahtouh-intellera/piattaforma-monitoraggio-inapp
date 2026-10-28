@@ -11,7 +11,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
   const q = await searchParams;
   const utente = typeof q.utente === "string" ? q.utente : undefined;
   await ensureBootstrapped();
-  const ref = configuredReferenceDate(getDb());
+  const ref = await configuredReferenceDate(await getDb());
   return (
     <div className="login-page">
       <DemoBanner referenceDate={ref} />

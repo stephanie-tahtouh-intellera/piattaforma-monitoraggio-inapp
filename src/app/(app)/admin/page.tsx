@@ -14,12 +14,14 @@ export const metadata = { title: "Amministrazione" };
 export default async function AdminPage() {
   const actor = await pageActor();
   if (!can(actor, "admin")) redirect("/");
-  const s = systemStatus(db());
-  const users = db().prepare("SELECT login, name, role, structure_scope, active FROM users ORDER BY id").all() as any[];
+  const database = await db();
+  const s = await systemStatus(database);
+  const users = (await database.prepare("SELECT login, name, role, structure_scope, active FROM users ORDER BY id").all()) as any[];
   const imp = s.imports[0] as any;
   const rep = imp ? JSON.parse(imp.summary_json) : null;
-  const es = engineSettings(db());
-  const extra = (db().prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get() as { value_json: string } | undefined)?.value_json;
+  const es = await engineSettings(database);
+  const extra = ((await database.prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get()) as { value_json: string } | undefined)?.value_json;
+  const module2Enabled = await executionModuleEnabled(database);
   return (
     <>
       <div className="page-head">
@@ -58,7 +60,7 @@ export default async function AdminPage() {
             method="PUT"
             submitLabel="Salva"
             successMessage="Configurazione dei moduli salvata e auditata."
-            fields={[{ name: "execution", label: "Mostra il Modulo 2 (anteprima)", type: "checkbox", defaultValue: String(executionModuleEnabled(db())) }]}
+            fields={[{ name: "execution", label: "Mostra il Modulo 2 (anteprima)", type: "checkbox", defaultValue: String(module2Enabled) }]}
           />
         </section>
         <section className="card stack" data-tour="impersona">

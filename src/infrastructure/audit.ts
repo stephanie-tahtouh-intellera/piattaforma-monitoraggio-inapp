@@ -18,8 +18,10 @@ export interface AuditInput {
 const json = (v: unknown) => (v === undefined ? null : JSON.stringify(v, (_k, x) => (typeof x === "bigint" ? x.toString() : x)));
 
 /** Audit append-only con hash chain (CR-42). Da chiamare dentro la transazione della mutazione. */
-export function writeAudit(db: Db, e: AuditInput): void {
-  const prev = db.prepare("SELECT hash FROM audit_events ORDER BY id DESC LIMIT 1").get() as { hash: string } | undefined;
+export async function writeAudit(db: Db, e: AuditInput): Promise<void> {
+  const prev = (await db.prepare("SELECT hash FROM audit_events ORDER BY id DESC LIMIT 1").get()) as
+    | { hash: string }
+    | undefined;
   const row = {
     at: e.at,
     actor: e.actor,
@@ -35,15 +37,17 @@ export function writeAudit(db: Db, e: AuditInput): void {
     prev_hash: prev?.hash ?? null,
   };
   const hash = createHash("sha256").update(JSON.stringify(row)).digest("hex");
-  db.prepare(
-    `INSERT INTO audit_events (at, actor, impersonated_by, action, entity_type, entity_id, procedure_code, before_json, after_json, reason, correlation_id, prev_hash, hash)
+  await db
+    .prepare(
+      `INSERT INTO audit_events (at, actor, impersonated_by, action, entity_type, entity_id, procedure_code, before_json, after_json, reason, correlation_id, prev_hash, hash)
      VALUES (@at, @actor, @impersonated_by, @action, @entity_type, @entity_id, @procedure_code, @before_json, @after_json, @reason, @correlation_id, @prev_hash, @hash)`,
-  ).run({ ...row, hash });
+    )
+    .run({ ...row, hash });
 }
 
 /** Verifica della catena (cli audit verify). */
-export function verifyAuditChain(db: Db): { ok: boolean; brokenAt: number | null; count: number } {
-  const rows = db.prepare("SELECT * FROM audit_events ORDER BY id").all() as Record<string, unknown>[];
+export async function verifyAuditChain(db: Db): Promise<{ ok: boolean; brokenAt: number | null; count: number }> {
+  const rows = (await db.prepare("SELECT * FROM audit_events ORDER BY id").all()) as Record<string, unknown>[];
   let prev: string | null = null;
   for (const r of rows) {
     const { id, hash, ...rest } = r;

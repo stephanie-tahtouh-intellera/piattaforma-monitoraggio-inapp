@@ -12,15 +12,17 @@ export interface OcrPage {
  * OCR locale (DEC-099): rendering della pagina con pdf.js + @napi-rs/canvas e riconoscimento
  * con tesseract.js e dati `ita` versionati in vendor/tessdata (nessuna CDN). Errore recuperabile.
  */
-export async function ocrPdfPages(file: string, pages: number[], scale = 2.5): Promise<OcrPage[]> {
+export async function ocrPdfPages(file: string | Buffer, pages: number[], scale = 2.5): Promise<OcrPage[]> {
   if (process.env.OCR_ENABLED === "false") throw new Error("OCR disattivato (OCR_ENABLED=false)");
   const { renderPageAsImage, getDocumentProxy } = await import("unpdf");
   const { createWorker } = await import("tesseract.js");
-  const data = new Uint8Array(readFileSync(file));
+  const data = new Uint8Array(Buffer.isBuffer(file) ? file : readFileSync(file));
   const pdf = await getDocumentProxy(data);
+  // Su Vercel /data e la root del progetto sono di sola lettura: la cache tesseract va in /tmp (DEC-113).
+  const cacheRoot = process.env.VERCEL ? "/tmp/tesscache" : path.join(projectRoot(), ".data", "tesscache");
   const worker = await createWorker("ita", 1, {
     langPath: path.join(projectRoot(), "vendor", "tessdata"),
-    cachePath: path.join(projectRoot(), ".data", "tesscache"),
+    cachePath: cacheRoot,
     gzip: true,
   });
   const out: OcrPage[] = [];

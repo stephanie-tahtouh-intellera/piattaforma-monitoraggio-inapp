@@ -13,43 +13,43 @@ export function datasetName(): DatasetName {
   return v === "scenarios" ? "scenarios" : "inapp";
 }
 
-export function isSeeded(db: Db): boolean {
-  return !!db.prepare("SELECT value FROM system_meta WHERE key = 'seeded_at'").get();
+export async function isSeeded(db: Db): Promise<boolean> {
+  return !!(await db.prepare("SELECT value FROM system_meta WHERE key = 'seeded_at'").get());
 }
 
 /** Carica un dataset (idempotente). Per "inapp" usa il file generato dall'import del workbook reale. */
 export async function loadDataset(db: Db, clock: Clock, name: DatasetName): Promise<SeedReport[]> {
   const root = projectRoot();
   // Il dataset attivo determina la famiglia di modelli anche per le bozze create durante il caricamento (DEC-107)
-  tx(db, () => db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('dataset', ?)").run(name));
+  await tx(db, (tdb) => tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('dataset', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(name));
   const reports: SeedReport[] = [];
   if (name === "scenarios") {
-    reports.push(seedDataset(db, readDataset(path.join(root, "seed", "scenarios", "procedures.json")), clock, path.join(root, "seed", "scenarios", "documents")));
+    reports.push(await seedDataset(db, readDataset(path.join(root, "seed", "scenarios", "procedures.json")), clock, path.join(root, "seed", "scenarios", "documents")));
   } else {
     const { importInappWorkbook, attachRealDocuments } = await import("./inapp-import");
     const ds = await importInappWorkbook(db, clock);
-    reports.push(seedDataset(db, ds, clock, null));
+    reports.push(await seedDataset(db, ds, clock, null));
     await attachRealDocuments(db, clock);
     // Casi dimostrativi inventati (DEC-105): un'attività per ogni attore della guida demo
-    reports.push(seedDataset(db, readDataset(path.join(root, "seed", "inapp", "casi-demo.json")), clock, path.join(root, "seed", "inapp", "casi-demo")));
+    reports.push(await seedDataset(db, readDataset(path.join(root, "seed", "inapp", "casi-demo.json")), clock, path.join(root, "seed", "inapp", "casi-demo")));
     const { applyDemoActions } = await import("@/server/demo-cases");
-    applyDemoActions(db);
+    await applyDemoActions(db);
   }
   return reports;
 }
 
 export async function bootstrap(db: Db, clock: Clock, opts: { dataset?: DatasetName; force?: boolean } = {}): Promise<{ seeded: boolean; reports: SeedReport[] }> {
-  migrate(db);
-  if (isSeeded(db) && !opts.force) return { seeded: false, reports: [] };
-  seedReference(db, clock);
+  await migrate(db);
+  if ((await isSeeded(db)) && !opts.force) return { seeded: false, reports: [] };
+  await seedReference(db, clock);
   const name = opts.dataset ?? datasetName();
   const reports = await loadDataset(db, clock, name);
-  tx(db, () => {
-    db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('seeded_at', ?)").run(clock.nowIso());
-    db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('dataset', ?)").run(name);
-    writeAudit(db, { actor: "system", action: "SEED", entityType: "DATASET", entityId: name, after: reports, at: clock.nowIso() });
+  await tx(db, async (tdb) => {
+    await tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('seeded_at', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(clock.nowIso());
+    await tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('dataset', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(name);
+    await writeAudit(tdb, { actor: "system", action: "SEED", entityType: "DATASET", entityId: name, after: reports, at: clock.nowIso() });
   });
-  runChecks(db, clock);
+  await runChecks(db, clock);
   return { seeded: true, reports };
 }
 
@@ -61,23 +61,31 @@ const RESET_TABLES = [
 
 /** Reset transazionale della demo (US-112): audit e versioni rimossi solo con il flag di reset. */
 export async function resetDemo(db: Db, clock: Clock, actor: string, dataset?: DatasetName): Promise<{ reports: SeedReport[] }> {
-  tx(db, () => {
-    db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('reset_in_progress', '1')").run();
-    for (const t of RESET_TABLES) db.prepare(`DELETE FROM ${t}`).run();
-    db.prepare("UPDATE procedures SET current_version_id = NULL").run();
-    db.prepare("DELETE FROM procedure_versions").run();
-    db.prepare("DELETE FROM procedures").run();
-    db.prepare("DELETE FROM audit_events").run();
-    db.prepare("DELETE FROM system_meta WHERE key IN ('seeded_at','reset_in_progress')").run();
-    db.prepare("DELETE FROM config WHERE key = 'modules.execution'").run();
+  await tx(db, async (tdb) => {
+    await tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('reset_in_progress', '1') ON CONFLICT (key) DO UPDATE SET value = excluded.value").run();
+    for (const t of RESET_TABLES) await tdb.prepare(`DELETE FROM ${t}`).run();
+    await tdb.prepare("UPDATE procedures SET current_version_id = NULL").run();
+    await tdb.prepare("DELETE FROM procedure_versions").run();
+    await tdb.prepare("DELETE FROM procedures").run();
+    await tdb.prepare("DELETE FROM audit_events").run();
+    await tdb.prepare("DELETE FROM system_meta WHERE key IN ('seeded_at','reset_in_progress')").run();
+    await tdb.prepare("DELETE FROM config WHERE key = 'modules.execution'").run();
   });
   const name = dataset ?? datasetName();
   const reports = await loadDataset(db, clock, name);
-  tx(db, () => {
-    db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('seeded_at', ?)").run(clock.nowIso());
-    db.prepare("INSERT OR REPLACE INTO system_meta (key, value) VALUES ('dataset', ?)").run(name);
-    writeAudit(db, { actor, action: "RESET_DEMO", entityType: "DATASET", entityId: name, after: reports.map((r) => ({ inserted: r.inserted })), reason: "Reset demo confermato", at: clock.nowIso() });
+  await tx(db, async (tdb) => {
+    await tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('seeded_at', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(clock.nowIso());
+    await tdb.prepare("INSERT INTO system_meta (key, value) VALUES ('dataset', ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value").run(name);
+    await writeAudit(tdb, {
+      actor,
+      action: "RESET_DEMO",
+      entityType: "DATASET",
+      entityId: name,
+      after: reports.map((r) => ({ inserted: r.inserted })),
+      reason: "Reset demo confermato",
+      at: clock.nowIso(),
+    });
   });
-  runChecks(db, clock);
+  await runChecks(db, clock);
   return { reports };
 }

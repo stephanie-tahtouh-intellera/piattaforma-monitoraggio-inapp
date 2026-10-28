@@ -1,20 +1,19 @@
 # Piattaforma INAPP – Monitoraggio Gare e Contratti (MVP dimostrativo)
 
-Prototipo dimostrativo per INAPP: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. Next.js fullstack + SQLite, core deterministico, IA disattivata.
+Prototipo dimostrativo per INAPP: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. Next.js fullstack + Postgres (Vercel Postgres/Neon), core deterministico, IA disattivata.
 
 > **Ambiente DEMO** – data di riferimento configurata (default 01/10/2026). Non è un servizio ufficiale INAPP.
 
-## Avvio rapido (senza Docker)
+## Avvio rapido
 Prerequisiti: Node ≥ 22.12, pnpm 10.
 
 ```bash
 pnpm install
-pnpm db:bootstrap   # migrazioni + seed se il DB è vuoto (DB in ./.data/inapp.db)
+pnpm db:bootstrap   # migrazioni + seed se il DB è vuoto (richiede POSTGRES_URL in .env, vedi .env.example)
 pnpm dev            # http://localhost:3000
 pnpm worker         # in un secondo terminale: run_checks periodico + invio e-mail
 ```
 
-Con Docker (non collaudato su questa macchina, DEC-100): `docker compose up --build`.
 
 ## Dataset
 | `DEMO_DATASET` | Contenuto |
@@ -37,7 +36,7 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 ## Comandi
 | Comando | Effetto |
 |---|---|
-| `pnpm test` | Test unit, integration, API (Vitest; oracle su SQLite reale) |
+| `pnpm test` | Test unit, integration, API (Vitest; oracle su Postgres reale: svuota le tabelle, usare un DB di test dedicato) |
 | `pnpm verify` | Typecheck + guard + test |
 | `pnpm cli run-checks --date 2026-10-15` | Ricalcolo a una data |
 | `pnpm cli audit-verify` | Verifica della catena di hash dell'audit e dei trigger |

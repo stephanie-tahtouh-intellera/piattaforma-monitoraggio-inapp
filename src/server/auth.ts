@@ -40,8 +40,8 @@ export function safeEqual(a: string, b: string): boolean {
 const DUMMY = "$argon2id$v=19$m=19456,t=2,p=1$c2FsdHNhbHRzYWx0$5C0aZz8j3q2vWQ5k6Kq8uY5zqTqgk7lB0fO7h1m3h0Q";
 
 /** Login locale (US-002): la sessione è salvata solo come hash del token (DEC-097). */
-export function login(db: Db, loginName: string, password: string, ip = "local"): { token: string; csrf: string; actor: Actor } {
-  const u = db.prepare("SELECT * FROM users WHERE login = ?").get(loginName) as
+export async function login(db: Db, loginName: string, password: string, ip = "local"): Promise<{ token: string; csrf: string; actor: Actor }> {
+  const u = (await db.prepare("SELECT * FROM users WHERE login = ?").get(loginName)) as
     | { id: number; login: string; password_hash: string; active: number }
     | undefined;
   let ok = false;
@@ -52,36 +52,38 @@ export function login(db: Db, loginName: string, password: string, ip = "local")
   }
   const now = systemNowIso();
   if (!u || !ok || u.active !== 1) {
-    tx(db, () => writeAudit(db, { actor: loginName.slice(0, 64), action: "LOGIN_FAILED", entityType: "USER", entityId: loginName.slice(0, 64), reason: `ip ${ip}`, at: now }));
+    await tx(db, (tdb) => writeAudit(tdb, { actor: loginName.slice(0, 64), action: "LOGIN_FAILED", entityType: "USER", entityId: loginName.slice(0, 64), reason: `ip ${ip}`, at: now }));
     throw new DomainError("INVALID_CREDENTIALS", "Credenziali non valide", 401);
   }
   return createSession(db, u.id, null, now);
 }
 
-export function createSession(db: Db, userId: number, impersonatedBy: number | null, now = systemNowIso()) {
+export async function createSession(db: Db, userId: number, impersonatedBy: number | null, now = systemNowIso()): Promise<{ token: string; csrf: string; actor: Actor }> {
   const token = randomBytes(32).toString("base64url");
   const hash = sha(token);
-  tx(db, () => {
-    db.prepare(
-      "INSERT INTO sessions (id_hash, user_id, impersonated_by, csrf_secret, created_at, last_seen_at, idle_expires_at, absolute_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-    ).run(hash, userId, impersonatedBy, "hmac", now, now, plusMs(now, IDLE_MS), plusMs(now, ABS_MS));
-    const login = (db.prepare("SELECT login FROM users WHERE id = ?").get(userId) as { login: string }).login;
-    writeAudit(db, { actor: login, action: impersonatedBy ? "IMPERSONATE_START" : "LOGIN", entityType: "SESSION", entityId: hash.slice(0, 12), at: now });
+  await tx(db, async (db) => {
+    await db
+      .prepare(
+        "INSERT INTO sessions (id_hash, user_id, impersonated_by, csrf_secret, created_at, last_seen_at, idle_expires_at, absolute_expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(hash, userId, impersonatedBy, "hmac", now, now, plusMs(now, IDLE_MS), plusMs(now, ABS_MS));
+    const login = ((await db.prepare("SELECT login FROM users WHERE id = ?").get(userId)) as { login: string }).login;
+    await writeAudit(db, { actor: login, action: impersonatedBy ? "IMPERSONATE_START" : "LOGIN", entityType: "SESSION", entityId: hash.slice(0, 12), at: now });
   });
-  const actor = actorFromSession(db, token);
+  const actor = await actorFromSession(db, token);
   if (!actor) throw new DomainError("INTERNAL_ERROR", "Sessione non creata", 500);
   return { token, csrf: csrfFor(hash), actor };
 }
 
-export function actorFromSession(db: Db, token: string | undefined | null): Actor | null {
+export async function actorFromSession(db: Db, token: string | undefined | null): Promise<Actor | null> {
   if (!token) return null;
   const hash = sha(token);
-  const s = db
+  const s = (await db
     .prepare(
       `SELECT s.*, u.login, u.name, u.role, u.structure_scope, u.supplier_code, u.active, iu.login AS imp_login
        FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN users iu ON iu.id = s.impersonated_by WHERE s.id_hash = ?`,
     )
-    .get(hash) as
+    .get(hash)) as
     | {
         user_id: number;
         login: string;
@@ -98,7 +100,7 @@ export function actorFromSession(db: Db, token: string | undefined | null): Acto
     | undefined;
   const now = systemNowIso();
   if (!s || s.revoked_at || s.active !== 1 || s.idle_expires_at < now || s.absolute_expires_at < now) return null;
-  db.prepare("UPDATE sessions SET last_seen_at = ?, idle_expires_at = ? WHERE id_hash = ?").run(now, plusMs(now, IDLE_MS), hash);
+  await db.prepare("UPDATE sessions SET last_seen_at = ?, idle_expires_at = ? WHERE id_hash = ?").run(now, plusMs(now, IDLE_MS), hash);
   return {
     userId: s.user_id,
     login: s.login,
@@ -111,9 +113,9 @@ export function actorFromSession(db: Db, token: string | undefined | null): Acto
   };
 }
 
-export function logout(db: Db, actor: Actor): void {
-  tx(db, () => {
-    db.prepare("UPDATE sessions SET revoked_at = ? WHERE id_hash = ?").run(systemNowIso(), actor.sessionHash);
-    writeAudit(db, { actor: actor.login, impersonatedBy: actor.impersonatedBy, action: "LOGOUT", entityType: "SESSION", entityId: actor.sessionHash.slice(0, 12), at: systemNowIso() });
+export async function logout(db: Db, actor: Actor): Promise<void> {
+  await tx(db, async (db) => {
+    await db.prepare("UPDATE sessions SET revoked_at = ? WHERE id_hash = ?").run(systemNowIso(), actor.sessionHash);
+    await writeAudit(db, { actor: actor.login, impersonatedBy: actor.impersonatedBy, action: "LOGOUT", entityType: "SESSION", entityId: actor.sessionHash.slice(0, 12), at: systemNowIso() });
   });
 }

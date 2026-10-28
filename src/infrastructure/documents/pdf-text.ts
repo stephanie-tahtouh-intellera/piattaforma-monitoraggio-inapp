@@ -7,9 +7,9 @@ export interface PageText {
 }
 
 /** Estrazione del layer di testo (DEC-099). Le pagine senza testo restano da OCR. */
-export async function extractPdfText(file: string): Promise<{ pages: PageText[]; totalPages: number }> {
+export async function extractPdfText(file: string | Buffer): Promise<{ pages: PageText[]; totalPages: number }> {
   const { extractText, getDocumentProxy } = await import("unpdf");
-  const data = new Uint8Array(readFileSync(file));
+  const data = new Uint8Array(Buffer.isBuffer(file) ? file : readFileSync(file));
   const pdf = await getDocumentProxy(data);
   const { text, totalPages } = await extractText(pdf, { mergePages: false });
   const arr = Array.isArray(text) ? text : [text];

@@ -5,13 +5,13 @@ import { require as requireAction, requireProcedure } from "@/server/authz";
 import { route } from "@/server/http";
 
 export const runtime = "nodejs";
-export const GET = route(({ db, actor, params }) => ({ items: procedureDetail(db, actor!, params.code!).documents }));
+export const GET = route(async ({ db, actor, params }) => ({ items: (await procedureDetail(db, actor!, params.code!)).documents }));
 
 /** Upload (US-020, US-112): PDF/XLSX/ZIP, limiti e firma del contenuto; elaborazione testo/OCR subito. */
 export const POST = route(async ({ db, actor, req, params }) => {
   const a = actor!;
   if (!(a.role === "SUPPLIER" || a.role === "STRUCTURE_USER" || a.role === "PROCUREMENT_OFFICER")) requireAction(a, "documents.import");
-  const p = requireProcedure(db, a, params.code!);
+  const p = await requireProcedure(db, a, params.code!);
   const len = Number(req.headers.get("content-length") ?? "0");
   if (len > MAX_UPLOAD_BYTES * 1.1) throw new DomainError("UPLOAD_REJECTED", "File oltre il limite di 20 MB", 413);
   const form = await req.formData();

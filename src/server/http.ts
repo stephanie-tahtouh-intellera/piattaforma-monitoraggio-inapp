@@ -47,8 +47,8 @@ export function route(
     const correlationId = req.headers.get("x-correlation-id") ?? `corr-${randomUUID().slice(0, 8)}`;
     try {
       await ensureBootstrapped();
-      const db = getDb();
-      const actor = actorFromSession(db, cookie(req, SESSION_COOKIE));
+      const db = await getDb();
+      const actor = await actorFromSession(db, cookie(req, SESSION_COOKIE));
       const auth = opts.auth ?? true;
       if (auth && !actor) throw new DomainError("UNAUTHENTICATED", "Accesso richiesto", 401);
       if (actor && UNSAFE.has(req.method) && (opts.csrf ?? true)) {

@@ -13,13 +13,20 @@ export const dynamic = "force-dynamic";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const actor = await pageActor();
-  const d = db();
-  const ref = configuredReferenceDate(d);
+  const d = await db();
+  const ref = await configuredReferenceDate(d);
   const scope = scopeSql(actor);
-  const openAlerts = (d.prepare(`SELECT COUNT(*) AS n FROM alerts a JOIN procedures p ON p.id = a.procedure_id WHERE ${scope.sql} AND a.kind='ALERT' AND a.status IN ('OPEN')`).get(...scope.params) as { n: number }).n;
-  const unread = (d.prepare("SELECT COUNT(*) AS n FROM alert_notifications n WHERE n.user_id = ? AND n.channel='IN_APP' AND NOT EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = ?)").get(actor.userId, actor.userId) as { n: number }).n;
-  const dataset = (d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get() as { value: string } | undefined)?.value ?? "";
-  const scopeName = actor.structureScope === "*" ? null : ((d.prepare("SELECT name FROM structures WHERE code = ?").get(actor.structureScope) as { name: string } | undefined)?.name ?? actor.structureScope.replaceAll("_", " "));
+  const openAlerts = ((await d
+    .prepare(`SELECT COUNT(*) AS n FROM alerts a JOIN procedures p ON p.id = a.procedure_id WHERE ${scope.sql} AND a.kind='ALERT' AND a.status IN ('OPEN')`)
+    .get(...scope.params)) as { n: number }).n;
+  const unread = ((await d
+    .prepare("SELECT COUNT(*) AS n FROM alert_notifications n WHERE n.user_id = ? AND n.channel='IN_APP' AND NOT EXISTS (SELECT 1 FROM notification_reads r WHERE r.notification_id = n.id AND r.user_id = ?)")
+    .get(actor.userId, actor.userId)) as { n: number }).n;
+  const dataset = ((await d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get()) as { value: string } | undefined)?.value ?? "";
+  const scopeName =
+    actor.structureScope === "*"
+      ? null
+      : (((await d.prepare("SELECT name FROM structures WHERE code = ?").get(actor.structureScope)) as { name: string } | undefined)?.name ?? actor.structureScope.replaceAll("_", " "));
   const items: (NavItem | "sep")[] = [
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/portafoglio", label: "Portafoglio", icon: "portfolio" },

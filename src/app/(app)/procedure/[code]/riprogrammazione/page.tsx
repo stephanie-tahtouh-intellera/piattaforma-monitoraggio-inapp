@@ -9,7 +9,7 @@ export const metadata = { title: "Riprogrammazione" };
 export default async function ReschedulePage({ params }: { params: Promise<{ code: string }> }) {
   const actor = await pageActor();
   const { code } = await params;
-  const d = procedureDetail(db(), actor, decodeURIComponent(code));
+  const d = await procedureDetail(await db(), actor, decodeURIComponent(code));
   if (!can(actor, "simulation.create")) {
     return (
       <div className="alert-box warning" role="alert">

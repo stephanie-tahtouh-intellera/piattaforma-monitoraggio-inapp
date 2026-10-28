@@ -16,7 +16,7 @@ export default async function AssistantPage() {
           </div>
         </div>
       </div>
-      <AssistantChat examples={examplesFor(db())} />
+      <AssistantChat examples={await examplesFor(await db())} />
     </>
   );
 }

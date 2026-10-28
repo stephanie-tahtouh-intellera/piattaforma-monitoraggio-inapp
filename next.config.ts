@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["better-sqlite3", "@node-rs/argon2", "exceljs", "unpdf", "nodemailer", "tesseract.js", "@napi-rs/canvas", "yauzl", "pdf-lib"],
+  serverExternalPackages: ["pg", "@node-rs/argon2", "exceljs", "unpdf", "nodemailer", "tesseract.js", "@napi-rs/canvas", "yauzl", "pdf-lib"],
   poweredByHeader: false,
   typedRoutes: false,
+  // Evita il tracciamento dell'intero progetto per gli accessi a file con percorso calcolato
+  // (seed scenari in bundle, dati tesseract, migrazioni SQL) — DEC-113.
+  outputFileTracingIncludes: {
+    "/**": ["seed/scenarios/**", "vendor/tessdata/**", "db/migrations/**", "db/sql/**"],
+  },
   async headers() {
     return [
       {

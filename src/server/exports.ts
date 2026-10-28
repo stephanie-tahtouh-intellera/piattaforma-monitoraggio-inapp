@@ -15,11 +15,11 @@ const STATUS_IT: Record<string, string> = {
 };
 const HEALTH_IT: Record<string, string> = { GREEN: "Verde", AMBER: "Ambra", RED: "Rosso", NEUTRAL: "Neutro" };
 
-function record(db: Db, actor: Actor, kind: string, filters: unknown, buf: Buffer): string {
+async function record(db: Db, actor: Actor, kind: string, filters: unknown, buf: Buffer): Promise<string> {
   const sha = createHash("sha256").update(buf).digest("hex");
-  tx(db, () => {
-    db.prepare("INSERT INTO exports (actor, kind, filters_json, sha256, created_at) VALUES (?, ?, ?, ?, ?)").run(actor.login, kind, JSON.stringify(filters), sha, systemNowIso());
-    writeAudit(db, { actor: actor.login, impersonatedBy: actor.impersonatedBy, action: "EXPORT", entityType: "EXPORT", entityId: kind, after: { filters, sha256: sha, bytes: buf.length }, at: systemNowIso() });
+  await tx(db, async (db) => {
+    await db.prepare("INSERT INTO exports (actor, kind, filters_json, sha256, created_at) VALUES (?, ?, ?, ?, ?)").run(actor.login, kind, JSON.stringify(filters), sha, systemNowIso());
+    await writeAudit(db, { actor: actor.login, impersonatedBy: actor.impersonatedBy, action: "EXPORT", entityType: "EXPORT", entityId: kind, after: { filters, sha256: sha, bytes: buf.length }, at: systemNowIso() });
   });
   return sha;
 }
@@ -31,13 +31,13 @@ const csvCell = (v: unknown) => {
 const itAmount = (s: string | null) => (s ? s.replace(".", ",") : "");
 
 /** US-073: CSV con filtri correnti, data, utente e perimetro in testa. */
-export function portfolioCsv(db: Db, actor: Actor, f: PortfolioFilters) {
+export async function portfolioCsv(db: Db, actor: Actor, f: PortfolioFilters) {
   requireAction(actor, "export");
-  const r = listProcedures(db, actor, { ...f, page: 1, size: 100 });
+  const r = await listProcedures(db, actor, { ...f, page: 1, size: 100 });
   const all = [...r.items];
-  for (let p = 2; (p - 1) * 100 < r.total; p++) all.push(...listProcedures(db, actor, { ...f, page: p, size: 100 }).items);
+  for (let p = 2; (p - 1) * 100 < r.total; p++) all.push(...(await listProcedures(db, actor, { ...f, page: p, size: 100 })).items);
   const head = [
-    `# Export portafoglio INAPP DEMO;data di riferimento ${formatDateIt(configuredReferenceDate(db))};utente ${actor.login};filtri ${JSON.stringify(f)};righe ${all.length}`,
+    `# Export portafoglio INAPP DEMO;data di riferimento ${formatDateIt(await configuredReferenceDate(db))};utente ${actor.login};filtri ${JSON.stringify(f)};righe ${all.length}`,
     ["Codice", "Oggetto", "Tipologia", "Fase", "Health", "Prossima scadenza", "Scadenza", "Programmato", "Contrattualizzato", "Pagato", "Residuo", "A rischio", "Alert aperti"].join(";"),
   ];
   const rows = all.map((p) =>
@@ -46,19 +46,19 @@ export function portfolioCsv(db: Db, actor: Actor, f: PortfolioFilters) {
       .join(";"),
   );
   const buf = Buffer.from("﻿" + [...head, ...rows].join("\r\n"), "utf8");
-  const sha = record(db, actor, "portfolio.csv", f, buf);
+  const sha = await record(db, actor, "portfolio.csv", f, buf);
   return { buf, sha };
 }
 
 export async function portfolioXlsx(db: Db, actor: Actor, f: PortfolioFilters) {
   requireAction(actor, "export");
-  const r = listProcedures(db, actor, { ...f, page: 1, size: 100 });
+  const r = await listProcedures(db, actor, { ...f, page: 1, size: 100 });
   const all = [...r.items];
-  for (let p = 2; (p - 1) * 100 < r.total; p++) all.push(...listProcedures(db, actor, { ...f, page: p, size: 100 }).items);
+  for (let p = 2; (p - 1) * 100 < r.total; p++) all.push(...(await listProcedures(db, actor, { ...f, page: p, size: 100 })).items);
   const wb = new ExcelJS.Workbook();
   wb.creator = "INAPP DEMO";
   const ws = wb.addWorksheet("Portafoglio");
-  ws.addRow([`Export INAPP DEMO – dati al ${formatDateIt(configuredReferenceDate(db))} – utente ${actor.login} – ${all.length} righe – filtri ${JSON.stringify(f)}`]);
+  ws.addRow([`Export INAPP DEMO – dati al ${formatDateIt(await configuredReferenceDate(db))} – utente ${actor.login} – ${all.length} righe – filtri ${JSON.stringify(f)}`]);
   ws.addRow(["Codice", "Oggetto", "Tipologia", "Fase", "Health", "Prossima scadenza", "Data", "Programmato", "Contrattualizzato", "Pagato", "Residuo", "A rischio"]).font = { bold: true };
   // Unica conversione ammessa Money → numero: celle di foglio di calcolo (CR-40)
   const n = (s: string | null) => (s === null ? null : Number(s));
@@ -66,22 +66,22 @@ export async function portfolioXlsx(db: Db, actor: Actor, f: PortfolioFilters) {
   for (const c of [8, 9, 10, 11, 12]) ws.getColumn(c).numFmt = "#,##0.00 €";
   ws.getColumn(2).width = 60;
   const buf = Buffer.from(await wb.xlsx.writeBuffer());
-  const sha = record(db, actor, "portfolio.xlsx", f, buf);
+  const sha = await record(db, actor, "portfolio.xlsx", f, buf);
   return { buf, sha };
 }
 
-export function alertsCsv(db: Db, actor: Actor) {
+export async function alertsCsv(db: Db, actor: Actor) {
   requireAction(actor, "export");
-  const r = alertsList(db, actor, {}).items as any[];
+  const r = (await alertsList(db, actor, {})).items as any[];
   const lines = [["Procedura", "Tipo", "Regola", "Severità", "Livello", "Scadenza", "Stato", "Titolo"].join(";"), ...r.map((a) => [a.procedure_code, a.kind, a.rule, a.severity, a.current_level ?? "", a.due_date ?? "", a.status, a.title].map(csvCell).join(";"))];
   const buf = Buffer.from("﻿" + lines.join("\r\n"), "utf8");
-  return { buf, sha: record(db, actor, "alerts.csv", {}, buf) };
+  return { buf, sha: await record(db, actor, "alerts.csv", {}, buf) };
 }
 
 /** Report PDF della procedura con fonti essenziali (US-073). */
 export async function procedurePdf(db: Db, actor: Actor, code: string) {
   requireAction(actor, "export");
-  const d = procedureDetail(db, actor, code);
+  const d = await procedureDetail(db, actor, code);
   const pdf = await PDFDocument.create();
   pdf.setTitle(`Report ${code} – INAPP DEMO`);
   pdf.setCreator("Piattaforma INAPP DEMO");
@@ -91,7 +91,7 @@ export async function procedurePdf(db: Db, actor: Actor, code: string) {
   const navy = rgb(0, 0.208, 0.404);
   let page = pdf.addPage([595, 842]);
   let y = 800;
-  const clean = (s: string) => s.replace(/[^\x20-\x7E -ÿ]/g, (c) => ({ "–": "-", "—": "-", "€": "EUR", "’": "'", "«": '"', "»": '"', "→": "->", "…": "..." })[c] ?? "?");
+  const clean = (s: string) => s.replace(/[^\x20-\x7E -ÿ]/g, (c) => ({ "–": "-", "—": "-", "€": "EUR", "’": "'", "«": '"', "»": '"', "→": "->", "…": "..." })[c] ?? "?");
   const line = (text: string, opts: { size?: number; b?: boolean; color?: ReturnType<typeof rgb> } = {}) => {
     const size = opts.size ?? 10;
     const words = clean(text).split(" ");
@@ -150,5 +150,5 @@ export async function procedurePdf(db: Db, actor: Actor, code: string) {
   y -= 6;
   line("Fonti: workbook/seed (SEED_FILE), atti del fascicolo (DOCUMENT), inserimenti manuali auditati (MANUAL). Valori calcolati dal motore deterministico.", { size: 8 });
   const buf = Buffer.from(await pdf.save());
-  return { buf, sha: record(db, actor, `procedure.pdf:${code}`, { code }, buf) };
+  return { buf, sha: await record(db, actor, `procedure.pdf:${code}`, { code }, buf) };
 }

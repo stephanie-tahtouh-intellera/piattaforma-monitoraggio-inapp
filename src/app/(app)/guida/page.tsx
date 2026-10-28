@@ -13,12 +13,16 @@ const ROLE_OF_LANE: Record<string, string> = { STRUCTURE: "STRUCTURE_USER", PROC
 
 export default async function GuidePage() {
   const actor = await pageActor();
-  const d = db();
-  const ref = configuredReferenceDate(d);
-  const dataset = (d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get() as { value: string } | undefined)?.value;
+  const d = await db();
+  const ref = await configuredReferenceDate(d);
+  const dataset = ((await d.prepare("SELECT value FROM system_meta WHERE key='dataset'").get()) as { value: string } | undefined)?.value;
   const scope = scopeSql(actor);
   const visible = new Set(
-    (d.prepare(`SELECT p.code FROM procedures p WHERE ${scope.sql} AND p.code IN (${DEMO_CASES.map(() => "?").join(",")})`).all(...scope.params, ...DEMO_CASES.map((c) => c.code)) as { code: string }[]).map((r) => r.code),
+    (
+      (await d
+        .prepare(`SELECT p.code FROM procedures p WHERE ${scope.sql} AND p.code IN (${DEMO_CASES.map(() => "?").join(",")})`)
+        .all(...scope.params, ...DEMO_CASES.map((c) => c.code))) as { code: string }[]
+    ).map((r) => r.code),
   );
   const process = TOURS[PROCESS_TOUR]!;
   const stages = STAGES.filter((s) => s.module === 1);

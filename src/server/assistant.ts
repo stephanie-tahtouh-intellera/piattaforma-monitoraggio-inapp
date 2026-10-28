@@ -37,8 +37,8 @@ const EXAMPLES_INAPP = [
   "Ultima riprogrammazione di CD-05",
 ];
 
-export function examplesFor(db: Db): string[] {
-  const d = db.prepare("SELECT value FROM system_meta WHERE key = 'dataset'").get() as { value: string } | undefined;
+export async function examplesFor(db: Db): Promise<string[]> {
+  const d = (await db.prepare("SELECT value FROM system_meta WHERE key = 'dataset'").get()) as { value: string } | undefined;
   return d?.value === "inapp" ? EXAMPLES_INAPP : EXAMPLES;
 }
 
@@ -60,17 +60,17 @@ const HEALTH_IT: Record<string, string> = { GREEN: "verde", AMBER: "ambra", RED:
  * Assistente deterministico (US-090/091/092, DEC-082): parser a regole, stessi use case
  * della dashboard e stesso RBAC. Non modifica dati e non prende decisioni. Nessun LLM.
  */
-export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
+export async function ask(db: Db, actor: Actor, question: string): Promise<AssistantAnswer> {
   requireAction(actor, "assistant");
   const q = question.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").slice(0, 500);
   const codeMatch = question.match(/\b(P-\d{3}|OP\d{2}-S\d+|CD-\d{2}|BZ-\d{3})\b/i);
-  const ref = configuredReferenceDate(db);
+  const ref = await configuredReferenceDate(db);
 
   if (codeMatch) {
     const code = codeMatch[1]!.toUpperCase();
-    let d: ReturnType<typeof procedureDetail>;
+    let d: Awaited<ReturnType<typeof procedureDetail>>;
     try {
-      d = procedureDetail(db, actor, code);
+      d = await procedureDetail(db, actor, code);
     } catch (e) {
       if (e instanceof DomainError) return { intent: "PROCEDURE_NOT_ACCESSIBLE", text: `Non posso mostrare la procedura ${code}: ${e.message.toLowerCase()}.`, facts: [], links: [], missing: [] };
       throw e;
@@ -136,7 +136,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
   const nDays = Number(/(\d{1,3})\s*giorn/.exec(q)?.[1] ?? "30");
   if (/memori/.test(q)) {
     const until = addDays(ref, nDays);
-    const all = listProcedures(db, actor, { status: "MEMORY_EXPECTED", sort: "deadline", size: 100 }).items.filter((p) => p.nextDeadline && p.nextDeadline.target === "MEMORY_SUBMISSION" && p.nextDeadline.date <= until);
+    const all = (await listProcedures(db, actor, { status: "MEMORY_EXPECTED", sort: "deadline", size: 100 })).items.filter((p) => p.nextDeadline && p.nextDeadline.target === "MEMORY_SUBMISSION" && p.nextDeadline.date <= until);
     const overdue = all.filter((p) => (p.nextDeadline?.days ?? 0) < 0);
     return {
       intent: "PORTFOLIO_MEMORIES_DUE",
@@ -147,7 +147,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     };
   }
   if (/riprogramm/.test(q)) {
-    const r = listProcedures(db, actor, { reschedule: "1", sort: "deadline", size: 100 });
+    const r = await listProcedures(db, actor, { reschedule: "1", sort: "deadline", size: 100 });
     return {
       intent: "PORTFOLIO_TO_RESCHEDULE",
       text: `${r.total} procedure richiedono una riprogrammazione (milestone bloccante oltre T+1). Importo a rischio complessivo: ${formatEuro(sumMoney(r.items.map((p) => p.atRisk)))}.`,
@@ -157,7 +157,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     };
   }
   if (/rischio|copert|slitt/.test(q)) {
-    const k = dashboard(db, actor).kpi;
+    const k = (await dashboard(db, actor)).kpi;
     return {
       intent: "PORTFOLIO_AT_RISK",
       text: `Importo a rischio: ${formatEuro(k.atRisk.total)} (non coperto ${formatEuro(k.atRisk.uncovered)}, in slittamento ${formatEuro(k.atRisk.slipping)}) su ${formatEuro(k.programmed)} programmati.`,
@@ -170,7 +170,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     };
   }
   if (/pagament|liquidat/.test(q)) {
-    const r = listProcedures(db, actor, { status: "EXECUTION,CLOSING", sort: "deadline", size: 100 });
+    const r = await listProcedures(db, actor, { status: "EXECUTION,CLOSING", sort: "deadline", size: 100 });
     const due = r.items.filter((p) => p.nextDeadline && p.nextDeadline.days !== null && p.nextDeadline.days <= nDays && /pagamento|SAL/.test(p.nextDeadline.label ?? ""));
     return {
       intent: "PORTFOLIO_PAYMENTS",
@@ -181,7 +181,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     };
   }
   if (/alert|critic|ritard/.test(q)) {
-    const k = dashboard(db, actor).kpi;
+    const k = (await dashboard(db, actor)).kpi;
     return {
       intent: "PORTFOLIO_ALERTS",
       text: `${k.criticalAlerts} alert critici aperti; ${k.proceduresLate} procedure in ritardo su ${k.proceduresTotal}.`,
@@ -196,7 +196,7 @@ export function ask(db: Db, actor: Actor, question: string): AssistantAnswer {
     facts: [],
     links: [],
     missing: [],
-    examples: examplesFor(db),
+    examples: await examplesFor(db),
   };
 }
 

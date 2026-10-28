@@ -13,17 +13,21 @@ export function systemNowIso(): string {
   return new Date(Date.now()).toISOString();
 }
 
-export function configuredReferenceDate(db: Db | null): IsoDate {
+export async function configuredReferenceDate(db: Db | null): Promise<IsoDate> {
   if (process.env.APP_REFERENCE_DATE) return isoDate(process.env.APP_REFERENCE_DATE);
   if (db) {
-    const row = db.prepare("SELECT value_json FROM config WHERE key = 'demo.reference_date'").get() as { value_json: string } | undefined;
+    const row = (await db.prepare("SELECT value_json FROM config WHERE key = 'demo.reference_date'").get()) as
+      | { value_json: string }
+      | undefined;
     if (row) return isoDate(JSON.parse(row.value_json) as string);
   }
   return isoDate(DEFAULT_REFERENCE_DATE);
 }
 
-export function dbClock(db: Db): Clock {
-  return { referenceDate: () => configuredReferenceDate(db), nowIso: systemNowIso };
+/** Risolve la data di riferimento una sola volta (I/O) e restituisce un Clock sincrono (DEC-002, DEC-112). */
+export async function dbClock(db: Db): Promise<Clock> {
+  const date = await configuredReferenceDate(db);
+  return { referenceDate: () => date, nowIso: systemNowIso };
 }
 
 export function fixedClock(date: string, now = "2026-10-01T08:00:00.000Z"): Clock {

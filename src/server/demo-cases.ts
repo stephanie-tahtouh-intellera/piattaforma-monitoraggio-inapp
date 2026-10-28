@@ -8,8 +8,8 @@ import type { Actor } from "./auth";
 import { createSimulation, submitSimulation } from "./commands";
 
 /** Attore del seed: stessi controlli RBAC degli utenti, nessuna sessione. */
-function seedActor(db: Db, login: string): Actor {
-  const u = db.prepare("SELECT id, login, name, role, structure_scope, supplier_code FROM users WHERE login = ?").get(login) as
+async function seedActor(db: Db, login: string): Promise<Actor> {
+  const u = (await db.prepare("SELECT id, login, name, role, structure_scope, supplier_code FROM users WHERE login = ?").get(login)) as
     | { id: number; login: string; name: string; role: Actor["role"]; structure_scope: string; supplier_code: string | null }
     | undefined;
   if (!u) throw new Error(`Utente demo mancante: ${login}`);
@@ -23,11 +23,12 @@ function seedActor(db: Db, login: string): Actor {
  * - CD-05: simulazione con criticità bloccanti inviata dall'Amministrazione → override dell'Ufficio Gare (DEC-110);
  * - CD-06: simulazione senza criticità inviata dall'Amministrazione → approvazione dell'Ufficio Gare (DEC-110).
  */
-export function applyDemoActions(db: Db): void {
-  const struttura = seedActor(db, "struttura.si");
-  const gare = seedActor(db, "gare");
-  const amministrazione = seedActor(db, "amministrazione");
-  const draft = createDraft(db, struttura, {
+export async function applyDemoActions(db: Db): Promise<void> {
+  const struttura = await seedActor(db, "struttura.si");
+  const gare = await seedActor(db, "gare");
+  const amministrazione = await seedActor(db, "amministrazione");
+  void gare;
+  const draft = await createDraft(db, struttura, {
     title: "Rinnovo licenze e supporto della piattaforma di business intelligence",
     type: "DIRECT_AWARD_MEPA",
     instrument: "MEPA",
@@ -36,20 +37,22 @@ export function applyDemoActions(db: Db): void {
     memoryDue: "2026-10-16",
   });
   // Procedura guida del percorso demo: fascicolo con memoria e documento tecnico, completezza documentale non tracciata
-  db.prepare("UPDATE procedures SET dataset = 'casi-demo', documents_tracked = 0 WHERE code = ?").run(draft.code);
-  const pid = (db.prepare("SELECT id FROM procedures WHERE code = ?").get(draft.code) as { id: number }).id;
+  await db.prepare("UPDATE procedures SET dataset = 'casi-demo', documents_tracked = 0 WHERE code = ?").run(draft.code);
+  const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(draft.code)) as { id: number }).id;
   for (const [type, file, title] of [
     ["MEMORIA", "memoria.pdf", "Memoria per il Direttore Generale – BZ-001"],
     ["DOCUMENTO_TECNICO", "documento_tecnico.pdf", "Documento tecnico – BZ-001"],
   ] as const) {
     const full = documentFile(`casi:BZ-001/${file}`);
     const buf = readFileSync(full);
-    db.prepare(
-      `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, uploaded_by, uploaded_at, association_method, association_confidence)
+    await db
+      .prepare(
+        `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, uploaded_by, uploaded_at, association_method, association_confidence)
        VALUES (?, ?, ?, ?, ?, ?, ?, 'struttura.si', ?, 'UPLOAD', '1.00')`,
-    ).run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, systemNowIso());
+      )
+      .run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, systemNowIso());
   }
-  const plans: { code: string; by: typeof gare; source: string; date: string; cause: string; notes: string }[] = [
+  const plans: { code: string; by: Actor; source: string; date: string; cause: string; notes: string }[] = [
     {
       code: "CD-05",
       by: amministrazione,
@@ -68,7 +71,7 @@ export function applyDemoActions(db: Db): void {
     },
   ];
   for (const s of plans) {
-    const sim = createSimulation(db, s.by, s.code, { source: s.source, candidateDate: s.date, kind: "MANUAL", cause: s.cause, notes: s.notes });
-    submitSimulation(db, s.by, sim.simulation_id);
+    const sim = await createSimulation(db, s.by, s.code, { source: s.source, candidateDate: s.date, kind: "MANUAL", cause: s.cause, notes: s.notes });
+    await submitSimulation(db, s.by, sim.simulation_id);
   }
 }

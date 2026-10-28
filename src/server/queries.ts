@@ -49,14 +49,20 @@ const SORTS: Record<string, string> = {
 };
 
 /** Portafoglio con filtri e paginazione lato server (US-011, NFR-002). */
-export function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) {
+export async function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) {
   const scope = scopeSql(actor);
   const where: string[] = [scope.sql];
   const params: unknown[] = [...scope.params];
   if (f.q) {
-    const terms = f.q.replace(/["*]/g, " ").split(/\s+/).filter(Boolean).map((t) => `"${t}"*`).join(" ");
+    const terms = f.q
+      .replace(/["*]/g, " ")
+      .split(/\s+/)
+      .map((t) => t.replace(/[&|!():]/g, " ").trim())
+      .filter(Boolean)
+      .map((t) => `${t}:*`)
+      .join(" & ");
     if (terms) {
-      where.push("p.code IN (SELECT code FROM procedure_search WHERE procedure_search MATCH ?)");
+      where.push("p.code IN (SELECT code FROM procedure_search WHERE search_vector @@ to_tsquery('simple', ?))");
       params.push(terms);
     }
   }
@@ -76,18 +82,18 @@ export function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) {
   if (f.alerts === "critical") where.push("s.critical_alerts > 0");
   if (f.alerts === "open") where.push("s.open_alerts > 0");
   const whereSql = where.join(" AND ");
-  const total = (db.prepare(`SELECT COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${whereSql}`).get(...params) as { n: number }).n;
+  const total = ((await db.prepare(`SELECT COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${whereSql}`).get(...params)) as { n: number }).n;
   const sort = SORTS[f.sort ?? "health"] ?? SORTS.health;
   const dir = f.dir === "desc" ? "DESC" : "ASC";
   const size = Math.min(Math.max(f.size ?? 25, 1), 100);
   const page = Math.max(f.page ?? 1, 1);
-  const rows = db
+  const rows = (await db
     .prepare(
       `SELECT p.code, p.title, p.structure_code, st.name AS structure_name, p.procedure_type, p.operation, p.dataset, s.*
        FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id LEFT JOIN structures st ON st.code = p.structure_code
        WHERE ${whereSql} ORDER BY ${sort} ${dir} NULLS LAST, s.next_deadline_date ASC NULLS LAST, p.code ASC LIMIT ? OFFSET ?`,
     )
-    .all(...params, size, (page - 1) * size) as Record<string, any>[];
+    .all(...params, size, (page - 1) * size)) as Record<string, any>[];
   return {
     total,
     page,
@@ -117,7 +123,7 @@ export function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) {
 }
 
 /** KPI direzionali (US-070, guida §8.6). */
-export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: string } = {}) {
+export async function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: string } = {}) {
   const scope = scopeSql(actor);
   const where = [scope.sql];
   const params: unknown[] = [...scope.params];
@@ -126,7 +132,7 @@ export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: 
     params.push(f.structure);
   }
   const w = where.join(" AND ");
-  const k = db
+  const k = (await db
     .prepare(
       `SELECT COUNT(*) AS total,
          SUM(CASE WHEN s.late = 1 THEN 1 ELSE 0 END) AS late,
@@ -141,36 +147,36 @@ export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: 
          SUM(s.open_anomalies) AS anomalies, MAX(s.updated_at) AS updated_at, MAX(s.reference_date) AS reference_date
        FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w}`,
     )
-    .get(...params) as Record<string, any>;
-  const years = db
+    .get(...params)) as Record<string, any>;
+  const years = (await db
     .prepare(
       `SELECT y.year, SUM(y.need_cents) AS need, SUM(y.available_cents) AS available
        FROM procedure_snapshot_year y JOIN procedures p ON p.id = y.procedure_id JOIN procedure_snapshot s ON s.procedure_id = p.id
        WHERE ${w} AND s.status <> 'CANCELLED' GROUP BY y.year ORDER BY y.year`,
     )
-    .all(...params) as { year: number; need: number; available: number }[];
+    .all(...params)) as { year: number; need: number; available: number }[];
   // Fabbisogno delle sole procedure con baseline: le bozze non hanno un riferimento, quindi non generano scostamento.
-  const needBaselined = db
+  const needBaselined = (await db
     .prepare(
       `SELECT y.year, SUM(y.need_cents) AS need
        FROM procedure_snapshot_year y JOIN procedures p ON p.id = y.procedure_id JOIN procedure_snapshot s ON s.procedure_id = p.id
        WHERE ${w} AND s.status <> 'CANCELLED' AND EXISTS (SELECT 1 FROM procedure_versions v WHERE v.procedure_id = p.id AND v.is_baseline = 1)
        GROUP BY y.year`,
     )
-    .all(...params) as { year: number; need: number }[];
-  const baselineYears = db
+    .all(...params)) as { year: number; need: number }[];
+  const baselineYears = (await db
     .prepare(
       `SELECT CAST(substr(fl.date,1,4) AS INTEGER) AS year, SUM(fl.amount_cents) AS amount
        FROM forecast_lines fl JOIN procedure_versions v ON v.id = fl.version_id AND v.is_baseline = 1 JOIN procedures p ON p.id = v.procedure_id
        JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} AND s.status <> 'CANCELLED' GROUP BY year ORDER BY year`,
     )
-    .all(...params) as { year: number; amount: number }[];
-  const attention = listProcedures(db, actor, { ...(f.structure ? { structure: f.structure } : {}), health: "RED,AMBER", sort: "health", size: 10 });
-  const byStatus = db
+    .all(...params)) as { year: number; amount: number }[];
+  const attention = await listProcedures(db, actor, { ...(f.structure ? { structure: f.structure } : {}), health: "RED,AMBER", sort: "health", size: 10 });
+  const byStatus = (await db
     .prepare(`SELECT s.status, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`)
-    .all(...params) as { status: string; n: number }[];
+    .all(...params)) as { status: string; n: number }[];
   return {
-    referenceDate: k.reference_date ?? configuredReferenceDate(db),
+    referenceDate: k.reference_date ?? (await configuredReferenceDate(db)),
     updatedAt: k.updated_at,
     kpi: {
       proceduresTotal: k.total ?? 0,
@@ -196,20 +202,26 @@ export function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: 
   };
 }
 
-const label = (db: Db) => (code: string | null) => (code ? ((db.prepare("SELECT name FROM structures WHERE code = ?").get(code) as { name: string } | undefined)?.name ?? code) : null);
+async function labelOf(db: Db, code: string | null): Promise<string | null> {
+  if (!code) return null;
+  const r = (await db.prepare("SELECT name FROM structures WHERE code = ?").get(code)) as { name: string } | undefined;
+  return r?.name ?? code;
+}
 
 /** Scheda procedura completa (US-072): ricalcolo live dell'aggregato per la timeline. */
-export function procedureDetail(db: Db, actor: Actor, code: string) {
-  const p0 = requireProcedure(db, actor, code);
-  const p = db.prepare("SELECT * FROM procedures WHERE id = ?").get(p0.id) as Record<string, any>;
-  const ref = configuredReferenceDate(db);
-  const settings = engineSettings(db);
-  const agg = loadAggregate(db, p0.id);
+export async function procedureDetail(db: Db, actor: Actor, code: string) {
+  const p0 = await requireProcedure(db, actor, code);
+  const p = (await db.prepare("SELECT * FROM procedures WHERE id = ?").get(p0.id)) as Record<string, any>;
+  const ref = await configuredReferenceDate(db);
+  const settings = await engineSettings(db);
+  const agg = await loadAggregate(db, p0.id);
   const ev = evaluateProcedure(agg, ref, settings);
-  const versions = db.prepare("SELECT * FROM procedure_versions WHERE procedure_id = ? ORDER BY version_no").all(p0.id) as Record<string, any>[];
-  const ms = db.prepare("SELECT * FROM milestones WHERE procedure_id = ?").all(p0.id) as Record<string, any>[];
+  const versions = (await db.prepare("SELECT * FROM procedure_versions WHERE procedure_id = ? ORDER BY version_no").all(p0.id)) as Record<string, any>[];
+  const ms = (await db.prepare("SELECT * FROM milestones WHERE procedure_id = ?").all(p0.id)) as Record<string, any>[];
   const msMap = new Map(ms.map((m) => [m.code, m]));
-  const evidences = db.prepare("SELECT e.*, d.file_name FROM evidences e LEFT JOIN documents d ON d.id = e.document_id WHERE e.procedure_id = ? ORDER BY e.id").all(p0.id) as Record<string, any>[];
+  const evidences = (await db
+    .prepare("SELECT e.*, d.file_name FROM evidences e LEFT JOIN documents d ON d.id = e.document_id WHERE e.procedure_id = ? ORDER BY e.id")
+    .all(p0.id)) as Record<string, any>[];
   const supplierView = actor.role === "SUPPLIER";
   const timeline = ev.milestones.map((m) => {
     const inst = agg.milestones.find((x) => x.code === m.code)!;
@@ -239,12 +251,13 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       canComplete: m.active && !agg.cancelled && !agg.closed && can(actor, "milestone.update") && canCompleteStep(actor, m.def.owner, p.operator_code ?? null),
     };
   });
-  const module2 = executionModuleEnabled(db);
+  const module2 = await executionModuleEnabled(db);
   const activeStep = timeline.find((t) => t.active) ?? null;
-  const operator = p.operator_code ? (db.prepare("SELECT code, name FROM suppliers WHERE code = ?").get(p.operator_code) as { code: string; name: string }) : null;
-  const byYear = (type: string) => {
+  const operator = p.operator_code ? ((await db.prepare("SELECT code, name FROM suppliers WHERE code = ?").get(p.operator_code)) as { code: string; name: string }) : null;
+  const byYear = async (type: string) => {
     const m = new Map<number, bigint>();
-    for (const x of db.prepare("SELECT year, amount_cents FROM financial_movements WHERE procedure_id = ? AND type = ?").all(p0.id, type) as { year: number; amount_cents: number }[]) m.set(x.year, (m.get(x.year) ?? 0n) + BigInt(x.amount_cents));
+    for (const x of (await db.prepare("SELECT year, amount_cents FROM financial_movements WHERE procedure_id = ? AND type = ?").all(p0.id, type)) as { year: number; amount_cents: number }[])
+      m.set(x.year, (m.get(x.year) ?? 0n) + BigInt(x.amount_cents));
     return [...m.entries()].sort((a, b) => a[0] - b[0]).map(([year, c]) => ({ year, amount: centsToString(c) }));
   };
   const process = {
@@ -254,12 +267,18 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
     module2,
     activeStep: activeStep ? { code: activeStep.code, label: activeStep.label, owner: activeStep.owner, due: activeStep.forecast, canComplete: activeStep.canComplete } : null,
     operator,
-    suppliers: actor.role === "PROCUREMENT_OFFICER" || actor.role === "ADMIN" ? (db.prepare("SELECT code, name FROM suppliers ORDER BY name").all() as { code: string; name: string }[]) : [],
-    reservations: byYear("RESERVATION"),
-    commitments: byYear("COMMITMENT"),
+    suppliers:
+      actor.role === "PROCUREMENT_OFFICER" || actor.role === "ADMIN"
+        ? ((await db.prepare("SELECT code, name FROM suppliers ORDER BY name").all()) as { code: string; name: string }[])
+        : [],
+    reservations: await byYear("RESERVATION"),
+    commitments: await byYear("COMMITMENT"),
   };
-  const contract = db.prepare("SELECT c.*, s.name AS supplier_name FROM contracts c LEFT JOIN suppliers s ON s.code = c.supplier_code WHERE c.procedure_id = ?").get(p0.id) as Record<string, any> | undefined;
-  const sals = (db.prepare("SELECT * FROM sals WHERE procedure_id = ? ORDER BY seq").all(p0.id) as Record<string, any>[]).map((s) => {
+  const contract = (await db
+    .prepare("SELECT c.*, s.name AS supplier_name FROM contracts c LEFT JOIN suppliers s ON s.code = c.supplier_code WHERE c.procedure_id = ?")
+    .get(p0.id)) as Record<string, any> | undefined;
+  const salRows = (await db.prepare("SELECT * FROM sals WHERE procedure_id = ? ORDER BY seq").all(p0.id)) as Record<string, any>[];
+  const sals = salRows.map((s) => {
     const inst = agg.sals.find((x) => x.seq === s.seq)!;
     return {
       seq: s.seq,
@@ -279,7 +298,8 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       version: s.version,
     };
   });
-  const payments = (db.prepare("SELECT * FROM payments WHERE procedure_id = ? ORDER BY date, id").all(p0.id) as Record<string, any>[]).map((x) => ({
+  const paymentRows = (await db.prepare("SELECT * FROM payments WHERE procedure_id = ? ORDER BY date, id").all(p0.id)) as Record<string, any>[];
+  const payments = paymentRows.map((x) => ({
     id: x.id,
     sal: x.sal_seq,
     amount: money(x.amount_cents),
@@ -287,7 +307,8 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
     reference: x.reference,
     state: x.state,
   }));
-  const movements = (db.prepare("SELECT * FROM financial_movements WHERE procedure_id = ? ORDER BY date, id").all(p0.id) as Record<string, any>[]).map((m) => ({
+  const movementRows = (await db.prepare("SELECT * FROM financial_movements WHERE procedure_id = ? ORDER BY date, id").all(p0.id)) as Record<string, any>[];
+  const movements = movementRows.map((m) => ({
     id: m.id,
     type: m.type,
     amount: money(m.amount_cents),
@@ -296,22 +317,27 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
     reference: m.reference,
     createdBy: m.created_by,
   }));
-  const alerts = db
-    .prepare("SELECT * FROM alerts WHERE procedure_id = ? ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 WHEN 'SUSPENDED' THEN 2 ELSE 3 END, CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END, id")
-    .all(p0.id) as Record<string, any>[];
-  const sims = (db.prepare("SELECT * FROM simulations WHERE procedure_id = ? ORDER BY id DESC").all(p0.id) as Record<string, any>[]).map((s) => ({
-    ...s,
-    result: JSON.parse(s.result_json),
-    result_json: undefined,
-  }));
-  const documents = db.prepare("SELECT id, file_name, file_path, doc_type, subtype, title, pages, processing_state, association_method, association_confidence, uploaded_at, size_bytes FROM documents WHERE procedure_id = ? ORDER BY id").all(p0.id);
-  const validations = db.prepare("SELECT * FROM validation_items WHERE procedure_id = ? ORDER BY status = 'OPEN' DESC, id").all(p0.id);
-  const audit = can(actor, "audit.read") ? db.prepare("SELECT * FROM audit_events WHERE procedure_code = ? ORDER BY id DESC LIMIT 200").all(code) : [];
+  const alerts = (await db
+    .prepare(
+      "SELECT * FROM alerts WHERE procedure_id = ? ORDER BY CASE status WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1 WHEN 'SUSPENDED' THEN 2 ELSE 3 END, CASE severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END, id",
+    )
+    .all(p0.id)) as Record<string, any>[];
+  const simRows = (await db.prepare("SELECT * FROM simulations WHERE procedure_id = ? ORDER BY id DESC").all(p0.id)) as Record<string, any>[];
+  const sims = simRows.map((s) => ({ ...s, result: JSON.parse(s.result_json), result_json: undefined }));
+  const documents = await db
+    .prepare(
+      "SELECT id, file_name, file_path, doc_type, subtype, title, pages, processing_state, association_method, association_confidence, uploaded_at, size_bytes FROM documents WHERE procedure_id = ? ORDER BY id",
+    )
+    .all(p0.id);
+  const validations = await db.prepare("SELECT * FROM validation_items WHERE procedure_id = ? ORDER BY status = 'OPEN' DESC, id").all(p0.id);
+  const audit = can(actor, "audit.read") ? await db.prepare("SELECT * FROM audit_events WHERE procedure_code = ? ORDER BY id DESC LIMIT 200").all(code) : [];
   const years = [...new Set([...ev.annualNeed.keys(), ...ev.available.keys()])].sort();
-  const baselineLines = db.prepare("SELECT date, amount_cents FROM forecast_lines WHERE version_id = (SELECT id FROM procedure_versions WHERE procedure_id = ? AND is_baseline = 1)").all(p0.id) as { date: string; amount_cents: number }[];
+  const baselineLines = (await db
+    .prepare("SELECT date, amount_cents FROM forecast_lines WHERE version_id = (SELECT id FROM procedure_versions WHERE procedure_id = ? AND is_baseline = 1)")
+    .all(p0.id)) as { date: string; amount_cents: number }[];
   const baseByYear = new Map<number, bigint>();
   for (const l of baselineLines) baseByYear.set(Number(l.date.slice(0, 4)), (baseByYear.get(Number(l.date.slice(0, 4))) ?? 0n) + BigInt(l.amount_cents));
-  const cal = calendarFromDb(db);
+  const cal = await calendarFromDb(db);
   const rescheduleSource = ev.deadlines.find((d) => d.kind === "MILESTONE" && d.blocking && d.daysUntil < 0)?.target ?? ev.milestones.find((m) => m.active)?.code ?? null;
   return {
     referenceDate: ref,
@@ -320,7 +346,7 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
       code: p.code,
       title: p.title,
       dataset: p.dataset,
-      structure: label(db)(p.structure_code),
+      structure: await labelOf(db, p.structure_code),
       structureCode: p.structure_code,
       type: p.procedure_type,
       awardCriterion: p.award_criterion,
@@ -400,14 +426,14 @@ export function procedureDetail(db: Db, actor: Actor, code: string) {
   };
 }
 
-export function previewAlternatives(db: Db, actor: Actor, code: string, source: string, manual: IsoDate | null) {
-  const p = requireProcedure(db, actor, code);
-  const ref = configuredReferenceDate(db);
-  const agg = loadAggregate(db, p.id);
-  return alternatives(agg, source, ref, calendarFromDb(db), manual);
+export async function previewAlternatives(db: Db, actor: Actor, code: string, source: string, manual: IsoDate | null) {
+  const p = await requireProcedure(db, actor, code);
+  const ref = await configuredReferenceDate(db);
+  const agg = await loadAggregate(db, p.id);
+  return alternatives(agg, source, ref, await calendarFromDb(db), manual);
 }
 
-export function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: string; severity?: string; status?: string; procedure?: string; rule?: string }) {
+export async function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: string; severity?: string; status?: string; procedure?: string; rule?: string }) {
   const scope = scopeSql(actor);
   const where = [scope.sql];
   const params: unknown[] = [...scope.params];
@@ -437,7 +463,7 @@ export function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: stri
     where.push("a.id IN (SELECT alert_id FROM alert_notifications WHERE user_id = ?)");
     params.push(actor.userId);
   }
-  const rows = db
+  const rows = await db
     .prepare(
       `SELECT a.*, p.code AS procedure_code, p.title AS procedure_title, p.structure_code
        FROM alerts a JOIN procedures p ON p.id = a.procedure_id
@@ -448,7 +474,7 @@ export function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: stri
   return { items: rows };
 }
 
-export function notificationsFor(db: Db, actor: Actor) {
+export async function notificationsFor(db: Db, actor: Actor) {
   return db
     .prepare(
       `SELECT n.id, n.level, n.created_at, a.title, a.severity, a.rule, p.code AS procedure_code,
@@ -459,7 +485,7 @@ export function notificationsFor(db: Db, actor: Actor) {
     .all(actor.userId, actor.userId);
 }
 
-export function auditList(db: Db, f: { procedure?: string; actor?: string; action?: string; limit?: number }) {
+export async function auditList(db: Db, f: { procedure?: string; actor?: string; action?: string; limit?: number }) {
   const where = ["1=1"];
   const params: unknown[] = [];
   if (f.procedure) {
@@ -477,15 +503,15 @@ export function auditList(db: Db, f: { procedure?: string; actor?: string; actio
   return db.prepare(`SELECT * FROM audit_events WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`).all(...params, Math.min(f.limit ?? 200, 1000));
 }
 
-export function systemStatus(db: Db) {
-  const hb = db.prepare("SELECT * FROM worker_heartbeat ORDER BY beat_at DESC LIMIT 1").get() as { beat_at: string } | undefined;
-  const meta = Object.fromEntries((db.prepare("SELECT key, value FROM system_meta").all() as { key: string; value: string }[]).map((r) => [r.key, r.value]));
-  const outbox = db.prepare("SELECT status, COUNT(*) AS n FROM outbox GROUP BY status").all();
-  const jobs = db.prepare("SELECT * FROM jobs ORDER BY id DESC LIMIT 20").all();
-  const imports = db.prepare("SELECT id, dataset, source_file, created_at, summary_json FROM import_reports ORDER BY id DESC LIMIT 5").all();
-  const llm = db.prepare("SELECT value_json FROM config WHERE key = 'llm.provider'").get() as { value_json: string } | undefined;
+export async function systemStatus(db: Db) {
+  const hb = (await db.prepare("SELECT * FROM worker_heartbeat ORDER BY beat_at DESC LIMIT 1").get()) as { beat_at: string } | undefined;
+  const meta = Object.fromEntries(((await db.prepare("SELECT key, value FROM system_meta").all()) as { key: string; value: string }[]).map((r) => [r.key, r.value]));
+  const outbox = await db.prepare("SELECT status, COUNT(*) AS n FROM outbox GROUP BY status").all();
+  const jobs = await db.prepare("SELECT * FROM jobs ORDER BY id DESC LIMIT 20").all();
+  const imports = await db.prepare("SELECT id, dataset, source_file, created_at, summary_json FROM import_reports ORDER BY id DESC LIMIT 5").all();
+  const llm = (await db.prepare("SELECT value_json FROM config WHERE key = 'llm.provider'").get()) as { value_json: string } | undefined;
   return {
-    referenceDate: configuredReferenceDate(db),
+    referenceDate: await configuredReferenceDate(db),
     dataset: meta.dataset ?? null,
     seededAt: meta.seeded_at ?? null,
     worker: hb ? { lastBeat: hb.beat_at } : null,

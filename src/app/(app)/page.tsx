@@ -32,12 +32,16 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const actor = await pageActor();
   const q = await searchParams;
   const structure = sp(q.structure);
-  const data = dashboard(db(), actor, { ...(structure ? { structure } : {}) });
+  const database = await db();
+  const data = await dashboard(database, actor, { ...(structure ? { structure } : {}) });
   const k = data.kpi;
-  const module2 = executionModuleEnabled(db());
+  const module2 = await executionModuleEnabled(database);
   const signedCount = data.byStatus.filter((x) => ["EXECUTION", "CLOSING", "CLOSED"].includes(x.status)).reduce((t, x) => t + Number(x.n), 0);
   const ref = formatDateIt(data.referenceDate);
-  const structures = db().prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all() as { code: string; name: string }[];
+  const structures = (await database.prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all()) as {
+    code: string;
+    name: string;
+  }[];
   return (
     <>
       <div className="page-head">

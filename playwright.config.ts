@@ -19,7 +19,6 @@ export default defineConfig({
       timeout: 180_000,
       reuseExistingServer: false,
       env: {
-        DATABASE_PATH: ".data/e2e/inapp-e2e.db",
         STORAGE_PATH: ".data/e2e/storage",
         DEMO_DATASET: "scenarios",
         APP_REFERENCE_DATE: "2026-10-01",
@@ -34,7 +33,6 @@ export default defineConfig({
       timeout: 180_000,
       reuseExistingServer: false,
       env: {
-        DATABASE_PATH: ".data/e2e-guida/inapp-guida.db",
         STORAGE_PATH: ".data/e2e-guida/storage",
         DEMO_DATASET: "inapp",
         APP_REFERENCE_DATE: "2026-10-01",

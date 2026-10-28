@@ -22,7 +22,7 @@ export default async function NewDraftPage() {
         </div>
       </div>
       <section className="card">
-        <DraftForm types={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} referenceDate={configuredReferenceDate(db())} />
+        <DraftForm types={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} referenceDate={await configuredReferenceDate(await db())} />
       </section>
     </>
   );

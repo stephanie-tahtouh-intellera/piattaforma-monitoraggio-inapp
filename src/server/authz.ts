@@ -70,11 +70,13 @@ export function scopeSql(actor: Actor): { sql: string; params: unknown[] } {
 }
 
 /** Controllo object-level: 404 non rivelerebbe l'esistenza, ma la guida chiede 403 senza dati (T-017). */
-export function requireProcedure(db: Db, actor: Actor, code: string): { id: number; code: string; structure_code: string } {
-  const p = db.prepare("SELECT id, code, structure_code FROM procedures WHERE code = ?").get(code) as { id: number; code: string; structure_code: string } | undefined;
+export async function requireProcedure(db: Db, actor: Actor, code: string): Promise<{ id: number; code: string; structure_code: string }> {
+  const p = (await db.prepare("SELECT id, code, structure_code FROM procedures WHERE code = ?").get(code)) as
+    | { id: number; code: string; structure_code: string }
+    | undefined;
   if (!p) throw new DomainError("NOT_FOUND", "Procedura non trovata", 404);
   const s = scopeSql(actor);
-  const ok = db.prepare(`SELECT 1 FROM procedures p WHERE p.id = ? AND ${s.sql}`).get(p.id, ...s.params);
+  const ok = await db.prepare(`SELECT 1 FROM procedures p WHERE p.id = ? AND ${s.sql}`).get(p.id, ...s.params);
   if (!ok) throw new DomainError("FORBIDDEN", "Procedura fuori dal tuo ambito", 403);
   return p;
 }

@@ -13,9 +13,10 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   if (!can(actor, "audit.read")) redirect("/");
   const q = await searchParams;
   const f = { procedure: sp(q.procedure), actor: sp(q.actor), action: sp(q.action) };
-  const rows = auditList(db(), { ...(f.procedure ? { procedure: f.procedure } : {}), ...(f.actor ? { actor: f.actor } : {}), ...(f.action ? { action: f.action } : {}) }) as any[];
-  const chain = verifyAuditChain(db());
-  const actions = (db().prepare("SELECT DISTINCT action FROM audit_events ORDER BY action").all() as { action: string }[]).map((r) => r.action);
+  const database = await db();
+  const rows = (await auditList(database, { ...(f.procedure ? { procedure: f.procedure } : {}), ...(f.actor ? { actor: f.actor } : {}), ...(f.action ? { action: f.action } : {}) })) as any[];
+  const chain = await verifyAuditChain(database);
+  const actions = ((await database.prepare("SELECT DISTINCT action FROM audit_events ORDER BY action").all()) as { action: string }[]).map((r) => r.action);
   return (
     <>
       <div className="page-head">

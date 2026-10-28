@@ -6,7 +6,7 @@ import { DateIt } from "./badges";
 import { UploadForm } from "./upload-form";
 import { DOC_TYPE_LABEL, LANES, OWNER_LABEL, STAGES, humanize } from "./labels";
 
-type Detail = ReturnType<typeof procedureDetail>;
+type Detail = Awaited<ReturnType<typeof procedureDetail>>;
 type Step = Detail["timeline"][number];
 
 /** Barra delle fasi dello schema di processo; il Modulo 2 compare solo se attivo (DEC-108). */

@@ -14,7 +14,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   const view = sp(q.view) ?? "";
   const kind = sp(q.kind);
   const status = sp(q.status);
-  const r = alertsList(db(), actor, { view, ...(kind ? { kind } : {}), ...(status ? { status } : {}) });
+  const r = await alertsList(await db(), actor, { view, ...(kind ? { kind } : {}), ...(status ? { status } : {}) });
   const link = (patch: Record<string, string>) => {
     const u = new URLSearchParams({ ...(view ? { view } : {}), ...(kind ? { kind } : {}), ...(status ? { status } : {}), ...patch });
     for (const [k, v] of [...u.entries()]) if (!v) u.delete(k);

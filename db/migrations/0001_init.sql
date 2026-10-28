@@ -1,9 +1,9 @@
--- Schema iniziale (DEC-096, DEC-101). Importi *_cents INTEGER, date ISO TEXT.
+-- Schema iniziale (DEC-096, DEC-101, porting Postgres DEC-115). Importi *_cents BIGINT, date ISO TEXT.
 CREATE TABLE system_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 
 CREATE TABLE config (
   key TEXT PRIMARY KEY,
-  value_json TEXT NOT NULL CHECK (json_valid(value_json)),
+  value_json TEXT NOT NULL CHECK (value_json::json IS NOT NULL),
   version INTEGER NOT NULL DEFAULT 1,
   updated_at TEXT NOT NULL,
   updated_by TEXT NOT NULL
@@ -13,7 +13,7 @@ CREATE TABLE structures (code TEXT PRIMARY KEY, name TEXT NOT NULL, active INTEG
 CREATE TABLE suppliers (code TEXT PRIMARY KEY, name TEXT NOT NULL, is_demo INTEGER NOT NULL DEFAULT 1);
 
 CREATE TABLE users (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   login TEXT NOT NULL UNIQUE,
   name TEXT NOT NULL,
   email TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE sessions (
 );
 
 CREATE TABLE procedures (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   dataset TEXT NOT NULL,
   title TEXT NOT NULL,
@@ -46,15 +46,15 @@ CREATE TABLE procedures (
   award_criterion TEXT CHECK (award_criterion IS NULL OR award_criterion IN ('LOWEST_PRICE','MEAT')),
   instrument TEXT CHECK (instrument IS NULL OR instrument IN ('MEPA','OFF_MEPA','CONSIP_AQ')),
   template_code TEXT NOT NULL,
-  programmed_cents INTEGER NOT NULL CHECK (typeof(programmed_cents)='integer' AND programmed_cents >= 0),
+  programmed_cents BIGINT NOT NULL CHECK (programmed_cents >= 0),
   documents_tracked INTEGER NOT NULL DEFAULT 1,
-  anac_fee_cents INTEGER NOT NULL DEFAULT 0 CHECK (typeof(anac_fee_cents)='integer' AND anac_fee_cents >= 0),
+  anac_fee_cents BIGINT NOT NULL DEFAULT 0 CHECK (anac_fee_cents >= 0),
   cig TEXT,
   cup TEXT,
   source_key TEXT,
   operation TEXT,
-  activity_start TEXT CHECK (activity_start IS NULL OR activity_start IS date(activity_start)),
-  activity_end TEXT CHECK (activity_end IS NULL OR activity_end IS date(activity_end)),
+  activity_start TEXT CHECK (activity_start IS NULL OR activity_start ~ '^\d{4}-\d{2}-\d{2}$'),
+  activity_end TEXT CHECK (activity_end IS NULL OR activity_end ~ '^\d{4}-\d{2}-\d{2}$'),
   source_status TEXT,
   iter_text TEXT,
   source_row INTEGER,
@@ -67,13 +67,13 @@ CREATE TABLE procedures (
 );
 
 CREATE TABLE procedure_versions (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   version_no INTEGER NOT NULL,
   is_baseline INTEGER NOT NULL DEFAULT 0,
   label TEXT NOT NULL,
   reason TEXT NOT NULL,
-  programmed_cents INTEGER NOT NULL CHECK (typeof(programmed_cents)='integer' AND programmed_cents >= 0),
+  programmed_cents BIGINT NOT NULL CHECK (programmed_cents >= 0),
   simulation_id INTEGER,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -85,16 +85,16 @@ CREATE TABLE procedure_versions (
 CREATE TABLE milestone_forecasts (
   version_id INTEGER NOT NULL REFERENCES procedure_versions(id),
   milestone_code TEXT NOT NULL,
-  date TEXT NOT NULL CHECK (date IS date(date)),
+  date TEXT NOT NULL CHECK (date ~ '^\d{4}-\d{2}-\d{2}$'),
   PRIMARY KEY (version_id, milestone_code)
 );
 
 CREATE TABLE forecast_lines (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   version_id INTEGER NOT NULL REFERENCES procedure_versions(id),
   line_key TEXT NOT NULL,
-  date TEXT NOT NULL CHECK (date IS date(date)),
-  amount_cents INTEGER NOT NULL CHECK (typeof(amount_cents)='integer' AND amount_cents >= 0),
+  date TEXT NOT NULL CHECK (date ~ '^\d{4}-\d{2}-\d{2}$'),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
   anchor_type TEXT NOT NULL CHECK (anchor_type IN ('MILESTONE','SAL')),
   anchor_ref TEXT NOT NULL,
   source TEXT,
@@ -104,7 +104,7 @@ CREATE TABLE forecast_lines (
 CREATE TABLE milestones (
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   code TEXT NOT NULL,
-  actual_date TEXT CHECK (actual_date IS NULL OR actual_date IS date(actual_date)),
+  actual_date TEXT CHECK (actual_date IS NULL OR actual_date ~ '^\d{4}-\d{2}-\d{2}$'),
   manual_state TEXT CHECK (manual_state IS NULL OR manual_state IN ('SUSPENDED','NOT_APPLICABLE','CANCELLED')),
   manual_blocker TEXT,
   completed_by TEXT,
@@ -115,36 +115,36 @@ CREATE TABLE milestones (
 );
 
 CREATE TABLE budget_allocations (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   year INTEGER NOT NULL,
   source TEXT NOT NULL,
-  amount_cents INTEGER NOT NULL CHECK (typeof(amount_cents)='integer' AND amount_cents >= 0),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
   UNIQUE (procedure_id, year, source)
 );
 
 CREATE TABLE contracts (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL UNIQUE REFERENCES procedures(id),
   signed INTEGER NOT NULL DEFAULT 0,
   supplier_code TEXT REFERENCES suppliers(code),
-  net_cents INTEGER NOT NULL CHECK (typeof(net_cents)='integer' AND net_cents >= 0),
-  vat_cents INTEGER NOT NULL CHECK (typeof(vat_cents)='integer' AND vat_cents >= 0),
-  gross_cents INTEGER NOT NULL CHECK (typeof(gross_cents)='integer' AND gross_cents >= 0),
+  net_cents BIGINT NOT NULL CHECK (net_cents >= 0),
+  vat_cents BIGINT NOT NULL CHECK (vat_cents >= 0),
+  gross_cents BIGINT NOT NULL CHECK (gross_cents >= 0),
   signed_date TEXT, start_date TEXT, end_date TEXT,
   version INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE sals (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   seq INTEGER NOT NULL,
   pct_hundredths INTEGER NOT NULL CHECK (pct_hundredths BETWEEN 0 AND 10000),
-  amount_cents INTEGER NOT NULL CHECK (typeof(amount_cents)='integer' AND amount_cents >= 0),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
   state TEXT NOT NULL CHECK (state IN ('PLANNED','SUBMITTED','UNDER_REVIEW','ACCEPTED','INVOICED','LIQUIDATED','PARTIALLY_PAID','PAID','REJECTED','SUSPENDED')),
   due_date TEXT, submitted_date TEXT, review_due_date TEXT, invoice_date TEXT, payment_due_date TEXT,
-  accepted_cents INTEGER NOT NULL DEFAULT 0 CHECK (typeof(accepted_cents)='integer' AND accepted_cents >= 0),
-  liquidated_cents INTEGER NOT NULL DEFAULT 0 CHECK (typeof(liquidated_cents)='integer' AND liquidated_cents >= 0),
+  accepted_cents BIGINT NOT NULL DEFAULT 0 CHECK (accepted_cents >= 0),
+  liquidated_cents BIGINT NOT NULL DEFAULT 0 CHECK (liquidated_cents >= 0),
   note TEXT,
   version INTEGER NOT NULL DEFAULT 1,
   UNIQUE (procedure_id, seq),
@@ -152,11 +152,11 @@ CREATE TABLE sals (
 );
 
 CREATE TABLE payments (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   sal_seq INTEGER,
-  amount_cents INTEGER NOT NULL CHECK (typeof(amount_cents)='integer' AND amount_cents > 0),
-  date TEXT NOT NULL CHECK (date IS date(date)),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents > 0),
+  date TEXT NOT NULL CHECK (date ~ '^\d{4}-\d{2}-\d{2}$'),
   reference TEXT,
   state TEXT NOT NULL DEFAULT 'EXECUTED' CHECK (state IN ('EXECUTED','REVERSED')),
   created_by TEXT NOT NULL,
@@ -164,19 +164,19 @@ CREATE TABLE payments (
 );
 
 CREATE TABLE financial_movements (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   type TEXT NOT NULL CHECK (type IN ('RESERVATION','COMMITMENT','LIQUIDATION','PAYMENT','RELEASE','REVERSAL')),
-  amount_cents INTEGER NOT NULL CHECK (typeof(amount_cents)='integer' AND amount_cents >= 0),
+  amount_cents BIGINT NOT NULL CHECK (amount_cents >= 0),
   year INTEGER NOT NULL,
-  date TEXT NOT NULL CHECK (date IS date(date)),
+  date TEXT NOT NULL CHECK (date ~ '^\d{4}-\d{2}-\d{2}$'),
   reference TEXT,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
 
 CREATE TABLE documents (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER REFERENCES procedures(id),
   file_path TEXT NOT NULL,
   file_name TEXT NOT NULL,
@@ -204,7 +204,7 @@ CREATE TABLE document_pages (
 );
 
 CREATE TABLE evidences (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   field TEXT NOT NULL,
   value TEXT,
@@ -219,7 +219,7 @@ CREATE TABLE evidences (
 );
 
 CREATE TABLE validation_items (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER REFERENCES procedures(id),
   kind TEXT NOT NULL CHECK (kind IN ('ASSOCIATION','EXTRACTED_FIELD','CONFLICT','OVERRIDE','RESCHEDULE')),
   field TEXT NOT NULL,
@@ -240,7 +240,7 @@ CREATE TABLE validation_items (
 );
 
 CREATE TABLE alerts (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   kind TEXT NOT NULL CHECK (kind IN ('ALERT','ANOMALY')),
   rule TEXT NOT NULL,
@@ -262,7 +262,7 @@ CREATE TABLE alerts (
 );
 
 CREATE TABLE outbox (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   channel TEXT NOT NULL DEFAULT 'EMAIL',
   recipient TEXT NOT NULL,
   subject TEXT NOT NULL,
@@ -277,7 +277,7 @@ CREATE TABLE outbox (
 );
 
 CREATE TABLE alert_notifications (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   alert_id INTEGER NOT NULL REFERENCES alerts(id),
   level TEXT NOT NULL,
   recipient TEXT NOT NULL,
@@ -296,7 +296,7 @@ CREATE TABLE notification_reads (
 );
 
 CREATE TABLE simulations (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   code TEXT NOT NULL UNIQUE,
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   base_version_id INTEGER NOT NULL REFERENCES procedure_versions(id),
@@ -306,7 +306,7 @@ CREATE TABLE simulations (
   cause TEXT NOT NULL,
   notes TEXT,
   status TEXT NOT NULL CHECK (status IN ('DRAFT','SUBMITTED','APPROVED','REJECTED','SUPERSEDED','STALE')),
-  result_json TEXT NOT NULL CHECK (json_valid(result_json)),
+  result_json TEXT NOT NULL CHECK (result_json::json IS NOT NULL),
   blocking INTEGER NOT NULL DEFAULT 0,
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL,
@@ -317,7 +317,7 @@ CREATE TABLE simulations (
 );
 
 CREATE TABLE audit_events (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   at TEXT NOT NULL,
   actor TEXT NOT NULL,
   impersonated_by TEXT,
@@ -334,10 +334,10 @@ CREATE TABLE audit_events (
 );
 
 CREATE TABLE jobs (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   type TEXT NOT NULL,
   dedupe_key TEXT UNIQUE,
-  payload_json TEXT NOT NULL DEFAULT '{}' CHECK (json_valid(payload_json)),
+  payload_json TEXT NOT NULL DEFAULT '{}' CHECK (payload_json::json IS NOT NULL),
   status TEXT NOT NULL DEFAULT 'QUEUED' CHECK (status IN ('QUEUED','RUNNING','DONE','FAILED')),
   attempts INTEGER NOT NULL DEFAULT 0,
   max_attempts INTEGER NOT NULL DEFAULT 3,
@@ -370,14 +370,14 @@ CREATE TABLE procedure_snapshot (
   days_until INTEGER,
   reschedule_required INTEGER NOT NULL,
   late INTEGER NOT NULL,
-  programmed_cents INTEGER NOT NULL,
-  contracted_cents INTEGER,
-  paid_cents INTEGER NOT NULL,
-  liquidated_cents INTEGER NOT NULL,
-  residual_cents INTEGER NOT NULL,
-  at_risk_cents INTEGER NOT NULL,
-  uncovered_cents INTEGER NOT NULL,
-  slipping_cents INTEGER NOT NULL,
+  programmed_cents BIGINT NOT NULL,
+  contracted_cents BIGINT,
+  paid_cents BIGINT NOT NULL,
+  liquidated_cents BIGINT NOT NULL,
+  residual_cents BIGINT NOT NULL,
+  at_risk_cents BIGINT NOT NULL,
+  uncovered_cents BIGINT NOT NULL,
+  slipping_cents BIGINT NOT NULL,
   open_alerts INTEGER NOT NULL,
   critical_alerts INTEGER NOT NULL,
   open_anomalies INTEGER NOT NULL,
@@ -389,22 +389,22 @@ CREATE TABLE procedure_snapshot (
 CREATE TABLE procedure_snapshot_year (
   procedure_id INTEGER NOT NULL REFERENCES procedures(id),
   year INTEGER NOT NULL,
-  need_cents INTEGER NOT NULL,
-  available_cents INTEGER NOT NULL,
+  need_cents BIGINT NOT NULL,
+  available_cents BIGINT NOT NULL,
   PRIMARY KEY (procedure_id, year)
 );
 
 CREATE TABLE import_reports (
-  id INTEGER PRIMARY KEY,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   dataset TEXT NOT NULL,
   source_file TEXT NOT NULL,
-  summary_json TEXT NOT NULL CHECK (json_valid(summary_json)),
+  summary_json TEXT NOT NULL CHECK (summary_json::json IS NOT NULL),
   created_by TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
 
 CREATE TABLE exports (
-  id INTEGER PRIMARY KEY, actor TEXT NOT NULL, kind TEXT NOT NULL, filters_json TEXT NOT NULL,
+  id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY, actor TEXT NOT NULL, kind TEXT NOT NULL, filters_json TEXT NOT NULL,
   sha256 TEXT NOT NULL, created_at TEXT NOT NULL
 );
 

@@ -1,6 +1,6 @@
 # Piattaforma INAPP — monitoraggio, riprogrammazione e controllo finanziario (MVP demo)
 
-MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. Core deterministico; AI opzionale e disattivata di default. Stack: **Next.js fullstack (TypeScript) + SQLite**, worker Node, Mailpit (ADR-0001).
+MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. Core deterministico; AI opzionale e disattivata di default. Stack: **Next.js fullstack (TypeScript) + Postgres** (Vercel Postgres/Neon, DEC-115 — sostituisce SQLite/Turso di DEC-112), worker Node, Mailpit (ADR-0001). Un solo database per locale, test e Vercel; cambia solo lo storage dei documenti e il dataset (DEC-113/DEC-114): in locale i documenti caricati vanno su disco e il dataset è `inapp`, su Vercel Vercel Blob e il dataset `scenarios`.
 
 ## Leggi prima di lavorare (in quest'ordine)
 1. [docs/02_guida_sviluppo_agente.md](docs/02_guida_sviluppo_agente.md) — **guida operativa vincolante**: protocollo, decisioni di default (DEC), regole precise, modelli di procedura, seed/oracle, piano a incrementi. Prevale sulla specifica dove differisce.
@@ -37,23 +37,24 @@ MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert →
 
 ## Comandi
 <!-- Da creare in I0; mantenerli allineati al README. -->
-- Avvio: `docker compose up --build` (sviluppo senza Docker: `pnpm install && pnpm db:bootstrap && pnpm dev`)
+- Avvio: `pnpm install && pnpm db:bootstrap && pnpm dev` (worker: `pnpm worker`)
 - Quality gate: `bash scripts/check.sh` (ciclo veloce sull'host: `pnpm verify`)
 - Test: `pnpm test` (unit + integration + api) · `pnpm test:e2e` · `pnpm test -- tests/unit/<file>`
-- Reset demo: `docker compose run --rm init reset --yes`
-- Backup / restore: `docker compose run --rm init backup` · restore solo a servizi fermi (vedi README)
-- Run-checks a una data: `docker compose run --rm init run-checks --date 2026-10-01`
+- Reset demo: `pnpm db:reset`
+- Backup: non più da CLI; usare il backup/branching di Neon/Vercel Postgres (DEC-115)
+- Run-checks a una data: `pnpm run-checks -- --date 2026-10-01`
 - Schema DB: `pnpm db:generate` (rivedere il SQL generato) · `pnpm db:migrate`
 - OpenAPI: `pnpm openapi` (rigenera `docs/openapi.json`)
 
 ## Ambiente
-- Windows; **Docker non installato** su questa macchina (DEC-100): sviluppo e collaudo in locale con Node 22 + pnpm 10; i file Docker vanno scritti ma collaudati quando Docker sarà disponibile. Gli script girano nei container: fine riga LF (`.gitattributes`).
+- Windows: sviluppo e collaudo in locale con Node 22 + pnpm 10 (DEC-100). Fine riga LF (`.gitattributes`).
 - Node 24 LTS, pnpm 12, TypeScript 6.
-- DB SQLite nel volume nominato `appdata` (`/data/inapp.db`): **mai** bind mount di cartelle Windows. In sviluppo locale il DB sta in `./.data/`, ignorato da git.
+- DB: Postgres (Vercel Postgres/Neon, DEC-115), un solo database per locale/test/Vercel via `POSTGRES_URL`; nessun file `.db` in nessun ambiente. Lo storage dei documenti caricati resta in `./.data/storage` (ignorato da git) senza `BLOB_READ_WRITE_TOKEN`.
 - Indirizzi locali:
   - web e API: http://localhost:3000;
   - OpenAPI: http://localhost:3000/api/docs;
   - UI e-mail demo (Mailpit): http://localhost:8025.
+- **Deployment Vercel** (DEC-113/DEC-114/DEC-115): richiede `POSTGRES_URL` (store "Postgres" del progetto Vercel, Neon) sia in locale sia su Vercel. Su Vercel servono anche `BLOB_READ_WRITE_TOKEN` (store Vercel Blob) e `DEMO_DATASET=scenarios`.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

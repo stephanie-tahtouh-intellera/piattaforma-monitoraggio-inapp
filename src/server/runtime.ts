@@ -1,5 +1,5 @@
 import { bootstrap } from "@/application/bootstrap";
-import { dbClock } from "@/infrastructure/clock";
+import { dbClock, type Clock } from "@/infrastructure/clock";
 import { getDb } from "@/infrastructure/db/connection";
 
 declare global {
@@ -10,12 +10,14 @@ declare global {
 /** Migrazioni + seed if-empty al primo accesso (US-001). */
 export function ensureBootstrapped(): Promise<unknown> {
   if (!globalThis.__inappBoot) {
-    const db = getDb();
-    globalThis.__inappBoot = bootstrap(db, dbClock(db));
+    globalThis.__inappBoot = (async () => {
+      const db = await getDb();
+      return bootstrap(db, await dbClock(db));
+    })();
   }
   return globalThis.__inappBoot;
 }
 
-export function clock() {
-  return dbClock(getDb());
+export async function clock(): Promise<Clock> {
+  return dbClock(await getDb());
 }
