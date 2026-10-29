@@ -3,6 +3,8 @@ import { Titillium_Web } from "next/font/google";
 import "./tokens.css";
 import "./globals.css";
 
+export const maxDuration = 60; // il primo accesso su DB vuoto esegue migrazioni e seed (DEC-114)
+
 const titillium = Titillium_Web({ subsets: ["latin"], weight: ["400", "600", "700"], variable: "--font-titillium", display: "swap" });
 
 export const metadata: Metadata = {

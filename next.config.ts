@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   // Evita il tracciamento dell'intero progetto per gli accessi a file con percorso calcolato
   // (seed scenari in bundle, dati tesseract, migrazioni SQL) — DEC-113.
   outputFileTracingIncludes: {
-    "/**": ["seed/scenarios/**", "vendor/tessdata/**", "db/migrations/**", "db/sql/**"],
+    "/**": ["seed/scenarios/**", "seed/inapp/**", "vendor/tessdata/**", "db/migrations/**", "db/sql/**"],
   },
   async headers() {
     return [

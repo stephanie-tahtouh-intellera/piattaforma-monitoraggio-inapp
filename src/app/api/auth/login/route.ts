@@ -3,6 +3,7 @@ import { login } from "@/server/auth";
 import { body, route, sessionCookies } from "@/server/http";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 const Body = z.object({ login: z.string().min(1).max(64), password: z.string().min(1).max(200) });
 
 export const POST = route(
