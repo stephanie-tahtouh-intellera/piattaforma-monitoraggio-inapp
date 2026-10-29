@@ -5,6 +5,6 @@ import { reversePayment } from "@/server/commands";
 export const runtime = "nodejs";
 export const POST = route(async ({ db, actor, req, params }) => {
   const b = await body(req, z.object({ reason: z.string().max(2000) }));
-  reversePayment(db, actor!, Number(params.id), b.reason);
+  await reversePayment(db, actor!, Number(params.id), b.reason);
   return { ok: true };
 });

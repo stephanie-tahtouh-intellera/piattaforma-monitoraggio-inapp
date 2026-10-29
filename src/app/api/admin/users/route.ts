@@ -15,6 +15,6 @@ const B = z.object({
 });
 export const POST = route(async ({ db, actor, req }) => {
   const b = await body(req, B);
-  upsertUser(db, actor!, { login: b.login, name: b.name, role: b.role, structureScope: b.structure_scope, supplier: b.supplier ?? null, active: b.active });
+  await upsertUser(db, actor!, { login: b.login, name: b.name, role: b.role, structureScope: b.structure_scope, supplier: b.supplier ?? null, active: b.active });
   return { ok: true };
 });

@@ -12,6 +12,6 @@ const B = z.object({
 /** Correzione della classificazione di un documento (DEC-109): tipo di atto ed eventuale altra procedura. */
 export const POST = route(async ({ db, actor, req }) => {
   const b = await body(req, B);
-  classifyDocument(db, actor!, b.document_id, b.doc_type?.trim() || null, b.procedure?.trim() || null, b.note ?? null);
+  await classifyDocument(db, actor!, b.document_id, b.doc_type?.trim() || null, b.procedure?.trim() || null, b.note ?? null);
   return { ok: true };
 });

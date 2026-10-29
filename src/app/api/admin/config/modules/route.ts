@@ -11,6 +11,6 @@ const B = z.object({ execution: z.boolean() });
 export const PUT = route(async ({ db, actor, req }) => {
   requireAction(actor, "admin");
   const b = await body(req, B);
-  tx(db, () => setExecutionModule(db, b.execution, actor!.login, systemNowIso()));
+  await tx(db, (tdb) => setExecutionModule(tdb, b.execution, actor!.login, systemNowIso()));
   return { execution: b.execution };
 });

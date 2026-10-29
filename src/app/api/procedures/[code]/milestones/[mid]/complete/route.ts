@@ -17,7 +17,7 @@ const B = z.object({
 });
 export const POST = route(async ({ db, actor, req, params }) => {
   const b = await body(req, B);
-  completeMilestone(db, actor!, params.code!, params.mid!, b.date, b.note ?? null, {
+  await completeMilestone(db, actor!, params.code!, params.mid!, b.date, b.note ?? null, {
     operator: b.operator,
     lines: b.lines,
     gross: b.gross,
