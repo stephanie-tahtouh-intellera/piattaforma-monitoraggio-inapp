@@ -203,10 +203,10 @@ export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boo
   const s = d.timeline.find((t) => t.active);
   if (d.evaluation.status === "DRAFT") return null;
   if (!s) {
-    return <div className="step-panel done" data-tour="passo">Tutti i passi del Modulo 1 sono completati: il contratto è stipulato.</div>;
+    return <div className="step-panel done" data-tour="passo" data-step-code="DONE" data-step-label="Contratto stipulato">Tutti i passi del Modulo 1 sono completati: il contratto è stipulato.</div>;
   }
   return (
-    <div className="step-panel" id="passo" data-tour="passo">
+    <div className="step-panel" id="passo" data-tour="passo" data-step-code={s.code} data-step-label={s.label}>
       <h3>
         Passo in corso: {s.label}
       </h3>

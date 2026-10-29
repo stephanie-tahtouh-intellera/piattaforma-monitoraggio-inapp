@@ -1,10 +1,10 @@
 "use client";
-import { Compass, Lightbulb, Minus, UserRound, X } from "lucide-react";
+import { Compass, Lightbulb, Minus, TriangleAlert, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Role } from "@/domain/model";
-import { LOGIN_OF, PROCESS_TOUR, ROLE_TOUR, TOURS, pageHelp, type TourStep } from "./content";
+import { LOGIN_OF, PROCESS_ORDER, PROCESS_TOUR, ROLE_TOUR, TOURS, pageHelp, type TourStep } from "./content";
 import { CLOSED, readTourState as read, switchActor, writeTourState, type TourState } from "./state";
 
 function onStepPage(step: TourStep, pathname: string, params: URLSearchParams): boolean {
@@ -29,6 +29,7 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
   const [switching, setSwitching] = useState(false);
   const headRef = useRef<HTMLHeadingElement>(null);
   const focusNext = useRef(false);
+  const [actual, setActual] = useState<{ code: string; label: string } | null>(null);
 
   const save = useCallback((next: TourState) => {
     focusNext.current = next.mode !== "closed";
@@ -73,10 +74,30 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
     };
   }, [step, here, pathname, params]);
 
+  // Stato reale della pratica: confronto con il passo che la guida sta mostrando (solo percorso per fasi)
+  useEffect(() => {
+    if (!step?.expect || !here) {
+      setActual(null);
+      return;
+    }
+    const read = () => {
+      const p = document.querySelector("[data-tour='passo']");
+      if (p) setActual({ code: p.getAttribute("data-step-code") ?? "", label: p.getAttribute("data-step-label") ?? "" });
+      else setActual(document.querySelector("#memoria") ? { code: "DRAFT", label: "Consegna della memoria" } : null);
+    };
+    read();
+    const t = window.setInterval(read, 1500);
+    return () => window.clearInterval(t);
+  }, [step, here, pathname, params]);
+
   useEffect(() => {
     if (focusNext.current) headRef.current?.focus({ preventScroll: true });
     focusNext.current = false;
   }, [st.mode, st.step]);
+
+  const mismatch = step?.expect && actual && actual.code && actual.code !== step.expect ? actual : null;
+  const ahead = mismatch ? PROCESS_ORDER.indexOf(mismatch.code) > PROCESS_ORDER.indexOf(step!.expect!) : false;
+  const matchIdx = mismatch ? tour.steps.findIndex((x) => x.expect === mismatch.code) : -1;
 
   const go = (i: number) => {
     const target = tour.steps[i]!;
@@ -147,6 +168,21 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
                 >
                   {switching ? "Cambio in corso…" : `Accedi come ${LOGIN_OF[otherActor]} e continua`}
                 </button>
+              </div>
+            ) : null}
+            {mismatch ? (
+              <div className="tour-warn" role="status">
+                <p>
+                  <TriangleAlert size={16} aria-hidden />{" "}
+                  {ahead
+                    ? <>Questo passo è già stato registrato: la pratica è più avanti, a «{mismatch.label}».</>
+                    : <>I passi precedenti non sono ancora stati registrati: la pratica è ferma a «{mismatch.label}».</>}
+                </p>
+                {matchIdx >= 0 && matchIdx !== st.step ? (
+                  <button type="button" className="btn btn-secondary btn-sm" onClick={() => go(matchIdx)}>
+                    Vai al passo corrispondente (n. {matchIdx + 1})
+                  </button>
+                ) : null}
               </div>
             ) : null}
             <p>{step.body}</p>

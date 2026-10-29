@@ -352,6 +352,10 @@ pre.iter { white-space: pre-wrap; background: var(--neutral-25); border: 1px sol
 .tour-switch { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--ds-radius); background: var(--brand-tint); border: 1px solid var(--brand-tint-border); }
 .tour-switch p { margin: 0 0 8px; }
 .tour-switch svg { vertical-align: -3px; }
+.tour-warn { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--ds-radius); background: var(--feedback-warning-bg); color: var(--feedback-warning-fg); border: 1px solid var(--health-amber-border); }
+.tour-warn p { margin: 0 0 8px; }
+.tour-warn p:last-child { margin: 0; }
+.tour-warn svg { vertical-align: -3px; }
 .guide-map td { min-width: 190px; }
 .map-step { display: flex; gap: 6px; align-items: flex-start; width: 100%; text-align: left; padding: 6px 8px; margin-bottom: 6px; border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); background: var(--ds-color-bg-surface); color: var(--ds-color-text); font: inherit; font-size: var(--ds-text-xs); cursor: pointer; }
 .map-step:hover { border-color: var(--brand-blue); background: var(--brand-tint); }

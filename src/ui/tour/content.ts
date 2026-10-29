@@ -15,6 +15,8 @@ export interface TourStep {
   /** Percorso per fasi: ruolo che svolge il passo e fase dello schema. */
   role?: Role;
   stage?: number;
+  /** Passo del processo che la pratica deve avere in corso perché questo passo sia applicabile ("DRAFT", codice del passo, "DONE"). */
+  expect?: string;
   title: string;
   body: string;
   /** Cosa può fare l'attore in questa pagina. */
@@ -36,6 +38,9 @@ export interface Tour {
 }
 
 export const PROCESS_TOUR = "PROCESSO";
+
+/** Ordine dei passi del Modulo 1 (usato per dire se la pratica è più avanti o più indietro del passo della guida). */
+export const PROCESS_ORDER = ["DRAFT", "TAKEN_IN_CHARGE", "FUNDING_CHECK", "PRELIMINARY_INQUIRY", "OPERATOR_DOCUMENTS", "REQUIREMENTS_CHECK", "INDICTION", "COMMITMENTS", "PROCEDURE_SETUP", "AWARD_PROPOSAL", "AWARD", "CONTRACT_PREPARATION", "GUARANTEE", "CONTRACT_SIGNED", "DONE"];
 
 /** Utente demo di ciascun ruolo (per il cambio di attore del percorso per fasi). */
 export const LOGIN_OF: Record<Role, string> = {
@@ -76,96 +81,112 @@ const PROCESS: Tour = {
     {
       path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,
       title: "1 · Fabbisogno: redazione e consegna della memoria",
+      expect: "DRAFT",
       body: "Memoria e documento tecnico sono già nel fascicolo (sezione Documenti). Alla consegna la data diventa effettiva, la baseline si congela e la pratica passa all'Ufficio Gare.",
       tryIt: "Consegna la memoria con data 01/10/2026 e protocollo «INAPP-DEMO 412/2026».",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 1,
       title: "1 · Presa in carico della pratica",
+      expect: "TAKEN_IN_CHARGE",
       body: "La sezione Iter mostra lo schema a corsie della procedura: il passo in corso è evidenziato e indica a chi tocca. Ora tocca all'Ufficio Gare, che assegna un funzionario.",
       tryIt: "Registra il passo con nota «Funzionario assegnato: dott.ssa Bianchi».",
     },
     {
       path: ITER, target: PASSO, role: "FINANCE_OFFICER", stage: 1,
       title: "1 · Verifica importi e prenotazioni di spesa",
+      expect: "FUNDING_CHECK",
       body: "L'Amministrazione verifica importo e fonte di finanziamento e registra le prenotazioni per annualità, proposte dal riparto della bozza. Il totale non può superare il programmato.",
       tryIt: "Conferma le prenotazioni 2026 (25.620,00 €) e 2027 (59.780,00 €) con nota «PN GDL – Priorità 1».",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
       title: "2 · Istruttoria preliminare e richiesta documenti",
+      expect: "PRELIMINARY_INQUIRY",
       body: "Per l'affidamento diretto su MePA l'Ufficio Gare individua l'operatore e gli chiede i documenti per la verifica dei requisiti, prima della determina di indizione. Da questo momento l'operatore vede la pratica.",
       tryIt: "Scegli «Fornitore Demo Alfa S.r.l.» e registra il passo.",
     },
     {
       path: ITER, target: "[data-tour='upload-passo']", role: "SUPPLIER", stage: 2,
       title: "2 · Il fornitore carica i documenti",
+      expect: "OPERATOR_DOCUMENTS",
       body: "Il fornitore vede solo le pratiche in cui è operatore e solo i passi della propria corsia. Nel passo in corso, nello stesso riquadro, carica i documenti per la verifica dei requisiti (DGUE, DURC, dichiarazioni): PDF o ZIP, controllati per tipo, firma del contenuto e dimensione.",
       tryIt: "Scegli un PDF qualsiasi e premi il pulsante di caricamento: il documento compare nel fascicolo e nell'elenco dei documenti attesi.",
     },
     {
       path: ITER, target: PASSO, role: "SUPPLIER", stage: 2,
       title: "2 · Il fornitore registra l'invio",
+      expect: "OPERATOR_DOCUMENTS",
       body: "Dopo il caricamento, nello stesso riquadro, il fornitore registra il passo con data e nota: la pratica torna all'Ufficio Gare per la verifica dei requisiti.",
       tryIt: "Registra il passo con nota «DGUE, DURC e dichiarazioni inviati».",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
       title: "2 · Ricezione e verifica dei requisiti (FVOE)",
+      expect: "REQUIREMENTS_CHECK",
       body: "L'Ufficio Gare verifica la documentazione dell'operatore.",
       tryIt: "Registra il passo con nota «Verifica FVOE con esito positivo».",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
       title: "2 · Determina di indizione ◆",
+      expect: "INDICTION",
       body: "È una data chiave: con la determina si indice la procedura, si acquisisce il CIG, si nomina il RUP e si autorizzano gli impegni. Le date chiave hanno alert e riprogrammazione dedicati.",
       tryIt: "Registra la determina con nota «Det. n. 312 del 01/10/2026».",
     },
     {
       path: ITER, target: PASSO, role: "FINANCE_OFFICER", stage: 2,
       title: "2 · Assunzione degli impegni di spesa",
+      expect: "COMMITMENTS",
       body: "L'Amministrazione trasforma le prenotazioni in impegni per annualità. I movimenti finanziari sono in sola aggiunta: si correggono con storni, mai con cancellazioni.",
       tryIt: "Conferma gli impegni proposti (uguali alle prenotazioni).",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
       title: "2 · Acquisizione CIG e predisposizione della procedura",
+      expect: "PROCEDURE_SETUP",
       body: "L'Ufficio Gare predispone la trattativa diretta o l'ordine su MePA.",
       tryIt: "Registra il passo con nota «TD MePA n. 5512345».",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
       title: "3 · Verifica dei requisiti e proposta di aggiudicazione",
+      expect: "AWARD_PROPOSAL",
       body: "Inizia la fase di affidamento: istruttoria sull'offerta ricevuta e proposta di aggiudicazione.",
       tryIt: "Registra il passo.",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
       title: "3 · Determina di aggiudicazione ◆",
+      expect: "AWARD",
       body: "Data chiave: operatore, importo e durata. L'importo aggiudicato genera il contratto da stipulare (netto e IVA sono calcolati dal sistema).",
       tryIt: "Indica 84.180,00 € (offerta con ribasso), inizio attività 15/10/2026, fine 14/10/2027.",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
       title: "3 · Predisposizione e stipula del contratto",
+      expect: "CONTRACT_PREPARATION",
       body: "L'Ufficio Gare predispone l'ordine o il contratto (es. ODA MePA) da inviare all'operatore.",
       tryIt: "Registra il passo.",
     },
     {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 3,
       title: "3 · Acquisizione della garanzia definitiva",
+      expect: "GUARANTEE",
       body: "Se prevista, la garanzia definitiva è acquisita sul portale gare prima della stipula.",
       tryIt: "Registra il passo con nota «Polizza fideiussoria n. 778/2026».",
     },
     {
       path: ITER, target: PASSO, role: "SUPPLIER", stage: 3,
       title: "3 · Accettazione dell'ordine e controfirma ◆",
+      expect: "CONTRACT_SIGNED",
       body: "Ultima data chiave del Modulo 1: il fornitore accetta l'ordine e controfirma il contratto. La stipula fissa la data di inizio della previsione di spesa.",
       tryIt: "Premi «Accetto l'ordine e controfirmo il contratto».",
     },
     {
       path: "/procedure/BZ-001", target: ".phase-bar", role: "EXECUTIVE", stage: 3,
       title: "Contratto stipulato: fine del Modulo 1",
+      expect: "DONE",
       body: "La barra delle fasi è completa. Nella sezione Iter trovi le date chiave da programmate a effettive; nella sezione Audit ogni passo con autore, data e valori. L'esecuzione (Modulo 2) sarà sviluppata in seguito.",
       can: ["Consultare Iter, Finanza (prenotazioni e impegni) e Audit", "Scaricare il report PDF"],
     },
