@@ -72,7 +72,7 @@ async function rejectAudit(db: Db, actor: string, code: string, name: string, re
 }
 
 /** Upload di un PDF/XLSX o di uno ZIP (estratto con limiti anti ZIP slip/bomb). Idempotente per hash (BR-016). */
-export async function storeUpload(db: Db, actor: string, procedureId: number, code: string, name: string, buf: Buffer): Promise<{ stored: number[]; rejected: string[] }> {
+export async function storeUpload(db: Db, actor: string, procedureId: number, code: string, name: string, buf: Buffer, docType: string | null = null): Promise<{ stored: number[]; rejected: string[] }> {
   if (buf.length > MAX_UPLOAD_BYTES) {
     await rejectAudit(db, actor, code, name, "dimensione oltre il limite");
     throw new DomainError("UPLOAD_REJECTED", "File oltre il limite di 20 MB", 413);
@@ -116,7 +116,7 @@ export async function storeUpload(db: Db, actor: string, procedureId: number, co
            VALUES (?, ?, ?, ?, ?, ?, ?, 'STORED', 'UPLOAD', '1.00', ?, ?)
            ON CONFLICT (sha256, procedure_id) DO NOTHING`,
         )
-        .run(procedureId, `storage:${sha}`, clean, sha, f.buf.length, classifyByName(clean), clean.replace(/\.[a-z]+$/i, ""), actor, systemNowIso());
+        .run(procedureId, `storage:${sha}`, clean, sha, f.buf.length, docType ?? classifyByName(clean), clean.replace(/\.[a-z]+$/i, ""), actor, systemNowIso());
       if (r.changes) {
         await writeAudit(tdb, { actor, action: "DOCUMENT_UPLOAD", entityType: "DOCUMENT", entityId: clean, procedureCode: code, after: { sha256: sha, bytes: f.buf.length }, at: systemNowIso() });
         return Number(r.lastInsertRowid);

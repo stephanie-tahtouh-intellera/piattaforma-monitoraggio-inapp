@@ -76,7 +76,7 @@ export const RULE_LABEL: Record<string, string> = {
 };
 export const DOC_TYPE_LABEL: Record<string, string> = {
   MEMORIA: "Memoria",
-  DOCUMENTO_TECNICO: "Documento tecnico",
+  DOCUMENTO_TECNICO: "Documento tecnico (capitolato)",
   DOCUMENTI_OPERATORE: "Documenti dell'operatore",
   DETERMINA_INDIZIONE: "Determina di indizione",
   DETERMINA_AGGIUDICAZIONE: "Determina di aggiudicazione",

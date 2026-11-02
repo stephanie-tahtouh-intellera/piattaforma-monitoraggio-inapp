@@ -1,7 +1,10 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Db } from "@/infrastructure/db/connection";
 import { login, type Actor } from "@/server/auth";
 import { createDraft, submitMemory, updateEngineSettings, upsertUser } from "@/server/admin-commands";
+import { storeUpload } from "@/application/documents";
 import { listProcedures, procedureDetail } from "@/server/queries";
 import { scenarioDb } from "../helpers/db";
 
@@ -54,6 +57,25 @@ describe("[DEC-111] quadro economico della bozza", () => {
     const legacy = await createDraft(db, s, { title: "Bozza senza quadro", type: "DIRECT_AWARD_MEPA", programmed: "5000.00", annual: { "2026": "5000.00" }, memoryDue: "2026-11-02" });
     expect((await procedureDetail(db, s, legacy.code)).procedure.economicFrame).toBeNull();
     await expect(createDraft(db, s, { title: "Bozza vuota", type: "OPEN", annual: { "2026": "1.00" }, memoryDue: "2026-11-02" })).rejects.toThrow(/base di gara/);
+  });
+});
+
+describe("[DEC-111] capitolato insieme alla memoria", () => {
+  test("con il quadro economico la memoria non si consegna senza capitolato; senza quadro il vincolo non c'è", async () => {
+    const s = await as("struttura.si");
+    const { code } = await createDraft(db, s, { title: "Servizio con capitolato", type: "DIRECT_AWARD_MEPA", frame: { base: "10000.00", hasDec: false }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" });
+    await expect(submitMemory(db, s, code, "2026-10-01", null)).rejects.toThrow(/capitolato/);
+    const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(code)) as { id: number }).id;
+    const pdf = readFileSync(path.join(process.env.APP_ROOT ?? process.cwd(), "seed", "scenarios", "documents", "P-001", "memoria_bozza.pdf"));
+    // il tipo indicato dal modulo prevale sul nome del file
+    await storeUpload(db, s.login, pid, code, "allegato.pdf", pdf, "DOCUMENTO_TECNICO");
+    const row = (await db.prepare("SELECT doc_type FROM documents WHERE procedure_id = ?").get(pid)) as { doc_type: string };
+    expect(row.doc_type).toBe("DOCUMENTO_TECNICO");
+    await submitMemory(db, s, code, "2026-10-01", "Prot. capitolato");
+    expect((await procedureDetail(db, s, code)).evaluation.status).toBe("PRELIMINARY_REVIEW");
+    // bozza con il solo programmato (percorso storico): nessun vincolo
+    const legacy = await createDraft(db, s, { title: "Bozza senza quadro", type: "DIRECT_AWARD_MEPA", programmed: "5000.00", annual: { "2026": "5000.00" }, memoryDue: "2026-11-02" });
+    await submitMemory(db, s, legacy.code, "2026-10-01", null);
   });
 });
 

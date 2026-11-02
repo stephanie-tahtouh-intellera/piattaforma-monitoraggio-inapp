@@ -17,9 +17,12 @@ export const POST = route(async ({ db, actor, req, params }) => {
   const form = await req.formData();
   const files = form.getAll("file").filter((f): f is File => typeof f !== "string");
   if (!files.length) throw new DomainError("VALIDATION_ERROR", "Nessun file", 422);
+  // Tipo indicato dal modulo di consegna della memoria (memoria o capitolato); altrimenti si classifica dal nome del file
+  const rawType = String(form.get("doc_type") ?? "");
+  const docType = rawType === "MEMORIA" || rawType === "DOCUMENTO_TECNICO" ? rawType : null;
   const out = { stored: [] as number[], rejected: [] as string[], processed: [] as unknown[] };
   for (const f of files) {
-    const r = await storeUpload(db, a.login, p.id, p.code, f.name, Buffer.from(await f.arrayBuffer()));
+    const r = await storeUpload(db, a.login, p.id, p.code, f.name, Buffer.from(await f.arrayBuffer()), docType);
     out.stored.push(...r.stored);
     out.rejected.push(...r.rejected);
   }

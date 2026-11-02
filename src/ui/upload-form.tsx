@@ -1,17 +1,19 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatEuro } from "@/contracts/format";
 import { humanize } from "./labels";
 
 /** Upload PDF/XLSX/ZIP con esito per file (US-020). */
-export function UploadForm({ code }: { code: string }) {
+export function UploadForm({ code, docType, label }: { code: string; docType?: string; label?: string }) {
   const router = useRouter();
+  const uid = useId();
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    if (docType) fd.set("doc_type", docType);
     const m = document.cookie.match(/(?:^|; )inapp_csrf=([^;]+)/);
     setBusy(true);
     setMsg(null);
@@ -31,8 +33,8 @@ export function UploadForm({ code }: { code: string }) {
   void formatEuro;
   return (
     <form onSubmit={submit} className="actions" style={{ marginBottom: 12 }}>
-      <label htmlFor="up-file" className="label">Carica documenti (PDF, XLSX o ZIP, max 20 MB)</label>
-      <input id="up-file" name="file" type="file" accept=".pdf,.xlsx,.zip" multiple required />
+      <label htmlFor={`${uid}-file`} className="label">{label ?? "Carica documenti (PDF, XLSX o ZIP, max 20 MB)"}</label>
+      <input id={`${uid}-file`} name="file" type="file" accept=".pdf,.xlsx,.zip" multiple required />
       <button className="btn btn-secondary" disabled={busy} aria-busy={busy}>{busy ? "Elaborazione in corso (OCR)…" : "Carica ed elabora"}</button>
       {msg ? <div className={`alert-box ${msg.ok ? "success" : "error"}`} role={msg.ok ? "status" : "alert"}>{msg.text}</div> : null}
     </form>

@@ -53,6 +53,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   const p = d.procedure;
   const ev = d.evaluation;
   const module2 = d.process.module2;
+  const hasDoc = (t: string) => (d.documents as { doc_type: string | null }[]).some((x) => x.doc_type === t);
   // La scheda mostra solo Iter, Documenti e Audit. Le altre sezioni restano nel codice e raggiungibili da `?tab=`
   // (collegamenti dell'assistente, della guida e delle simulazioni), ma non sono più nella barra.
   const tabs = d.supplierView
@@ -114,6 +115,15 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           <h2>Consegna della memoria</h2>
           <p className="muted">Alla consegna la baseline si congela, con il quadro economico qui sotto, e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
           {p.economicFrame ? <div style={{ margin: "12px 0" }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
+          <div className="step-upload" data-tour="memoria-documenti" style={{ margin: "12px 0" }}>
+            <h3>Documenti da consegnare con la memoria</h3>
+            <ul>
+              <li>Memoria: <strong>{hasDoc("MEMORIA") ? "caricata" : "da caricare"}</strong></li>
+              <li>Capitolato (documento tecnico){p.economicFrame ? ", obbligatorio" : ""}: <strong>{hasDoc("DOCUMENTO_TECNICO") ? "caricato" : "da caricare"}</strong></li>
+            </ul>
+            <UploadForm code={p.code} docType="MEMORIA" label="Carica la memoria (PDF)" />
+            <UploadForm code={p.code} docType="DOCUMENTO_TECNICO" label="Carica il capitolato (PDF)" />
+          </div>
           <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
         </section>
       ) : null}

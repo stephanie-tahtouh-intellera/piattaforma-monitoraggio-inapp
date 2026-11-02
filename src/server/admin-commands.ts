@@ -111,8 +111,14 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
 export async function submitMemory(db: Db, actor: Actor, code: string, date: string, note: string | null): Promise<void> {
   const p = await requireProcedure(db, actor, code);
   if (!(actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")) throw new DomainError("FORBIDDEN", "La memoria è consegnata dalla Struttura richiedente", 403);
-  const row = (await db.prepare("SELECT is_draft, current_version_id FROM procedures WHERE id = ?").get(p.id)) as { is_draft: number; current_version_id: number };
+  const row = (await db.prepare("SELECT is_draft, current_version_id, base_cents FROM procedures WHERE id = ?").get(p.id)) as { is_draft: number; current_version_id: number; base_cents: number | null };
   if (!row.is_draft) throw new DomainError("INVALID_TRANSITION", "La procedura non è in bozza", 409);
+  // DEC-111 (incremento 2): il capitolato (documento tecnico) va consegnato insieme alla memoria. Vale per le bozze con quadro economico;
+  // le procedure importate o create con il solo programmato (seed, oracle) non hanno il vincolo. DA VALIDARE con il cliente.
+  if (row.base_cents !== null) {
+    const cap = await db.prepare("SELECT 1 AS x FROM documents WHERE procedure_id = ? AND doc_type = 'DOCUMENTO_TECNICO' LIMIT 1").get(p.id);
+    if (!cap) throw new DomainError("VALIDATION_ERROR", "Allega il capitolato (documento tecnico) insieme alla memoria prima di consegnarla", 422);
+  }
   const d = isoDate(date);
   if (d > (await configuredReferenceDate(db))) throw new DomainError("VALIDATION_ERROR", "La data di consegna non può essere futura", 422);
   const agg = await loadAggregate(db, p.id);

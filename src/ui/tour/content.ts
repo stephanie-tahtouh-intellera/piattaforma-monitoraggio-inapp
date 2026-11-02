@@ -82,7 +82,7 @@ const PROCESS: Tour = {
       path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,
       title: "1 · Fabbisogno: redazione e consegna della memoria",
       expect: "DRAFT",
-      body: "Memoria e documento tecnico sono già nel fascicolo (sezione Documenti). Alla consegna la data diventa effettiva, la baseline si congela e la pratica passa all'Ufficio Gare.",
+      body: "Memoria e capitolato (documento tecnico) si consegnano insieme: nel riquadro «Documenti da consegnare con la memoria» li carichi, e per le bozze con quadro economico il capitolato è obbligatorio (per BZ-001 sono già nel fascicolo). Alla consegna la data diventa effettiva, la baseline si congela e la pratica passa all'Ufficio Gare.",
       tryIt: "Consegna la memoria con data 01/10/2026 e protocollo «INAPP-DEMO 412/2026».",
     },
     {
