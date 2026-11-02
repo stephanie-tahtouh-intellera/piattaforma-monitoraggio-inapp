@@ -13,6 +13,8 @@ import { DateIt, Deadline, Euro, HealthBadge, MilestoneBadge, SalBadge, StatusCh
 import { CRITICALITY_LABEL, DOC_TYPE_LABEL, MOVEMENT_LABEL, OWNER_LABEL, SIM_KIND_LABEL, SIM_STATUS_LABEL, TYPE_LABEL, humanize } from "@/ui/labels";
 import { AlertTable, AuditTable } from "@/ui/tables";
 import { UploadForm } from "@/ui/upload-form";
+import { MemoryAssistant } from "@/ui/memory-assistant";
+import { memoryAssistantProvider } from "@/application/memory-assistant";
 import { EconomicFrameCard } from "@/ui/economic-frame-card";
 import { IterBoard, PhaseBar } from "@/ui/process";
 
@@ -53,6 +55,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   const p = d.procedure;
   const ev = d.evaluation;
   const module2 = d.process.module2;
+  const assistantOn = (await memoryAssistantProvider(await db())) !== "disabled";
   const hasDoc = (t: string) => (d.documents as { doc_type: string | null }[]).some((x) => x.doc_type === t);
   // La scheda mostra solo Iter, Documenti e Audit. Le altre sezioni restano nel codice e raggiungibili da `?tab=`
   // (collegamenti dell'assistente, della guida e delle simulazioni), ma non sono più nella barra.
@@ -125,6 +128,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
             <UploadForm code={p.code} docType="MEMORIA" label="Carica la memoria (PDF)" />
             <UploadForm code={p.code} docType="DOCUMENTO_TECNICO" label="Carica il capitolato (PDF)" />
           </div>
+          {assistantOn ? <MemoryAssistant code={p.code} /> : null}
           <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
         </section>
       ) : null}

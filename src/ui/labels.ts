@@ -105,6 +105,8 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   DRAFT_CREATE: "Creazione bozza",
   MEMORY_SUBMIT: "Consegna memoria",
   PROJECT_CREATE: "Progetto aggiunto",
+  MEMORY_TEXT_PROPOSED: "Testo della memoria proposto",
+  CONFIG_ASSISTANT: "Assistente alla memoria configurato",
   MILESTONE_COMPLETE: "Passo completato",
   CANCEL: "Annullamento",
   CLOSE: "Chiusura",

@@ -5,6 +5,8 @@ import { ARGON_OPTS, familyOfDataset } from "@/application/seed-loader";
 import { addDays, addMonths, isoDate, type IsoDate } from "@/domain/dates";
 import { selectTemplate } from "@/domain/milestones";
 import { DEFAULT_SETTINGS, ROLES, type AwardCriterion, type EngineSettings, type Instrument, type ProcedureType, type Role } from "@/domain/model";
+import { memoryAssistantProvider, type MemoryAssistantProvider } from "@/application/memory-assistant";
+import { buildMemoryOutline, MEMORY_ASSISTANT_NOTICE } from "@/domain/memory-draft";
 import { computeEconomicFrame, DEFAULT_INCENTIVE_PCT, DEFAULT_VAT_PCT } from "@/domain/economic-frame";
 import { Money } from "@/domain/money";
 import { writeAudit } from "@/infrastructure/audit";
@@ -209,4 +211,31 @@ export async function createProject(db: Db, actor: Actor, code: string, name: st
     await audit(tdb, actor, { action: "PROJECT_CREATE", entityType: "PROJECT", entityId: c, after: { code: c, name: n } });
   });
   return { code: c };
+}
+
+/**
+ * Testo proposto per la memoria (DEC-111, incremento 6): solo per la bozza, solo alla Struttura, solo se l'assistente è attivo.
+ * Non scrive nulla sulla procedura: il testo si copia e si rilegge. L'uso è registrato nell'audit (senza il contenuto).
+ */
+export async function proposeMemoryText(db: Db, actor: Actor, code: string): Promise<{ provider: MemoryAssistantProvider; text: string; notice: string }> {
+  const p = await requireProcedure(db, actor, code);
+  if (!(actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")) throw new DomainError("FORBIDDEN", "Il testo della memoria è proposto alla Struttura richiedente", 403);
+  const provider = await memoryAssistantProvider(db);
+  if (provider === "disabled") throw new DomainError("ASSISTANT_DISABLED", "L'assistente alla memoria non è attivo (si abilita da Amministrazione)", 409);
+  const row = (await db
+    .prepare(
+      "SELECT p.title, p.procedure_type, p.award_criterion, p.has_dec, p.is_draft, st.name AS structure_name, pr.name AS project_name FROM procedures p LEFT JOIN structures st ON st.code = p.structure_code LEFT JOIN projects pr ON pr.code = p.project_code WHERE p.id = ?",
+    )
+    .get(p.id)) as Record<string, any>;
+  if (!row.is_draft) throw new DomainError("INVALID_TRANSITION", "La memoria è già stata consegnata: la procedura non è più in bozza", 409);
+  const text = buildMemoryOutline({
+    title: row.title,
+    structure: row.structure_name ?? "",
+    project: row.project_name ?? null,
+    type: row.procedure_type,
+    awardCriterion: row.award_criterion ?? null,
+    hasDec: row.has_dec === 1,
+  });
+  await tx(db, (tdb) => audit(tdb, actor, { action: "MEMORY_TEXT_PROPOSED", entityType: "PROCEDURE", entityId: code, procedureCode: code, after: { provider } }));
+  return { provider, text, notice: MEMORY_ASSISTANT_NOTICE };
 }

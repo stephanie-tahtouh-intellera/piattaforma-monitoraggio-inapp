@@ -1,3 +1,4 @@
+import { memoryAssistantProvider } from "@/application/memory-assistant";
 import { redirect } from "next/navigation";
 import { formatDateTimeIt } from "@/contracts/format";
 import { can } from "@/server/authz";
@@ -20,6 +21,7 @@ export default async function AdminPage() {
   const imp = s.imports[0] as any;
   const rep = imp ? JSON.parse(imp.summary_json) : null;
   const projects = (await database.prepare("SELECT code, name FROM projects ORDER BY code").all()) as { code: string; name: string }[];
+  const assistantProvider = await memoryAssistantProvider(database);
   const es = await engineSettings(database);
   const extra = ((await database.prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get()) as { value_json: string } | undefined)?.value_json;
   const module2Enabled = await executionModuleEnabled(database);
@@ -62,6 +64,17 @@ export default async function AdminPage() {
             submitLabel="Salva"
             successMessage="Configurazione dei moduli salvata e auditata."
             fields={[{ name: "execution", label: "Mostra il Modulo 2 (anteprima)", type: "checkbox", defaultValue: String(module2Enabled) }]}
+          />
+        </section>
+        <section className="card stack" data-tour="assistente-memoria">
+          <h2>Assistente alla memoria</h2>
+          <p className="muted">Opzionale e spento di default. «Schema locale» propone alla Struttura uno schema di testo per la memoria, senza servizi esterni e senza IA generativa; non inserisce mai importi, date o stati. Un modello linguistico reale richiede prima la decisione D-07 (provider, residenza dei dati, valutazione d'impatto).</p>
+          <ActionForm
+            endpoint="/api/admin/config/assistant"
+            method="PUT"
+            submitLabel="Salva"
+            successMessage="Assistente alla memoria aggiornato e auditato."
+            fields={[{ name: "provider", label: "Assistente alla memoria", type: "select", defaultValue: assistantProvider, options: [{ value: "disabled", label: "Disattivato" }, { value: "template", label: "Schema locale (senza IA)" }] }]}
           />
         </section>
         <section className="card stack" data-tour="impersona">
