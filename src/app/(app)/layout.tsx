@@ -31,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/", label: "Dashboard", icon: "dashboard" },
     { href: "/portafoglio", label: "Portafoglio", icon: "portfolio" },
   ];
+  if (actor.role !== "SUPPLIER") items.push({ href: "/kpi-gare", label: "KPI gare", icon: "kpi", hint: "Base di gara, aggiudicato e ribasso per gara" });
   if (actor.role !== "SUPPLIER") items.push({ href: "/alert", label: "Centro alert", icon: "alerts", count: openAlerts, hint: `${openAlerts} alert aperti` });
   if (can(actor, "assistant")) items.push({ href: "/assistente", label: "Assistente", icon: "assistant" });
   if (can(actor, "audit.read")) items.push("sep", { href: "/audit", label: "Audit", icon: "audit" });

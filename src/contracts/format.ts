@@ -12,6 +12,14 @@ export function formatEuroCompact(amount: string | null | undefined): string {
   return euroCompact.format(amount as unknown as number);
 }
 
+const pct2 = new Intl.NumberFormat("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** Percentuale già calcolata dal dominio ("12.34" → "12,34 %"): solo presentazione. */
+export function formatPercentIt(value: string | null | undefined): string {
+  if (value === null || value === undefined || value === "") return "n.d.";
+  return `${pct2.format(value as unknown as number)} %`;
+}
+
 export function formatDateIt(iso: string | null | undefined): string {
   if (!iso) return "—";
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);

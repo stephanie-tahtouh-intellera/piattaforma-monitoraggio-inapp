@@ -309,6 +309,7 @@ export interface PageHelp {
 export function pageHelp(pathname: string, tab: string | null): PageHelp | null {
   if (pathname === "/") return HELP.dashboard!;
   if (pathname === "/portafoglio") return HELP.portfolio!;
+  if (pathname === "/kpi-gare") return HELP.kpiGare!;
   if (pathname === "/procedure/nuova") return HELP.draft!;
   if (/^\/procedure\/[^/]+\/riprogrammazione$/.test(pathname)) return HELP.reschedule!;
   if (/^\/procedure\/[^/]+$/.test(pathname)) return HELP[`procedure.${tab ?? "iter"}`] ?? HELP["procedure.iter"]!;
@@ -330,6 +331,16 @@ const STEP_ACTIONS: Partial<Record<Role, string[]>> = {
 };
 
 const HELP: Record<string, PageHelp> = {
+  kpiGare: {
+    title: "KPI gare",
+    summary: "Per ogni gara visibile: base di gara, importo aggiudicato, ribasso e programmato, con i totali.",
+    sections: [
+      ["Base di gara", "IVA esclusa. Per le bozze è quella inserita nel quadro economico; per le procedure importate è ricavata dal programmato (segnata con ≈) perché il workbook non la riporta."],
+      ["Aggiudicato e ribasso", "L'aggiudicato è l'importo netto del contratto; il ribasso è (base − aggiudicato) / base, calcolato dal sistema. Il totale è ponderato sulle sole gare aggiudicate."],
+      ["Programmato", "È l'importo a disposizione della struttura: contratto IVA inclusa, tassa gara e incentivi."],
+    ],
+    actions: { ALL: ["Filtrare per progetto e fase"] },
+  },
   dashboard: {
     title: "Dashboard",
     summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento.",

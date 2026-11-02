@@ -1,5 +1,5 @@
 "use client";
-import { Bot, Compass, FileText, LayoutDashboard, ListChecks, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Bot, ChartColumn, Compass, FileText, LayoutDashboard, ListChecks, PanelLeftClose, PanelLeftOpen, Settings, ShieldCheck, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,7 +8,7 @@ const STORAGE_KEY = "inapp.sidebar.collapsed";
 const NARROW_PX = 900;
 
 export interface NavItem { href: string; label: string; icon: string; count?: number; hint?: string }
-const ICONS = { dashboard: LayoutDashboard, portfolio: ListChecks, alerts: TriangleAlert, assistant: Bot, audit: ShieldCheck, admin: Settings, docs: FileText, guide: Compass };
+const ICONS = { dashboard: LayoutDashboard, portfolio: ListChecks, kpi: ChartColumn, alerts: TriangleAlert, assistant: Bot, audit: ShieldCheck, admin: Settings, docs: FileText, guide: Compass };
 
 export function SideNav({ items, footer }: { items: (NavItem | "sep")[]; footer: string }) {
   const path = usePathname();

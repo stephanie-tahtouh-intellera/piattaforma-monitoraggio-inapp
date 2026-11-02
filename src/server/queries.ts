@@ -2,6 +2,7 @@ import { centsToString } from "@/contracts/format";
 import { BusinessCalendar, daysBetween, type IsoDate } from "@/domain/dates";
 import { evaluateProcedure } from "@/domain/evaluate";
 import { mapToRecord } from "@/domain/finance";
+import { garaKpi, garaTotals, hundredthsToString, type GaraKpi } from "@/domain/gara-kpi";
 import { Money } from "@/domain/money";
 import { alternatives, fastestCandidate } from "@/domain/reschedule";
 import { calendarFromDb, engineSettings } from "@/application/run-checks";
@@ -523,5 +524,68 @@ export async function systemStatus(db: Db) {
     jobs,
     imports,
     llmProvider: llm ? JSON.parse(llm.value_json) : "disabled",
+  };
+}
+
+/**
+ * KPI per gara (DEC-111, incremento 5): base di gara, aggiudicato, ribasso, programmato per ogni procedura visibile all'utente,
+ * con totali. I calcoli sono nel dominio (`src/domain/gara-kpi.ts`); qui solo lettura e perimetro (stesso di `listProcedures`).
+ */
+export async function garaKpiList(db: Db, actor: Actor, f: PortfolioFilters) {
+  const items: Awaited<ReturnType<typeof listProcedures>>["items"] = [];
+  for (let page = 1; ; page++) {
+    const r = await listProcedures(db, actor, { ...f, page, size: 100, sort: "code", dir: "asc" });
+    items.push(...r.items);
+    if (page * 100 >= r.total) break;
+  }
+  const extra = new Map<string, Record<string, any>>();
+  for (let i = 0; i < items.length; i += 500) {
+    const codes = items.slice(i, i + 500).map((x) => x.code);
+    const rows = (await db
+      .prepare(
+        `SELECT p.code, p.base_cents, p.anac_fee_cents, p.incentive_cents, p.vat_pct_hundredths, c.net_cents, c.gross_cents
+         FROM procedures p LEFT JOIN contracts c ON c.procedure_id = p.id WHERE p.code IN (${codes.map(() => "?").join(",")})`,
+      )
+      .all(...codes)) as Record<string, any>[];
+    for (const r of rows) extra.set(r.code, r);
+  }
+  const kpis: GaraKpi[] = [];
+  const out = items.map((it) => {
+    const e = extra.get(it.code)!;
+    const k = garaKpi({
+      programmed: Money.parse(it.programmed ?? "0.00"),
+      base: e.base_cents === null ? null : Money.ofCents(BigInt(e.base_cents)),
+      anacFee: Money.ofCents(BigInt(e.anac_fee_cents ?? 0)),
+      incentive: Money.ofCents(BigInt(e.incentive_cents ?? 0)),
+      vatPctHundredths: BigInt(e.vat_pct_hundredths ?? 2200),
+      awardedNet: e.net_cents === null ? null : Money.ofCents(BigInt(e.net_cents)),
+      awardedGross: e.gross_cents === null ? null : Money.ofCents(BigInt(e.gross_cents)),
+    });
+    kpis.push(k);
+    return {
+      code: it.code,
+      title: it.title,
+      project: it.project,
+      status: it.status,
+      owner: it.owner,
+      programmed: k.programmed.toString(),
+      base: k.base?.toString() ?? null,
+      baseDerived: k.baseDerived,
+      awardedNet: k.awardedNet?.toString() ?? null,
+      awardedGross: k.awardedGross?.toString() ?? null,
+      ribasso: k.ribassoHundredths === null ? null : hundredthsToString(k.ribassoHundredths),
+    };
+  });
+  const t = garaTotals(kpis);
+  return {
+    items: out,
+    totals: {
+      count: t.count,
+      awardedCount: t.awardedCount,
+      programmed: t.programmed.toString(),
+      base: t.base.toString(),
+      awardedNet: t.awardedNet.toString(),
+      ribasso: t.ribassoHundredths === null ? null : hundredthsToString(t.ribassoHundredths),
+    },
   };
 }
