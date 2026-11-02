@@ -29,12 +29,18 @@ export interface DraftInput {
   frame?: { base: string; vatPct?: bigint | undefined; anacFee?: string | undefined; hasDec: boolean; incentivePct?: bigint | undefined } | undefined;
   annual: Record<string, string>;
   memoryDue: string;
+  /** Progetto (Operazione/Attività) a cui è collegata la gara; obbligatorio se esiste un catalogo progetti (DEC-111). */
+  project?: string | undefined;
 }
 
 /** US-013: bozza della Struttura; ogni salvataggio è una versione di bozza, la baseline nasce alla consegna della memoria (DEC-024). */
 export async function createDraft(db: Db, actor: Actor, input: DraftInput): Promise<{ code: string }> {
   if (!(actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")) throw new DomainError("FORBIDDEN", "Solo la Struttura richiedente può creare una bozza", 403);
   const structure = actor.role === "STRUCTURE_USER" && actor.structureScope !== "*" ? actor.structureScope : "PN_GDL";
+  const projectCount = ((await db.prepare("SELECT COUNT(*) AS n FROM projects WHERE active = 1").get()) as { n: number }).n;
+  if (input.project) {
+    if (!(await db.prepare("SELECT code FROM projects WHERE code = ? AND active = 1").get(input.project))) throw new DomainError("VALIDATION_ERROR", "Progetto non valido", 422);
+  } else if (projectCount > 0) throw new DomainError("VALIDATION_ERROR", "Indica il progetto a cui è collegata la gara", 422);
   if (!input.frame && !input.programmed) throw new DomainError("VALIDATION_ERROR", "Indica la base di gara o l'importo programmato", 422);
   const frame = input.frame
     ? computeEconomicFrame({ base: Money.parse(input.frame.base), vatPct: input.frame.vatPct ?? DEFAULT_VAT_PCT, anacFee: Money.parse(input.frame.anacFee || "0"), hasDec: input.frame.hasDec, incentivePct: input.frame.incentivePct ?? DEFAULT_INCENTIVE_PCT })
@@ -56,8 +62,8 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     const insProc = await db
       .prepare(
         `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents, cig, cup, is_draft, created_by, created_at,
-             base_cents, vat_pct_hundredths, anac_fee_cents, has_dec, incentive_pct_hundredths, incentive_cents)
-           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             base_cents, vat_pct_hundredths, anac_fee_cents, has_dec, incentive_pct_hundredths, incentive_cents, project_code)
+           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         code,
@@ -76,6 +82,7 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
         frame?.hasDec ? 1 : 0,
         Number(frame?.hasDec ? frame.incentivePct : 0n),
         frame ? frame.incentive.cents : 0,
+        input.project ?? null,
       );
     const pid = Number(insProc.lastInsertRowid);
     const insVer = await db
@@ -188,3 +195,18 @@ export async function upsertUser(db: Db, actor: Actor, u: { login: string; name:
 }
 
 export { addMonths };
+
+/** Aggiunge un progetto al catalogo (DEC-111, incremento 4): solo amministratore, auditato. */
+export async function createProject(db: Db, actor: Actor, code: string, name: string): Promise<{ code: string }> {
+  requireAction(actor, "admin");
+  const c = code.trim().toUpperCase();
+  const n = name.trim();
+  if (!/^[A-Z0-9][A-Z0-9-]{1,31}$/.test(c)) throw new DomainError("VALIDATION_ERROR", "Codice non valido: usa lettere, numeri e trattini (2–32 caratteri)", 422);
+  if (n.length < 3 || n.length > 200) throw new DomainError("VALIDATION_ERROR", "Il nome del progetto deve avere da 3 a 200 caratteri", 422);
+  if (await db.prepare("SELECT code FROM projects WHERE code = ?").get(c)) throw new DomainError("CONFLICT", "Progetto già presente", 409);
+  await tx(db, async (tdb) => {
+    await tdb.prepare("INSERT INTO projects (code, name) VALUES (?, ?)").run(c, n);
+    await audit(tdb, actor, { action: "PROJECT_CREATE", entityType: "PROJECT", entityId: c, after: { code: c, name: n } });
+  });
+  return { code: c };
+}

@@ -79,6 +79,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           <dl className="meta-grid">
             <div><dt>Tipologia</dt><dd>{TYPE_LABEL[p.type] ?? p.type}</dd></div>
             <div><dt>Modello</dt><dd title={p.templateLabel}>{p.template}</dd></div>
+            <div><dt>Progetto</dt><dd>{p.project ? <><span className="mono">{p.project.code}</span> · {p.project.name}</> : "—"}</dd></div>
             <div><dt>Struttura / linea</dt><dd>{p.operation ?? p.structure}</dd></div>
             <div><dt>CIG</dt><dd className="mono">{p.cig || "n.d."}</dd></div>
             <div><dt>Programmato</dt><dd><Euro v={ev.programmed} /></dd></div>

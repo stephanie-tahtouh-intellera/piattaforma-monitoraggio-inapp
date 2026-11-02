@@ -104,6 +104,7 @@ export const AUDIT_ACTION_LABEL: Record<string, string> = {
   EXPORT: "Esportazione",
   DRAFT_CREATE: "Creazione bozza",
   MEMORY_SUBMIT: "Consegna memoria",
+  PROJECT_CREATE: "Progetto aggiunto",
   MILESTONE_COMPLETE: "Passo completato",
   CANCEL: "Annullamento",
   CLOSE: "Chiusura",

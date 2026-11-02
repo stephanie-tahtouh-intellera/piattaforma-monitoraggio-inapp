@@ -28,7 +28,10 @@ export async function applyDemoActions(db: Db): Promise<void> {
   const gare = await seedActor(db, "gare");
   const amministrazione = await seedActor(db, "amministrazione");
   void gare;
+  // Progetto dimostrativo per la bozza guida (DEC-111, incremento 4): con il catalogo del workbook ogni gara deve avere un progetto
+  await db.prepare("INSERT INTO projects (code, name) VALUES ('DEMO', 'Progetto dimostrativo – Sistemi informativi') ON CONFLICT (code) DO NOTHING").run();
   const draft = await createDraft(db, struttura, {
+    project: "DEMO",
     title: "Rinnovo licenze e supporto della piattaforma di business intelligence",
     type: "DIRECT_AWARD_MEPA",
     instrument: "MEPA",

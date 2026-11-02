@@ -21,20 +21,21 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const actor = await pageActor();
   const q = await searchParams;
   const f: PortfolioFilters = {
-    q: sp(q.q), health: sp(q.health), status: sp(q.status), structure: sp(q.structure), type: sp(q.type), year: sp(q.year),
+    q: sp(q.q), health: sp(q.health), status: sp(q.status), structure: sp(q.structure), type: sp(q.type), project: sp(q.project), year: sp(q.year),
     reschedule: sp(q.reschedule), alerts: sp(q.alerts), sort: sp(q.sort) ?? "health", dir: sp(q.dir) ?? "asc",
     page: Number(sp(q.page) ?? "1"), size: Number(sp(q.size) ?? "25"),
   };
   const d = await db();
   const r = await listProcedures(d, actor, f);
   const structures = (await d.prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all()) as { code: string; name: string }[];
+  const projects = (await d.prepare("SELECT code, name FROM projects ORDER BY code").all()) as { code: string; name: string }[];
   const years = ((await d.prepare("SELECT DISTINCT year FROM procedure_snapshot_year ORDER BY year").all()) as { year: number }[]).map((x) => x.year);
   const qs = (patch: Record<string, string | undefined>) => {
     const u = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...f, ...patch })) if (v !== undefined && v !== "" && !(k === "page" && v === 1)) u.set(k, String(v));
     return `/portafoglio?${u.toString()}`;
   };
-  const active = (["health", "status", "structure", "type", "year", "reschedule", "alerts", "q"] as const).filter((k) => f[k]);
+  const active = (["health", "status", "structure", "type", "project", "year", "reschedule", "alerts", "q"] as const).filter((k) => f[k]);
   const from = r.total ? (r.page - 1) * r.size + 1 : 0;
   const to = Math.min(r.page * r.size, r.total);
   return (
@@ -90,6 +91,15 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             {Object.entries(TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
         </div>
+        {projects.length ? (
+          <div className="field">
+            <label htmlFor="f-project">Progetto</label>
+            <select id="f-project" name="project" defaultValue={f.project ?? ""}>
+              <option value="">Tutti</option>
+              {projects.map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}
+            </select>
+          </div>
+        ) : null}
         <div className="field">
           <label htmlFor="f-year">Annualità</label>
           <select id="f-year" name="year" defaultValue={f.year ?? ""}>
@@ -154,7 +164,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                 <td className="mono"><Link href={`/procedure/${p.code}`}>{p.code}</Link></td>
                 <td className="title">
                   <span className="clamp2" title={p.title}>{p.title}</span>
-                  <span className="small muted">{TYPE_LABEL[p.type] ?? p.type} · {p.operation ?? p.structure}</span>
+                  <span className="small muted">{TYPE_LABEL[p.type] ?? p.type} · {p.project?.name ?? p.operation ?? p.structure}</span>
                 </td>
                 <td><StatusChip value={p.status} /></td>
                 <td><HealthBadge value={p.health} drivers={p.healthDrivers} />{p.rescheduleRequired ? <div className="small" style={{ color: "var(--health-red-fg)" }}>Riprogrammazione richiesta</div> : null}</td>

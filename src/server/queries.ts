@@ -28,6 +28,7 @@ export interface PortfolioFilters {
   status?: string;
   structure?: string;
   type?: string;
+  project?: string;
   year?: string;
   reschedule?: string;
   alerts?: string;
@@ -66,7 +67,7 @@ export async function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) 
       params.push(terms);
     }
   }
-  for (const [key, col] of [["health", "s.health"], ["status", "s.status"], ["structure", "p.structure_code"], ["type", "p.procedure_type"], ["dataset", "p.dataset"]] as const) {
+  for (const [key, col] of [["health", "s.health"], ["status", "s.status"], ["structure", "p.structure_code"], ["type", "p.procedure_type"], ["project", "p.project_code"], ["dataset", "p.dataset"]] as const) {
     const v = f[key];
     if (v) {
       const vals = v.split(",").filter(Boolean);
@@ -89,8 +90,8 @@ export async function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) 
   const page = Math.max(f.page ?? 1, 1);
   const rows = (await db
     .prepare(
-      `SELECT p.code, p.title, p.structure_code, st.name AS structure_name, p.procedure_type, p.operation, p.dataset, s.*
-       FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id LEFT JOIN structures st ON st.code = p.structure_code
+      `SELECT p.code, p.title, p.structure_code, st.name AS structure_name, p.procedure_type, p.operation, p.project_code, pr.name AS project_name, p.dataset, s.*
+       FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id LEFT JOIN structures st ON st.code = p.structure_code LEFT JOIN projects pr ON pr.code = p.project_code
        WHERE ${whereSql} ORDER BY ${sort} ${dir} NULLS LAST, s.next_deadline_date ASC NULLS LAST, p.code ASC LIMIT ? OFFSET ?`,
     )
     .all(...params, size, (page - 1) * size)) as Record<string, any>[];
@@ -103,6 +104,7 @@ export async function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) 
       title: r.title,
       structure: r.structure_name ?? r.structure_code,
       operation: r.operation,
+      project: r.project_code ? { code: r.project_code as string, name: r.project_name as string } : null,
       type: r.procedure_type,
       status: r.status,
       health: r.health,
@@ -337,6 +339,7 @@ export async function procedureDetail(db: Db, actor: Actor, code: string) {
     .all(p0.id)) as { date: string; amount_cents: number }[];
   const baseByYear = new Map<number, bigint>();
   for (const l of baselineLines) baseByYear.set(Number(l.date.slice(0, 4)), (baseByYear.get(Number(l.date.slice(0, 4))) ?? 0n) + BigInt(l.amount_cents));
+  const projectRow = p.project_code ? ((await db.prepare("SELECT code, name FROM projects WHERE code = ?").get(p.project_code)) as { code: string; name: string } | undefined) : undefined;
   const cal = await calendarFromDb(db);
   const rescheduleSource = ev.deadlines.find((d) => d.kind === "MILESTONE" && d.blocking && d.daysUntil < 0)?.target ?? ev.milestones.find((m) => m.active)?.code ?? null;
   return {
@@ -356,6 +359,7 @@ export async function procedureDetail(db: Db, actor: Actor, code: string) {
       cig: p.cig,
       cup: p.cup,
       operation: p.operation,
+      project: projectRow ? { code: projectRow.code, name: projectRow.name } : null,
       sourceKey: p.source_key,
       sourceStatus: p.source_status,
       iterText: p.iter_text,

@@ -39,7 +39,7 @@ declare global {
 const NO_ID_TABLES = new Set([
   "schema_migrations", "system_meta", "config", "structures", "suppliers", "sessions", "milestone_forecasts", "milestones",
   "document_pages", "notification_reads", "leader_lease", "worker_heartbeat", "idempotency_keys",
-  "procedure_snapshot", "procedure_snapshot_year", "procedure_search",
+  "procedure_snapshot", "procedure_snapshot_year", "procedure_search", "projects",
 ]);
 
 function insertTargetTable(sql: string): string | null {

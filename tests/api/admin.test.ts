@@ -3,7 +3,7 @@ import path from "node:path";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { Db } from "@/infrastructure/db/connection";
 import { login, type Actor } from "@/server/auth";
-import { createDraft, submitMemory, updateEngineSettings, upsertUser } from "@/server/admin-commands";
+import { createDraft, createProject, submitMemory, updateEngineSettings, upsertUser } from "@/server/admin-commands";
 import { storeUpload } from "@/application/documents";
 import { listProcedures, procedureDetail } from "@/server/queries";
 import { scenarioDb } from "../helpers/db";
@@ -99,5 +99,23 @@ describe("[US-102] utenti, ruoli e ambiti", () => {
     await expect(as("struttura.form")).rejects.toThrow(/Credenziali/);
     expect(((await db.prepare("SELECT COUNT(*) n FROM users WHERE login='struttura.form'").get()) as any).n).toBe(1);
     expect(((await db.prepare("SELECT COUNT(*) n FROM audit_events WHERE action='PERMISSION_CHANGE'").get()) as any).n).toBe(2);
+  });
+});
+
+// In coda: dopo la creazione del catalogo ogni nuova bozza richiede il progetto, quindi i test sopra non devono dipenderne
+describe("[DEC-111] ogni gara è collegata a un progetto", () => {
+  test("senza catalogo il progetto non è richiesto; con il catalogo è obbligatorio, deve esistere e filtra il portafoglio", async () => {
+    const s = await as("struttura.si");
+    const admin = await as("admin");
+    const base = { title: "Servizio con progetto", type: "DIRECT_AWARD_MEPA" as const, frame: { base: "10000.00", hasDec: false }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" };
+    await createDraft(db, s, base);
+    await createProject(db, admin, "op01-a1", "Operazione 1 – Attività 1");
+    await expect(createDraft(db, s, base)).rejects.toThrow(/progetto/);
+    await expect(createDraft(db, s, { ...base, project: "XX-NOPE" })).rejects.toThrow(/Progetto non valido/);
+    const { code } = await createDraft(db, s, { ...base, project: "OP01-A1" });
+    expect((await procedureDetail(db, s, code)).procedure.project).toEqual({ code: "OP01-A1", name: "Operazione 1 – Attività 1" });
+    expect((await listProcedures(db, s, { project: "OP01-A1" })).items.map((i) => i.code)).toEqual([code]);
+    await expect(createProject(db, s, "OP02-A1", "Altro progetto")).rejects.toThrow();
+    await expect(createProject(db, admin, "OP01-A1", "Duplicato")).rejects.toThrow(/già presente/);
   });
 });

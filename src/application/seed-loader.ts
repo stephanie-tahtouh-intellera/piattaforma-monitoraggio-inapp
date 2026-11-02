@@ -1,3 +1,4 @@
+import { projectFromOperation } from "@/domain/project";
 import { hashSync } from "@node-rs/argon2";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -144,13 +145,21 @@ async function insertProcedureBatch(
   const now = clock.nowIso();
   const aggs = new Map(procedures.map((p) => [p.code, buildAggregateFromSeed(p, templates, cal, DEFAULT_SETTINGS, familyOfDataset(dataset))]));
 
+  // --- Progetti (DEC-111, incremento 4): ogni Operazione/Attività del workbook è un progetto
+  const projects = new Map<string, string>();
+  for (const p of procedures) {
+    const pr = projectFromOperation(p.operation);
+    if (pr) projects.set(pr.code, pr.name);
+  }
+  for (const [code, name] of projects) await db.prepare("INSERT INTO projects (code, name) VALUES (?, ?) ON CONFLICT (code) DO NOTHING").run(code, name);
+
   // --- Procedure
   const procRows = procedures.map((p) => {
     const agg = aggs.get(p.code)!;
     return [
       p.code, dataset, p.title, p.structure, p.type, p.awardCriterion ?? null, p.instrument ?? null, agg.template.code, agg.programmed.cents,
       p.documentsTracked === false ? 0 : 1, agg.costComponents.cents, p.cig ?? `CIG-DEMO-${p.code.replace("-", "")}`, p.cup ?? `CUP-DEMO-${p.code.replace("-", "")}`,
-      p.sourceKey ?? null, p.operation ?? null, p.activityStart ?? null, p.activityEnd ?? null, p.sourceStatus ?? null, p.iterText ?? null, p.sourceRow ?? null,
+      p.sourceKey ?? null, p.operation ?? null, projectFromOperation(p.operation)?.code ?? null, p.activityStart ?? null, p.activityEnd ?? null, p.sourceStatus ?? null, p.iterText ?? null, p.sourceRow ?? null,
       p.operator ?? null, now,
     ];
   });
@@ -159,7 +168,7 @@ async function insertProcedureBatch(
     "procedures",
     [
       "code", "dataset", "title", "structure_code", "procedure_type", "award_criterion", "instrument", "template_code", "programmed_cents",
-      "documents_tracked", "anac_fee_cents", "cig", "cup", "source_key", "operation", "activity_start", "activity_end", "source_status", "iter_text",
+      "documents_tracked", "anac_fee_cents", "cig", "cup", "source_key", "operation", "project_code", "activity_start", "activity_end", "source_status", "iter_text",
       "source_row", "operator_code", "created_at",
     ],
     procRows,

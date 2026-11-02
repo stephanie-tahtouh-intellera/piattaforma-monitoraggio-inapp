@@ -19,6 +19,7 @@ export default async function AdminPage() {
   const users = (await database.prepare("SELECT login, name, role, structure_scope, active FROM users ORDER BY id").all()) as any[];
   const imp = s.imports[0] as any;
   const rep = imp ? JSON.parse(imp.summary_json) : null;
+  const projects = (await database.prepare("SELECT code, name FROM projects ORDER BY code").all()) as { code: string; name: string }[];
   const es = await engineSettings(database);
   const extra = ((await database.prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get()) as { value_json: string } | undefined)?.value_json;
   const module2Enabled = await executionModuleEnabled(database);
@@ -112,6 +113,17 @@ export default async function AdminPage() {
               { name: "paymentTermDays", label: "Termine di pagamento dalla fattura (giorni)", defaultValue: String(es.paymentTermDays) },
               { name: "extraHolidays", label: "Festività aggiuntive (AAAA-MM-GG, separate da virgola)", defaultValue: extra ? (JSON.parse(extra) as string[]).join(", ") : "" },
             ]}
+          />
+        </section>
+        <section className="card stack" data-tour="progetti">
+          <h2>Progetti</h2>
+          <p className="muted">Ogni gara è collegata a un progetto (Operazione / Attività). Le procedure importate dal workbook usano quelli del workbook; qui puoi aggiungerne altri. Il reset della demo ricarica il catalogo dal dataset.</p>
+          <ul>{projects.map((x) => <li key={x.code}><span className="mono">{x.code}</span> · {x.name}</li>)}</ul>
+          <ActionForm
+            endpoint="/api/admin/projects"
+            submitLabel="Aggiungi progetto"
+            successMessage="Progetto aggiunto."
+            fields={[{ name: "code", label: "Codice (es. OP05-A1)", required: true }, { name: "name", label: "Nome del progetto", required: true }]}
           />
         </section>
         <section className="card stack" data-tour="utenti">

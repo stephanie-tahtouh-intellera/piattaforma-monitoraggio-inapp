@@ -16,10 +16,10 @@ const normalize = (v: string) => v.replace(/\./g, "").replace(",", ".").replace(
 const isAmount = (v: string) => /^\d+(\.\d{1,2})?$/.test(normalize(v));
 
 /** Modulo di creazione bozza con quadro economico calcolato dal server prima della memoria (DEC-111). */
-export function DraftForm({ types, referenceDate }: { types: { value: string; label: string }[]; referenceDate: string }) {
+export function DraftForm({ types, referenceDate, projects = [] }: { types: { value: string; label: string }[]; referenceDate: string; projects?: { code: string; name: string }[] }) {
   const router = useRouter();
   const [f, setF] = useState({
-    title: "", type: types[0]?.value ?? "DIRECT_AWARD_MEPA", award: "", base: "", vat: "22,00", anac: "", hasDec: false, incentive: "2,00",
+    title: "", project: "", type: types[0]?.value ?? "DIRECT_AWARD_MEPA", award: "", base: "", vat: "22,00", anac: "", hasDec: false, incentive: "2,00",
     y2026: "", y2027: "", y2028: "", y2029: "", due: referenceDate,
   });
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -56,7 +56,7 @@ export function DraftForm({ types, referenceDate }: { types: { value: string; la
     setError(null);
     try {
       const res = await api<{ redirect?: string }>("/api/procedures", "POST", {
-        title: f.title, type: f.type, ...(f.award ? { award_criterion: f.award } : {}),
+        title: f.title, type: f.type, ...(f.project ? { project: f.project } : {}), ...(f.award ? { award_criterion: f.award } : {}),
         base: normalize(f.base), vat_pct: f.vat.replace(",", "."), anac_fee: f.anac ? normalize(f.anac) : "0", has_dec: f.hasDec, incentive_pct: f.incentive.replace(",", "."),
         ...Object.fromEntries((["y2026", "y2027", "y2028", "y2029"] as const).filter((k) => f[k]).map((k) => [k, normalize(f[k])])),
         memory_due: f.due,
@@ -75,6 +75,16 @@ export function DraftForm({ types, referenceDate }: { types: { value: string; la
         <div className="stack">
           <h2>Procedura</h2>
           <div className="field"><label htmlFor="d-title">Oggetto (obbligatorio)</label><input id="d-title" type="text" required minLength={5} value={f.title} onChange={(e) => set("title", e.target.value)} /></div>
+          {projects.length ? (
+            <div className="field">
+              <label htmlFor="d-project">Progetto (obbligatorio)</label>
+              <select id="d-project" required value={f.project} onChange={(e) => set("project", e.target.value)}>
+                <option value="">Scegli il progetto…</option>
+                {projects.map((x) => <option key={x.code} value={x.code}>{x.name} ({x.code})</option>)}
+              </select>
+              <span className="help">Ogni gara è collegata a un progetto (Operazione / Attività).</span>
+            </div>
+          ) : null}
           <div className="field">
             <label htmlFor="d-type">Tipologia prevista</label>
             <select id="d-type" value={f.type} onChange={(e) => set("type", e.target.value)}>{types.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}</select>

@@ -70,7 +70,7 @@ const PROCESS: Tour = {
       path: "/procedure/nuova", target: "main section.card", role: "STRUCTURE_USER", stage: 0,
       title: "0 · Piano: creazione della bozza",
       body: "Si parte dalla bozza: la Struttura inserisce oggetto, tipologia, data obiettivo della memoria e quadro economico (base di gara, IVA, tassa gara, riparto per annualità). La bozza non genera date effettive: la baseline si congela solo alla consegna della memoria.",
-      tryIt: "Compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
+      tryIt: "Scegli il progetto (Operazione / Attività) e compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
       can: ["Creare altre bozze con «Nuova procedura in bozza» (in alto a destra, anche da Dashboard e Portafoglio)"],
     },
     {

@@ -67,6 +67,7 @@ export async function resetDemo(db: Db, clock: Clock, actor: string, dataset?: D
     await tdb.prepare("UPDATE procedures SET current_version_id = NULL").run();
     await tdb.prepare("DELETE FROM procedure_versions").run();
     await tdb.prepare("DELETE FROM procedures").run();
+    await tdb.prepare("DELETE FROM projects").run();
     await tdb.prepare("DELETE FROM audit_events").run();
     await tdb.prepare("DELETE FROM system_meta WHERE key IN ('seeded_at','reset_in_progress')").run();
     await tdb.prepare("DELETE FROM config WHERE key = 'modules.execution'").run();

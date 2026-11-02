@@ -10,6 +10,7 @@ export const metadata = { title: "Nuova procedura in bozza" };
 export default async function NewDraftPage() {
   const actor = await pageActor();
   if (!(actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")) redirect("/portafoglio");
+  const projects = (await (await db()).prepare("SELECT code, name FROM projects WHERE active = 1 ORDER BY code").all()) as { code: string; name: string }[];
   return (
     <>
       <nav className="breadcrumb" aria-label="Percorso">
@@ -22,7 +23,7 @@ export default async function NewDraftPage() {
         </div>
       </div>
       <section className="card">
-        <DraftForm types={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} referenceDate={await configuredReferenceDate(await db())} />
+        <DraftForm projects={projects} types={Object.entries(TYPE_LABEL).map(([value, label]) => ({ value, label }))} referenceDate={await configuredReferenceDate(await db())} />
       </section>
     </>
   );
