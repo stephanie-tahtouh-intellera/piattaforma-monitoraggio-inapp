@@ -172,7 +172,7 @@ Fermati solo se:
 | DEC-097 | Autenticazione | Autenticazione custom con sessioni su DB, dove si salva solo lo `sha256` del token. Password con argon2id (`@node-rs/argon2`). Scadenza per inattività 8 h, assoluta 12 h. Rotazione della sessione a login, cambio ruolo e impersonazione. Ripiego: Better Auth (ADR-0001). | CR-43, 06 §1.7 |
 | DEC-098 | Contratti API | I **contratti Zod** in `src/contracts` sono l'unica fonte per validazione, tipi del client e OpenAPI (`@asteasolutions/zod-to-openapi`). `docs/openapi.json` è versionato e verificato nella gate; Swagger UI su `/api/docs`. | 06 §1.9 |
 | DEC-099 | Documenti in JS | Estrazione del testo con `unpdf`, rendering con `@napi-rs/canvas`, OCR con `tesseract.js` (dati `ita` locali, nessuna CDN), tutto nel worker; pagine PNG pre-renderizzate all'import. Ordine di estrazione: XML incorporato (ordini MePA) → layer di testo con coordinate → OCR, obbligatorio se il testo copre la pagina sotto la soglia. | CR-45, P-19, 06 §1.12 |
-| DEC-100 | Ambiente di sviluppo | Sulla macchina di sviluppo **Docker non è installato** e Node è alla v22.16 (pnpm 10). Si sviluppa e si collauda in locale (`pnpm dev`, worker con `pnpm worker`, DB in `./.data/`). `Dockerfile` e `docker-compose.yml` si scrivono comunque e sono validati quando Docker è disponibile. `engines.node` = `>=22.12`. Mailpit è opzionale in locale: senza SMTP raggiungibile l'outbox resta consultabile in-app e nella pagina Amministrazione. | ambiente |
+| DEC-100 | Ambiente di sviluppo | Sulla macchina di sviluppo **Docker non è installato** e Node è alla v22.16 (pnpm 10). Si sviluppa e si collauda in locale (`pnpm dev`, worker con `pnpm worker`, DB in `./.data/`). Dal DEC-117 **Docker non è più usato**: non esistono `Dockerfile` né `docker-compose.yml`; il DB è Postgres (DEC-115). `engines.node` = `>=22.12`. Mailpit è opzionale in locale: senza SMTP raggiungibile l'outbox resta consultabile in-app e nella pagina Amministrazione. | ambiente |
 
 ---
 
@@ -180,18 +180,8 @@ Fermati solo se:
 
 > Stack unico TypeScript: Next.js fullstack + SQLite (ADR-0001, DEV-004). Nessun componente Python. Dettagli e motivazioni: [06_architettura_nextjs_sqlite.md](06_architettura_nextjs_sqlite.md).
 
-### 4.1 Servizi Docker Compose
-
-| Servizio | Immagine/base | Porta host | Ruolo | Healthcheck |
-|---|---|---|---|---|
-| `init` | `Dockerfile` target `runtime` (Node 24 slim) | — | One-shot `cli bootstrap`: migrazioni + `db/sql/*.sql` + `seed --if-empty` + `run-checks` alla data di riferimento | exit 0 |
-| `web` | stessa immagine | `127.0.0.1:3000` | Next.js: UI, API REST `/api/*`, `/health`, `/ready`, `/api/docs` | `GET /ready` |
-| `worker` | stessa immagine | — | Scheduler (`RUN_CHECKS` ogni 5 min), coda job (import, OCR, render pagine), dispatcher outbox | heartbeat < 120 s |
-| `mailpit` | `axllent/mailpit:v1.31` | `127.0.0.1:8025` (UI) | SMTP mock (1025 interno) | `/mailpit readyz` |
-| `tools` (profilo `tools`) | target `dev` | — | lint, typecheck, test unit/integration/api | — |
-| `e2e` (profilo `e2e`) | target `e2e` (`mcr.microsoft.com/playwright:v1.63.0-noble`) | — | E2E e axe | — |
-
-Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fuori dalla web root, `backups/`), condiviso da `init`, `web` e `worker` sullo stesso host. **Vietato** il bind mount di una cartella Windows per `/data`. `web` e `worker` dipendono da `init` (`service_completed_successfully`); solo `init` esegue migrazioni.
+### 4.1 Servizi
+_Aggiornato (DEC-117): `web` (Next.js: UI, API REST `/api/*`, `/health`, `/ready`, `/api/docs`) su Vercel o in locale con `pnpm dev`; `worker` (scheduler `RUN_CHECKS` ogni 5 min, coda job, dispatcher outbox) con `pnpm worker` in locale; Postgres su Neon; documenti su disco (`./.data/storage`) o Vercel Blob. Nessun container._
 
 ### 4.2 Librerie di riferimento (versioni esatte nel lockfile)
 - **Piattaforma:** Node.js 24 LTS, TypeScript 6.0 (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), pnpm 12 (`packageManager` fissato).
@@ -199,7 +189,7 @@ Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fu
 - **Persistenza:** better-sqlite3 13 (SQLite 3.53 con FTS5/JSON), Drizzle ORM 0.45 + drizzle-kit 0.31.
 - **Dominio:** solo `temporal-polyfill` (date `PlainDate`); `Money` su `bigint`, implementazione interna.
 - **Sicurezza:** @node-rs/argon2 (argon2id), @oslojs/crypto ed @oslojs/encoding (hash, HMAC, base64url), rate-limiter-flexible.
-- **Job e notifiche:** croner (scheduler), nodemailer → Mailpit.
+- **Job e notifiche:** croner (scheduler), nodemailer → SMTP.
 - **Documenti:** unpdf/pdfjs-dist (testo, rendering), @napi-rs/canvas, tesseract.js 7 con `ita.traineddata` in `vendor/tessdata/`, yauzl (ZIP), file-type (MIME), @react-pdf/renderer (PDF generati), exceljs (XLSX), csv-stringify (CSV), yaml.
 - **Log:** pino (JSON, redazione).
 - **Qualità:** ESLint 9 (flat) + eslint-config-next + typescript-eslint, Prettier, dependency-cruiser, Vitest 5 + @vitest/coverage-v8 + fast-check, Playwright + @axe-core/playwright. decimal.js solo nei test.
@@ -229,7 +219,7 @@ Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fu
 /tests/{unit,integration,api}/   /e2e/
 /scripts/             # check.sh, guards.ts, traceability.ts, openapi.ts, generate-seed-documents.ts, generate-seed-workbook.ts
 /docs/                # guida, adr/, openapi.json, runbook, traceability.md
-Dockerfile  docker-compose.yml  .env.example  README.md  CLAUDE.md
+.env.example  README.md  CLAUDE.md
 ```
 
 ### 4.4 Regole di dipendenza (da far rispettare)
@@ -894,7 +884,7 @@ Ogni incremento si chiude con: stack pulito avviabile, quality gate verde, oracl
 
 | Inc. | Contenuto | Storie | Sezioni oracle | Exit |
 |---|---|---|---|---|
-| **I0 Fondazioni** (P0) | git, pnpm, Next.js 16 + TS 6 strict, Dockerfile multi-stage e compose (`init`, `web`, `worker`, `mailpit`, profili `tools` ed `e2e`), `/health` e `/ready`, skeleton a strati + dependency-cruiser + guard, config (env Zod) e `Clock`, Drizzle + migrazioni + `db/sql/triggers.sql`, UoW SQLite (WAL, mutex, `IMMEDIATE`, lettura separata), `Money`/`divRoundHalfUp`/`MoneyString`, coda job con lease + heartbeat (worker scheletro), auth a sessione + CSRF + argon2id, 7 account, RBAC + object-level, audit append-only, error envelope, correlation ID, log JSON (pino), adapter LLM `disabled`, `bindRoute` + contratti Zod + `docs/openapi.json`, shell frontend (login, banner demo, ruolo attivo, formattazione it-IT), Vitest (template DB) + Playwright, script di quality gate, **`expected_results.json` scritto dalla §10**, generazione dei documenti seed e del workbook (TS) | US-001, 002, 003, 110 (base), 111 (base) | — | servizi healthy; test 401/403/CSRF; test di immutabilità dell'audit, anche dopo una ricreazione di tabella; test architetturale; test di lease concorrente; test schema "nessun REAL" |
+| **I0 Fondazioni** (P0) | git, pnpm, Next.js 16 + TS 6 strict, `/health` e `/ready`, skeleton a strati + dependency-cruiser + guard, config (env Zod) e `Clock`, Drizzle + migrazioni + `db/sql/triggers.sql`, UoW SQLite (WAL, mutex, `IMMEDIATE`, lettura separata), `Money`/`divRoundHalfUp`/`MoneyString`, coda job con lease + heartbeat (worker scheletro), auth a sessione + CSRF + argon2id, 7 account, RBAC + object-level, audit append-only, error envelope, correlation ID, log JSON (pino), adapter LLM `disabled`, `bindRoute` + contratti Zod + `docs/openapi.json`, shell frontend (login, banner demo, ruolo attivo, formattazione it-IT), Vitest (template DB) + Playwright, script di quality gate, **`expected_results.json` scritto dalla §10**, generazione dei documenti seed e del workbook (TS) | US-001, 002, 003, 110 (base), 111 (base) | — | servizi healthy; test 401/403/CSRF; test di immutabilità dell'audit, anche dopo una ricreazione di tabella; test architetturale; test di lease concorrente; test schema "nessun REAL" |
 | **I1 Portafoglio e cronoprogramma** (P0) | modelli YAML + validatore, calendario, import seed idempotente con evidenze `SEED_FILE`, versioni/baseline, generazione milestone, stati milestone, stato procedura, handoff, `procedure_snapshot` e `procedure_snapshot_year`, ricerca FTS5 (`procedure_search`), selezione del modello (§9.1), lista con filtri in URL, scheda (Panoramica, Cronoprogramma, Audit) | US-100 (config), 101 (base), 010, 012, 030, 031, 032 (stato), 033, 011, 072 (parz.), 013 | `status`, `next_deadline`, `amounts.programmed` | T-001, T-002, T-003 |
 | **I2 Alert e anomalie** (P0) | `run_checks` (CLI sincrona + job `RUN_CHECKS`) + scheduler `croner` con leader lease, policy di alert (incluso T-1M), escalation, outbox + dispatcher nodemailer → Mailpit (at-least-once, `Message-ID` stabile), centro alert, presa in carico/risoluzione/sospensione, anomalie che non richiedono estrazione, health completo | US-040, 041, 042, 043, 083 (base), 032 (health) | `health`, `health_drivers`, `open_alerts`, `anomalies`, `notifications` | T-004, T-005, T-013 (alert), T-014 |
 | **I3 Riprogrammazione** (P0) | BudgetAllocation, righe forecast, flag + simulazione automatica, motore di simulazione, criticità, alternative, submit/approve/reject/override, versioni, wizard UI a 5 step | US-050, 051, 052, 053, 054, 061 (disponibilità) | `simulations`, `reschedule_required`, `at_risk` | T-006–T-010 |
@@ -914,7 +904,7 @@ Ogni incremento si chiude con: stack pulito avviabile, quality gate verde, oracl
 - **Unit** (`tests/unit`, Vitest, nessun I/O): calendario (weekend, festività, Pasquetta, fine anno), stati delle milestone, policy di alert e livelli, health, propagazione e simulazione (casi §10.5), `Money` e `divRoundHalfUp` (property-based con fast-check, decimal.js come oracle), arrotondamenti SAL, invarianti, KPI, matrice dei permessi. Copertura `src/domain/**` ≥ 70% delle righe (obiettivo 85%).
 - **Integration** (`tests/integration`, **SQLite reale**, lo stesso motore della demo): migrazioni da zero e da una versione precedente; presenza ed effetto dei trigger obbligatori (audit, movimenti e versioni immutabili) anche dopo una ricreazione di tabella; schema senza colonne `REAL/NUMERIC` e con CHECK sugli `*_cents`; seed idempotente (T-002); oracle; `run_checks` idempotente; locking ottimistico; idempotency key; **lease concorrente** (3 processi figli, 0 doppie acquisizioni); recupero dei lease scaduti; outbox at-least-once; reset transazionale; FTS5.
 - **API** (`tests/api`, route handler invocati in-process con `Request` reali e cookie di sessione): RBAC per ogni endpoint, con la matrice ruolo × endpoint generata dai contratti delle route, inclusi i 403 object-level (T-017); CSRF (header mancante o errato, Origin estraneo → 403 `CSRF_REJECTED`); envelope di errore; idempotenza; coerenza contratti ↔ `route.ts`; nessun `number` monetario nelle risposte.
-- **E2E** (`e2e/`, Playwright nel servizio `e2e`, contro lo stack Docker): flussi T-0xx, lo spec `demo-script.spec.ts` che ripete la §13.3 della specifica, verifica delle e-mail tramite l'API di Mailpit; axe sulle pagine UI-01…UI-10 senza violazioni serious/critical. Prima della suite: reset via `POST /api/admin/reset`.
+- **E2E** (`e2e/`, Playwright con `pnpm test:e2e`): flussi T-0xx, lo spec `demo-script.spec.ts` che ripete la §13.3 della specifica, verifica delle e-mail tramite l'API di Mailpit; axe sulle pagine UI-01…UI-10 senza violazioni serious/critical. Prima della suite: reset via `POST /api/admin/reset`.
 
 ### 12.2 Database usa-e-getta
 - `globalSetup` di Vitest costruisce una sola volta `template.db` (migrazioni + `db/sql` + seed) e ne conserva la versione serializzata.
@@ -928,10 +918,9 @@ Ogni test porta nel titolo l'ID della storia o del test di collaudo (`describe('
 ### 12.4 Quality gate (`scripts/check.sh`, documentata nel README)
 
 ```
-docker compose up -d --build --wait
-docker compose --profile tools run --rm tools pnpm verify
-docker compose --profile e2e run --rm e2e
-docker compose --profile tools run --rm tools pnpm traceability --check
+pnpm verify
+pnpm test:e2e
+pnpm traceability --check
 ```
 
 `pnpm verify` = `format:check` (Prettier) → `lint` (ESLint, regole type-aware) → `typecheck` (`tsc --noEmit`) → `arch` (dependency-cruiser) → `guards` → `test:ci` (unit + integration + api, con copertura e soglie) → `openapi:check` → `audit` (`pnpm audit --prod --audit-level high`, con eccezioni documentate in `docs/audit-exceptions.md`; saltato solo con `CHECK_OFFLINE=1`, annotandolo).
@@ -959,7 +948,7 @@ Su Windows la gate si esegue da Git Bash o WSL. Per un ciclo veloce si può lanc
 - nessuna regola duplicata tra UI e backend;
 - `04_avanzamento.md` aggiornato e commit fatto.
 
-**Incremento completato:** exit della §11, oracle delle sezioni attive verde, `docker compose down -v && docker compose up --build` funzionante da zero, README aggiornato, tag.
+**Incremento completato:** exit della §11, oracle delle sezioni attive verde, `pnpm db:reset && pnpm dev` funzionante da zero, README aggiornato, tag.
 
 **MVP completato:** DoD §13.2 della specifica + §1 di questa guida + evidenze §13.4 della specifica in `docs/evidenze/`. Le deviazioni registrate nel registro hanno impatto e workaround.
 

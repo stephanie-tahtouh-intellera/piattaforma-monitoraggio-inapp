@@ -96,7 +96,9 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
   }, [st.mode, st.step]);
 
   const mismatch = step?.expect && actual && actual.code && actual.code !== step.expect ? actual : null;
-  const ahead = mismatch ? PROCESS_ORDER.indexOf(mismatch.code) > PROCESS_ORDER.indexOf(step!.expect!) : false;
+  const posA = mismatch ? PROCESS_ORDER.indexOf(mismatch.code) : -1;
+  const posE = mismatch ? PROCESS_ORDER.indexOf(step!.expect!) : -1;
+  const direction: "ahead" | "behind" | "other" = posA < 0 || posE < 0 ? "other" : posA > posE ? "ahead" : "behind";
   const matchIdx = mismatch ? tour.steps.findIndex((x) => x.expect === mismatch.code) : -1;
 
   const go = (i: number) => {
@@ -174,9 +176,13 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
               <div className="tour-warn" role="status">
                 <p>
                   <TriangleAlert size={16} aria-hidden />{" "}
-                  {ahead
-                    ? <>Questo passo è già stato registrato: la pratica è più avanti, a «{mismatch.label}».</>
-                    : <>I passi precedenti non sono ancora stati registrati: la pratica è ferma a «{mismatch.label}».</>}
+                  {direction === "ahead" ? (
+                    <>Questo passo è già stato registrato: la pratica è più avanti, a «{mismatch.label}».</>
+                  ) : direction === "behind" ? (
+                    <>I passi precedenti non sono ancora stati registrati: la pratica è ferma a «{mismatch.label}».</>
+                  ) : (
+                    <>La pratica non è a questo passo: ora è a «{mismatch.label}».</>
+                  )}
                 </p>
                 {matchIdx >= 0 && matchIdx !== st.step ? (
                   <button type="button" className="btn btn-secondary btn-sm" onClick={() => go(matchIdx)}>

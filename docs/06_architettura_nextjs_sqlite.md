@@ -1,5 +1,7 @@
 # Riprogettazione architetturale — Next.js fullstack + SQLite
 
+> **Aggiornamento (DEC-100, DEC-112…DEC-117):** questo documento descrive il disegno originale (SQLite, Docker Compose). Il database è ora **Postgres** (Neon / Vercel Postgres), l'applicazione si pubblica su **Vercel** e **Docker non è più usato**: restano validi stack applicativo, architettura a strati e regole di dominio. Le parti su SQLite (§1.4, §2) e sulla distribuzione con container (§4) sono **storiche**; per lo stato attuale vedi `CLAUDE.md` e il registro decisioni.
+
 > **Versione:** 1.0 · **Data:** 01/10/2026 · **Stato:** proposta, da integrare in [02_guida_sviluppo_agente.md](02_guida_sviluppo_agente.md), [01_analisi_criticita.md](01_analisi_criticita.md), [03_registro_decisioni.md](03_registro_decisioni.md) e `CLAUDE.md`
 > **Decisione:** [ADR-0001](adr/0001-nextjs-fullstack-sqlite.md) · **Deviazione dalla specifica:** DEV-004 (testo nella §5.10)
 >
@@ -21,7 +23,7 @@
 
 | Area | Scelta |
 |---|---|
-| Runtime | Node.js **24 LTS**; un'unica immagine Docker per `web`, `worker` e `init` |
+| Runtime | Node.js **24 LTS**; `web` su Vercel (o `pnpm dev` in locale), `worker` come processo Node separato |
 | Web e API | **Next.js 16** (App Router): UI + API REST `/api/*` tramite **route handler**. Server Actions non ammesse |
 | Persistenza | **SQLite 3.53** (WAL) con il driver **better-sqlite3 13** e l'ORM **Drizzle 0.45** (migrazioni SQL di drizzle-kit, più SQL post-migrazione per trigger e FTS5) |
 | Importi | **Centesimi interi**: `bigint` nel dominio (value object `Money`), `INTEGER` con CHECK nel DB, stringa `"47600.00"` in JSON. ROUND_HALF_UP implementato in aritmetica intera |
@@ -29,7 +31,7 @@
 | Auth | **Sessioni custom su DB** (token casuale, in DB solo l'hash), password **argon2id** (`@node-rs/argon2`), CSRF a doppio invio firmato più controllo dell'Origin |
 | Contratti | **Zod 4** come unica fonte per validazione, tipi del client e **OpenAPI** (`@asteasolutions/zod-to-openapi`) |
 | Job | Processo **worker separato**, stesso codebase; coda su tabella SQLite con **lease** atomico (`BEGIN IMMEDIATE` + `UPDATE … RETURNING`); outbox transazionale; scheduler `croner` |
-| Documenti | `unpdf`/`pdfjs-dist` (testo e rendering), `tesseract.js` (OCR, lingua `ita` inclusa nell'immagine), `@react-pdf/renderer` (PDF generati), `exceljs` (XLSX), `csv-stringify` (CSV), `nodemailer` → Mailpit |
+| Documenti | `unpdf`/`pdfjs-dist` (testo e rendering), `tesseract.js` (OCR, lingua `ita` versionata in `vendor/tessdata`), `@react-pdf/renderer` (PDF generati), `exceljs` (XLSX), `csv-stringify` (CSV), `nodemailer` → Mailpit |
 | Qualità | Vitest 5 (unit/integration/api su DB SQLite usa-e-getta), Playwright 1.63 + axe, ESLint 9 + typescript-eslint, `tsc` 6.0 strict, dependency-cruiser, pnpm |
 
 **Le tre decisioni più delicate**
@@ -46,7 +48,7 @@
 ### 1.1 Runtime, linguaggio, pacchetti
 - **Node.js 24.21 LTS "Krypton"**, nel container `node:24-slim` (Debian, glibc). Node 26 diventa LTS il 28/10/2026 e porta Temporal nativo e `node:sqlite` stabile: il passaggio si valuta con una DEC dopo I0, quando Node 26 sarà LTS (vedi CR-46). Alpine è scartata: musl, font e canvas danno problemi.
 - **TypeScript 6.0.x** in modalità `strict`, con `noUncheckedIndexedAccess` ed `exactOptionalPropertyTypes`. **Non** si usa TypeScript 7.0 (il compilatore nativo): typescript-eslint 8.71 supporta TypeScript solo fino a `<6.1`.
-- **pnpm 12.8**, fissato con `packageManager` in `package.json` e installato nel Dockerfile con `npm i -g pnpm@<versione>` (non si dipende da corepack, che non è più distribuito con Node ≥ 25). Lockfile obbligatorio, `--frozen-lockfile` in CI e nel Dockerfile. Va mantenuta l'allowlist degli script di build delle dipendenze (es. `esbuild`). better-sqlite3 13, `@node-rs/argon2` e `@napi-rs/canvas` usano binari precompilati e non hanno script di installazione.
+- **pnpm 12.8**, fissato con `packageManager` in `package.json` (non si dipende da corepack, che non è più distribuito con Node ≥ 25). Lockfile obbligatorio; `--frozen-lockfile` in CI. Va mantenuta l'allowlist degli script di build delle dipendenze (es. `esbuild`). better-sqlite3 13, `@node-rs/argon2` e `@napi-rs/canvas` usano binari precompilati e non hanno script di installazione.
 - **Un solo `package.json`**, senza workspace multipli: il monorepo è un singolo pacchetto con cartelle a strati (§3). Si evita la complessità di pnpm workspace in un MVP.
 
 ### 1.2 Next.js 16 (App Router): cosa usare e quando
@@ -96,7 +98,7 @@ Limiti noti di drizzle-kit su SQLite, con mitigazione (§2.5):
 
 | Criterio | **better-sqlite3 13.0.3** | @libsql/client 0.18 | `node:sqlite` |
 |---|---|---|---|
-| Installazione Windows/Docker | Prebuilt N-API **dentro il tarball** (8 piattaforme, glibc e musl, Windows), nessun `node-gyp`. **Verificato: installazione in 6 s su questa macchina Windows** | Binari prebuilt per piattaforma | Nessuna dipendenza |
+| Installazione Windows/Linux | Prebuilt N-API **dentro il tarball** (8 piattaforme, glibc e musl, Windows), nessun `node-gyp`. **Verificato: installazione in 6 s su questa macchina Windows** | Binari prebuilt per piattaforma | Nessuna dipendenza |
 | Versione SQLite | **3.53.4** inclusa, con FTS5, JSON, funzioni matematiche (verificato) | fork libSQL, segue SQLite con ritardo | dipende da Node |
 | API | Sincrona, molto veloce; `backup()`, `serialize()`, apertura da buffer in memoria (DB di test istantanei) | Asincrona | Sincrona |
 | Stabilità | Matura | Stabile, ma orientata a Turso/remoto | RC su Node 24, stabile su Node 26 |
@@ -219,7 +221,7 @@ export const POST = bindRoute(registerPayment, (ctx, { params, body }) =>
 | Esecuzione deterministica | `cli run-checks --date 2026-10-01` gira **in-process e in modo sincrono** (test, bootstrap); `POST /api/jobs/run-checks` accoda e risponde `202 {job_id}` |
 
 ### 1.11 E-mail
-**nodemailer 10** con trasporto SMTP verso `mailpit:1025` (`secure:false`, `ignoreTLS:true`), adapter `SmtpNotifier` dietro la porta `Notifier`. Template in italiano (App. A della specifica) come funzioni pure che producono oggetto e testo (testo semplice + HTML minimale). Negli E2E le e-mail si verificano con l'API di **Mailpit v1.31** (`GET http://mailpit:8025/api/v1/messages`).
+**nodemailer 10** con trasporto SMTP (`SMTP_HOST`/`SMTP_PORT`; in locale, se disponibile, un server di prova su `localhost:1025`) (`secure:false`, `ignoreTLS:true`), adapter `SmtpNotifier` dietro la porta `Notifier`. Template in italiano (App. A della specifica) come funzioni pure che producono oggetto e testo (testo semplice + HTML minimale). Negli E2E le e-mail si verificano con l'API del server SMTP di prova, se presente.
 
 ### 1.12 Documenti: PDF, OCR, pagine
 | Funzione | Libreria | Dove gira |
@@ -392,7 +394,7 @@ JSON è integrato in SQLite ≥ 3.38. Si usa solo per dati **non interrogati né
 
 ### 2.9 Backup, restore, reset della demo
 - **Backup** (`cli backup`): `VACUUM INTO '/data/backups/<ts>/inapp.db'` produce una copia consistente e compattata con un solo comando, senza bloccare gli scrittori in WAL. A questa si aggiunge il manifest dei file di storage (immutabili e indirizzati per hash, quindi basta copiarli). `db.backup()` di better-sqlite3 resta l'alternativa incrementale.
-- **Restore** (`cli restore <dir>`), **solo a servizi fermi**: `PRAGMA integrity_check` sulla copia → sostituzione di `/data/inapp.db` → eliminazione di `-wal`/`-shm` → `migrate` (se la copia è più vecchia) → riavvio. Comando: `docker compose stop web worker && docker compose run --rm init restore /data/backups/<ts> && docker compose start web worker`.
+- **Restore** (`cli restore <dir>`), **solo a servizi fermi**: `PRAGMA integrity_check` sulla copia → sostituzione di `/data/inapp.db` → eliminazione di `-wal`/`-shm` → `migrate` (se la copia è più vecchia) → riavvio.
 - **Reset della demo** (US-112, T-022): ADMIN, token di conferma, `APP_ENV=demo`.
   1. `VACUUM INTO` di sicurezza in `backups/pre-reset-<ts>`, così l'audit precedente non si perde.
   2. Una sola transazione `IMMEDIATE`:
@@ -407,14 +409,10 @@ JSON è integrato in SQLite ≥ 3.38. Si usa solo per dati **non interrogati né
 
   Gli altri processi vedono il DB prima o dopo, mai a metà. I job in corso falliscono il completamento (lease perso, epoch cambiata) e i loro effetti vengono annullati.
   Il reset è l'unico punto del codice autorizzato a rimuovere i trigger fuori dalle migrazioni: `src/infrastructure/db/reset.ts`, coperto da un test dedicato. Le sessioni vengono revocate tutte.
-- **Ripartenza da zero:** `docker compose down -v && docker compose up --build`.
+- **Ripartenza da zero:** `pnpm db:reset`, oppure dalla pagina Amministrazione (DEC-117).
 
 ### 2.10 File del DB su volume Docker
-- **Volume nominato** `appdata` montato su `/data` in `init`, `web` e `worker`. Contiene `inapp.db` (+ `-wal`, `-shm`), `storage/` e `backups/`.
-- **Web e worker possono condividere il file in sicurezza** perché girano sullo **stesso kernel**: la VM WSL2 di Docker Desktop, con un filesystem locale ext4. Il file `-shm`, mappato in memoria, e i lock POSIX sono coerenti fra i container. È lo stesso presupposto dei sidecar tipo Litestream.
-- **Vietato** il bind mount di una cartella Windows (`./data:/data`): passa da un filesystem di rete (9p/virtiofs) dove i lock e la memoria condivisa di WAL non sono affidabili, con rischio di corruzione. Vietati anche NFS/SMB e volumi condivisi fra host diversi (CR-41).
-- Tutti i container girano con lo stesso utente non root (`node`, uid 1000). L'immagine crea `/data` di proprietà di `node`: Docker copia proprietario e permessi nel volume nominato al primo montaggio.
-- In sviluppo senza Docker (`pnpm dev`) il file sta in `./.data/inapp.db` (in `.gitignore`), su disco locale NTFS: WAL funziona.
+_Rimosso (DEC-117): con Postgres non esiste più un file di database da condividere fra processi né un volume Docker. In locale i documenti caricati stanno in `./.data/storage` (in `.gitignore`); su Vercel vanno su Vercel Blob (DEC-113)._
 
 ### 2.11 Cosa si perde rispetto a PostgreSQL
 
@@ -483,7 +481,7 @@ Stima indicativa della migrazione: schema Drizzle `pgTable` + adapter + trigger 
 /scripts/                 # check.sh, guards.ts, traceability.ts, openapi.ts, generate-seed-documents.ts,
                           #   generate-seed-workbook.ts
 /docs/                    # guida, adr/, openapi.json, runbook, traceability.md
-Dockerfile  docker-compose.yml  .dependency-cruiser.cjs  eslint.config.mjs  drizzle.config.ts
+.dependency-cruiser.cjs  eslint.config.mjs  drizzle.config.ts
 next.config.ts  vitest.config.ts  playwright.config.ts  .env.example  README.md  CLAUDE.md
 ```
 
@@ -556,83 +554,8 @@ Gli errori applicativi (`ForbiddenError`, `InvariantViolation`, `StaleSimulation
 
 ## 4. Runtime e distribuzione
 
-### 4.1 docker-compose.yml (minimale)
-```yaml
-name: inapp
-x-app: &app
-  build: { context: ., target: runtime }
-  image: inapp-app:local
-  env_file: [.env]
-  volumes: [appdata:/data]
-  init: true
-services:
-  init:                      # one-shot: migrate + SQL post-migrazione + seed --if-empty + run-checks
-    <<: *app
-    entrypoint: ["node", "dist/cli.js"]
-    command: ["bootstrap"]
-    restart: "no"
-  web:
-    <<: *app
-    command: ["node_modules/.bin/next", "start", "-p", "3000", "-H", "0.0.0.0"]
-    ports: ["127.0.0.1:3000:3000"]
-    depends_on:
-      init: { condition: service_completed_successfully }
-    healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 3s
-      retries: 12
-      start_period: 20s
-  worker:
-    <<: *app
-    command: ["node", "dist/worker.js"]
-    depends_on:
-      init: { condition: service_completed_successfully }
-      mailpit: { condition: service_healthy }
-    healthcheck:
-      test: ["CMD", "node", "dist/cli.js", "worker-health"]   # heartbeat < 120 s
-      interval: 30s
-      timeout: 5s
-      retries: 4
-      start_period: 30s
-  mailpit:
-    image: axllent/mailpit:v1.31.3
-    ports: ["127.0.0.1:8025:8025"]     # UI; SMTP 1025 solo sulla rete interna
-    healthcheck:
-      test: ["CMD", "/mailpit", "readyz"]
-      interval: 10s
-      retries: 6
-  tools:                     # lint, typecheck, test non E2E (profilo tools)
-    build: { context: ., target: dev }
-    profiles: [tools]
-    env_file: [.env]
-    volumes: [appdata:/data]
-  e2e:                       # Playwright (profilo e2e)
-    build: { context: ., target: e2e }
-    profiles: [e2e]
-    environment: { BASE_URL: "http://web:3000", MAILPIT_URL: "http://mailpit:8025" }
-    depends_on:
-      web: { condition: service_healthy }
-volumes:
-  appdata: {}
-```
-Note:
-- `APP_ALLOWED_ORIGINS=http://localhost:3000,http://web:3000`: l'E2E raggiunge il web con il nome di servizio e il controllo dell'Origin (§1.7) deve accettarlo.
-- `web` non dipende da `worker`, per evitare che il web resti non healthy quando il worker è giù: il degrado si vede su `/ready` e su `/api/system/status`.
-
-**Dockerfile** (multi-stage, una sola immagine applicativa):
-
-| Stage | Contenuto |
-|---|---|
-| `base` | `node:24.21-slim`, `npm i -g pnpm@12.8.1` |
-| `deps` | `pnpm install --frozen-lockfile` (binari nativi Linux installati **nel container**, mai copiati da Windows: `node_modules` in `.dockerignore`) |
-| `dev` | `deps` + sorgenti (target del servizio `tools`) |
-| `build` | `next build`, `esbuild` per `dist/worker.js` e `dist/cli.js` (`--platform=node --packages=external`) |
-| `prod-deps` | `pnpm install --prod --frozen-lockfile` |
-| `runtime` | utente `node`, `NODE_ENV=production`, copia di `node_modules` di produzione, `.next`, `public`, `dist`, `db/`, `config/`, `seed/`, `vendor/`; `mkdir /data` di proprietà di `node` |
-| `e2e` | `mcr.microsoft.com/playwright:v1.63.0-noble` + dipendenze di sviluppo + `e2e/` e `playwright.config.ts` |
-
-`output: 'standalone'` **non** si usa: worker e cli hanno bisogno delle dipendenze native (better-sqlite3, canvas, argon2) che lo standalone pota per il solo web. L'immagine è più grande ma più robusta. La scelta va rivista solo se la dimensione dell'immagine diventa un problema.
+### 4.1 Distribuzione
+_Sostituita (DEC-117): niente Dockerfile né docker-compose. L'applicazione si pubblica su **Vercel** collegata al repository Git (`main`); il database è **Postgres** (Neon) e i documenti caricati vanno su **Vercel Blob**. Variabili: `POSTGRES_URL`, `BLOB_READ_WRITE_TOKEN`, `DEMO_DATASET`, `DEMO_PASSWORD`, `SESSION_SECRET`, `APP_REFERENCE_DATE`, `APP_ALLOWED_ORIGINS`, `COOKIE_SECURE`. Il worker (scheduler e invio e-mail) non gira su Vercel._
 
 ### 4.2 `/health` e `/ready`
 - `GET /health` (liveness): processo vivo, `{status:"ok", version, commit}`, **senza** toccare il DB.
@@ -640,19 +563,13 @@ Note:
 - Worker: `cli worker-health` → exit 0 se l'heartbeat ha meno di 120 s.
 
 ### 4.3 Avvio, seed, reset
-- **Comando unico:** `docker compose up --build` (in CI e nella gate: `docker compose up -d --build --wait`).
-- `init` esegue `bootstrap`, che è idempotente:
-  1. `migrate` (migrazioni drizzle + `db/sql/*.sql`);
-  2. `PRAGMA quick_check`;
-  3. se il DB è vuoto (`system_meta.seeded_at IS NULL`): `seed` + `run-checks --date <reference_date>`.
+- **Avvio:** `pnpm install && pnpm db:bootstrap && pnpm dev` (con `POSTGRES_URL` in `.env`); worker con `pnpm worker`.
+- `bootstrap` è idempotente: `migrate` (migrazioni + `db/sql/*.sql`, con advisory lock), poi, se il DB è vuoto, `seed` + `run-checks --date <reference_date>`. Su Vercel lo stesso avvio avviene alla prima richiesta.
+- **Reset:** `pnpm db:reset`, oppure dalla pagina Amministrazione (`POST /api/admin/reset`, conferma `RESET`).
+- **Backup:** non più da CLI; si usa il backup/branching di Neon (DEC-115).
 
-  Al primo avvio, quando `web` diventa healthy, la demo è già nello stato dell'oracle (T-001, T-004).
-- **Reset:** `docker compose run --rm init reset --yes`, oppure dalla UI admin (`POST /api/admin/reset` con token). Procedura nella §2.9.
-- **Backup/restore:** `docker compose run --rm init backup` / §2.9.
-- **Migrazioni concorrenti impossibili:** le esegue solo `init`, prima degli altri servizi. `web` e `worker` verificano soltanto la versione dello schema e non migrano.
-
-### 4.4 Sviluppo locale (Windows, senza Docker)
-`pnpm install` → `docker compose up -d mailpit` → `pnpm db:bootstrap` → `pnpm dev`. Quest'ultimo usa `concurrently`: `next dev` + `tsx watch worker/main.ts`, con DB in `./.data/inapp.db`. Le modifiche allo schema si fanno con `pnpm db:generate` (drizzle-kit) e si rivedono a mano nel SQL generato prima del commit.
+### 4.4 Sviluppo locale (Windows)
+`pnpm install` → `pnpm db:bootstrap` → `pnpm dev`. Le modifiche allo schema si fanno con `pnpm db:generate` (drizzle-kit) e si rivedono a mano nel SQL generato prima del commit.
 
 ---
 
@@ -693,18 +610,8 @@ Note:
 
 > Stack unico TypeScript: Next.js fullstack + SQLite (ADR-0001, DEV-004). Nessun componente Python. Dettagli e motivazioni: [06_architettura_nextjs_sqlite.md](06_architettura_nextjs_sqlite.md).
 
-### 4.1 Servizi Docker Compose
-
-| Servizio | Immagine/base | Porta host | Ruolo | Healthcheck |
-|---|---|---|---|---|
-| `init` | `Dockerfile` target `runtime` (Node 24 slim) | — | One-shot `cli bootstrap`: migrazioni + `db/sql/*.sql` + `seed --if-empty` + `run-checks` alla data di riferimento | exit 0 |
-| `web` | stessa immagine | `127.0.0.1:3000` | Next.js: UI, API REST `/api/*`, `/health`, `/ready`, `/api/docs` | `GET /ready` |
-| `worker` | stessa immagine | — | Scheduler (`RUN_CHECKS` ogni 5 min), coda job (import, OCR, render pagine), dispatcher outbox | heartbeat < 120 s |
-| `mailpit` | `axllent/mailpit:v1.31` | `127.0.0.1:8025` (UI) | SMTP mock (1025 interno) | `/mailpit readyz` |
-| `tools` (profilo `tools`) | target `dev` | — | lint, typecheck, test unit/integration/api | — |
-| `e2e` (profilo `e2e`) | target `e2e` (`mcr.microsoft.com/playwright:v1.63.0-noble`) | — | E2E e axe | — |
-
-Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fuori dalla web root, `backups/`), condiviso da `init`, `web` e `worker` sullo stesso host. **Vietato** il bind mount di una cartella Windows per `/data`. `web` e `worker` dipendono da `init` (`service_completed_successfully`); solo `init` esegue migrazioni.
+### 4.1 Servizi
+_Aggiornato (DEC-117): `web` (Next.js: UI, API `/api/*`, `/health`, `/ready`, `/api/docs`) su Vercel o in locale con `pnpm dev`; `worker` (scheduler `RUN_CHECKS`, coda job, outbox) con `pnpm worker` in locale; Postgres su Neon; documenti su disco o Vercel Blob. Nessun container._
 
 ### 4.2 Librerie di riferimento (versioni esatte nel lockfile)
 - **Piattaforma:** Node.js 24 LTS, TypeScript 6.0 (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), pnpm 12 (`packageManager` fissato).
@@ -712,7 +619,7 @@ Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fu
 - **Persistenza:** better-sqlite3 13 (SQLite 3.53 con FTS5/JSON), Drizzle ORM 0.45 + drizzle-kit 0.31.
 - **Dominio:** solo `temporal-polyfill` (date `PlainDate`); `Money` su `bigint`, implementazione interna.
 - **Sicurezza:** @node-rs/argon2 (argon2id), @oslojs/crypto ed @oslojs/encoding (hash, HMAC, base64url), rate-limiter-flexible.
-- **Job e notifiche:** croner (scheduler), nodemailer → Mailpit.
+- **Job e notifiche:** croner (scheduler), nodemailer → SMTP.
 - **Documenti:** unpdf/pdfjs-dist (testo, rendering), @napi-rs/canvas, tesseract.js 7 con `ita.traineddata` in `vendor/tessdata/`, yauzl (ZIP), file-type (MIME), @react-pdf/renderer (PDF generati), exceljs (XLSX), csv-stringify (CSV), yaml.
 - **Log:** pino (JSON, redazione).
 - **Qualità:** ESLint 9 (flat) + eslint-config-next + typescript-eslint, Prettier, dependency-cruiser, Vitest 5 + @vitest/coverage-v8 + fast-check, Playwright + @axe-core/playwright. decimal.js solo nei test.
@@ -742,7 +649,7 @@ Volume nominato `appdata` → `/data` (`inapp.db` + `-wal`/`-shm`, `storage/` fu
 /tests/{unit,integration,api}/   /e2e/
 /scripts/             # check.sh, guards.ts, traceability.ts, openapi.ts, generate-seed-documents.ts, generate-seed-workbook.ts
 /docs/                # guida, adr/, openapi.json, runbook, traceability.md
-Dockerfile  docker-compose.yml  .env.example  README.md  CLAUDE.md
+.env.example  README.md  CLAUDE.md
 ```
 
 ### 4.4 Regole di dipendenza (da far rispettare)
@@ -797,7 +704,7 @@ Dockerfile  docker-compose.yml  .env.example  README.md  CLAUDE.md
 - **Unit** (`tests/unit`, Vitest, nessun I/O): calendario (weekend, festività, Pasquetta, fine anno), stati delle milestone, policy di alert e livelli, health, propagazione e simulazione (casi §10.5), `Money` e `divRoundHalfUp` (property-based con fast-check, decimal.js come oracle), arrotondamenti SAL, invarianti, KPI, matrice dei permessi. Copertura `src/domain/**` ≥ 70% delle righe (obiettivo 85%).
 - **Integration** (`tests/integration`, **SQLite reale**, lo stesso motore della demo): migrazioni da zero e da una versione precedente; presenza ed effetto dei trigger obbligatori (audit, movimenti e versioni immutabili) anche dopo una ricreazione di tabella; schema senza colonne `REAL/NUMERIC` e con CHECK sugli `*_cents`; seed idempotente (T-002); oracle; `run_checks` idempotente; locking ottimistico; idempotency key; **lease concorrente** (3 processi figli, 0 doppie acquisizioni); recupero dei lease scaduti; outbox at-least-once; reset transazionale; FTS5.
 - **API** (`tests/api`, route handler invocati in-process con `Request` reali e cookie di sessione): RBAC per ogni endpoint, con la matrice ruolo × endpoint generata dai contratti delle route, inclusi i 403 object-level (T-017); CSRF (header mancante o errato, Origin estraneo → 403 `CSRF_REJECTED`); envelope di errore; idempotenza; coerenza contratti ↔ `route.ts`; nessun `number` monetario nelle risposte.
-- **E2E** (`e2e/`, Playwright nel servizio `e2e`, contro lo stack Docker): flussi T-0xx, lo spec `demo-script.spec.ts` che ripete la §13.3 della specifica, verifica delle e-mail tramite l'API di Mailpit; axe sulle pagine UI-01…UI-10 senza violazioni serious/critical. Prima della suite: reset via `POST /api/admin/reset`.
+- **E2E** (`e2e/`, Playwright con `pnpm test:e2e`): flussi T-0xx, lo spec `demo-script.spec.ts` che ripete la §13.3 della specifica, verifica delle e-mail tramite l'API di Mailpit; axe sulle pagine UI-01…UI-10 senza violazioni serious/critical. Prima della suite: reset via `POST /api/admin/reset`.
 
 ### 12.2 Database usa-e-getta
 - `globalSetup` di Vitest costruisce una sola volta `template.db` (migrazioni + `db/sql` + seed) e ne conserva la versione serializzata.
@@ -811,10 +718,9 @@ Ogni test porta nel titolo l'ID della storia o del test di collaudo (`describe('
 ### 12.4 Quality gate (`scripts/check.sh`, documentata nel README)
 
 ```
-docker compose up -d --build --wait
-docker compose --profile tools run --rm tools pnpm verify
-docker compose --profile e2e run --rm e2e
-docker compose --profile tools run --rm tools pnpm traceability --check
+pnpm verify
+pnpm test:e2e
+pnpm traceability --check
 ```
 
 `pnpm verify` = `format:check` (Prettier) → `lint` (ESLint, regole type-aware) → `typecheck` (`tsc --noEmit`) → `arch` (dependency-cruiser) → `guards` → `test:ci` (unit + integration + api, con copertura e soglie) → `openapi:check` → `audit` (`pnpm audit --prod --audit-level high`, con eccezioni documentate in `docs/audit-exceptions.md`; saltato solo con `CHECK_OFFLINE=1`, annotandolo).
@@ -854,7 +760,7 @@ Sostituire la riga **I0**:
 
 | Inc. | Contenuto | Storie | Sezioni oracle | Exit |
 |---|---|---|---|---|
-| **I0 Fondazioni** (P0) | git, pnpm, Next.js 16 + TS 6 strict, Dockerfile multi-stage e compose (`init`, `web`, `worker`, `mailpit`, profili `tools` ed `e2e`), `/health` e `/ready`, skeleton a strati + dependency-cruiser + guard, config (env Zod) e `Clock`, Drizzle + migrazioni + `db/sql/triggers.sql`, UoW SQLite (WAL, mutex, `IMMEDIATE`, lettura separata), `Money`/`divRoundHalfUp`/`MoneyString`, coda job con lease + heartbeat (worker scheletro), auth a sessione + CSRF + argon2id, 7 account, RBAC + object-level, audit append-only, error envelope, correlation ID, log JSON (pino), adapter LLM `disabled`, `bindRoute` + contratti Zod + `docs/openapi.json`, shell frontend (login, banner demo, ruolo attivo, formattazione it-IT), Vitest (template DB) + Playwright, script di quality gate, **`expected_results.json` scritto dalla §10**, generazione dei documenti seed e del workbook (TS) | US-001, 002, 003, 110 (base), 111 (base) | — | servizi healthy; test 401/403/CSRF; test di immutabilità dell'audit, anche dopo una ricreazione di tabella; test architetturale; test di lease concorrente; test schema "nessun REAL" |
+| **I0 Fondazioni** (P0) | git, pnpm, Next.js 16 + TS 6 strict, `/health` e `/ready`, skeleton a strati + dependency-cruiser + guard, config (env Zod) e `Clock`, Drizzle + migrazioni + `db/sql/triggers.sql`, UoW SQLite (WAL, mutex, `IMMEDIATE`, lettura separata), `Money`/`divRoundHalfUp`/`MoneyString`, coda job con lease + heartbeat (worker scheletro), auth a sessione + CSRF + argon2id, 7 account, RBAC + object-level, audit append-only, error envelope, correlation ID, log JSON (pino), adapter LLM `disabled`, `bindRoute` + contratti Zod + `docs/openapi.json`, shell frontend (login, banner demo, ruolo attivo, formattazione it-IT), Vitest (template DB) + Playwright, script di quality gate, **`expected_results.json` scritto dalla §10**, generazione dei documenti seed e del workbook (TS) | US-001, 002, 003, 110 (base), 111 (base) | — | servizi healthy; test 401/403/CSRF; test di immutabilità dell'audit, anche dopo una ricreazione di tabella; test architetturale; test di lease concorrente; test schema "nessun REAL" |
 
 Altre righe:
 - **I1:** aggiungere "ricerca FTS5 (`procedure_search`) e `procedure_snapshot_year`".
@@ -889,17 +795,17 @@ Sostituire le sezioni **Regole non negoziabili**, **Comandi** e **Ambiente** con
 - Una storia è finita solo con test automatici per ogni criterio di accettazione.
 
 ## Comandi
-- Avvio: `docker compose up --build`  (sviluppo senza Docker: `pnpm install && pnpm db:bootstrap && pnpm dev`)
+- Avvio: `pnpm install && pnpm db:bootstrap && pnpm dev`
 - Quality gate: `bash scripts/check.sh`  (ciclo veloce sull'host: `pnpm verify`)
 - Test: `pnpm test` (unit+integration+api) · `pnpm test:e2e` · `pnpm test -- tests/unit/<file>`
-- Reset demo: `docker compose run --rm init reset --yes`
-- Backup / restore: `docker compose run --rm init backup` · restore solo a servizi fermi (vedi README)
-- Run-checks a una data: `docker compose run --rm init run-checks --date 2026-10-01`
+- Reset demo: `pnpm db:reset`
+- Backup: backup/branching di Neon (DEC-115)
+- Run-checks a una data: `pnpm run-checks -- --date 2026-10-01`
 - Schema DB: `pnpm db:generate` (rivedere il SQL generato) · `pnpm db:migrate`
 - OpenAPI: `pnpm openapi` (rigenera `docs/openapi.json`)
 
 ## Ambiente
-Windows + Docker Desktop (WSL2). Script eseguiti nei container: fine riga LF (`.gitattributes`). Node 24 LTS, pnpm 12, TypeScript 6. DB SQLite nel volume nominato `appdata` (`/data/inapp.db`): **mai** bind mount di cartelle Windows. In sviluppo locale il DB sta in `./.data/` (ignorato da git). Web e API: http://localhost:3000 (OpenAPI: http://localhost:3000/api/docs). UI e-mail demo: Mailpit su http://localhost:8025.
+Windows. Fine riga LF (`.gitattributes`). Node 24 LTS, pnpm 12, TypeScript 6. DB Postgres (Neon / Vercel Postgres) via `POSTGRES_URL`; i documenti caricati stanno in `./.data/storage` (ignorato da git) o su Vercel Blob. Web e API: http://localhost:3000 (OpenAPI: http://localhost:3000/api/docs). UI e-mail demo: Mailpit su http://localhost:8025.
 ```
 Nella sezione "Leggi prima di lavorare", aggiungere come punto 6: "[docs/06_architettura_nextjs_sqlite.md](docs/06_architettura_nextjs_sqlite.md): motivazioni dello stack Next.js + SQLite e limiti di SQLite."
 

@@ -1,5 +1,7 @@
 # ADR-0001 — Next.js fullstack (TypeScript) + SQLite
 
+> **Aggiornamento (DEC-112…DEC-117):** la parte su SQLite è superata (database Postgres, DEC-115) e Docker non è più usato (DEC-117). Restano validi lo stack TypeScript e l'architettura a strati.
+
 - **Stato:** proposto (in attesa di presa d'atto INAPP; vedi DEV-004)
 - **Data:** 2026-10-01
 - **Riferimenti:** [06_architettura_nextjs_sqlite.md](../06_architettura_nextjs_sqlite.md) · specifica §2.4, §4, §10, §11 · guida §3–§4, §12 · CR-37…CR-49
@@ -14,7 +16,7 @@ Restano vincolanti:
 - importi decimali esatti, mai in float;
 - RBAC server-side object-level;
 - AI opzionale;
-- avvio con `docker compose up --build`;
+- avvio con `pnpm install && pnpm db:bootstrap && pnpm dev` (Docker rimosso, DEC-117);
 - test riproducibili con l'oracle `expected_results.json`;
 - API REST documentate (OpenAPI);
 - NFR-002 (1.000 procedure, p95 ≤ 2 s).
@@ -24,9 +26,9 @@ Restano vincolanti:
 2. **SQLite 3.53 in WAL** con **better-sqlite3 13** e **Drizzle ORM 0.45**. Per processo: una connessione di scrittura con mutex e transazioni `BEGIN IMMEDIATE` brevi, senza I/O esterno, e una connessione di sola lettura. Porte asincrone per restare migrabili. Trigger (audit append-only, versioni immutabili) e FTS5 in SQL post-migrazione idempotente, verificati da test e da `/ready`.
 3. **Importi in centesimi interi:** `Money` su `bigint`, `INTEGER` con CHECK nel DB, stringhe in JSON. ROUND_HALF_UP in aritmetica intera. Controlli automatici contro l'uso di `number` per gli importi.
 4. **Date con Temporal** (`PlainDate`, `temporal-polyfill`) e `Clock` iniettato; calendario da configurazione.
-5. **Worker Node separato**, stesso codebase e stessa immagine: coda job su tabella con lease atomico, leader lease per lo scheduler (`croner`), outbox transazionale verso Mailpit (nodemailer).
+5. **Worker Node separato**, stesso codebase: coda job su tabella con lease atomico, leader lease per lo scheduler (`croner`), outbox transazionale verso un server SMTP (nodemailer).
 6. **Autenticazione custom:** sessioni su DB (solo l'hash del token), argon2id, CSRF a doppio invio firmato + controllo dell'Origin. Ripiego: Better Auth.
-7. **Distribuzione:** un'immagine per `init` (migrazioni + seed if-empty + run-checks), `web` e `worker`, più `mailpit`. Il DB sta su un **volume Docker nominato** condiviso sullo stesso host, mai su un bind mount Windows.
+7. **Distribuzione:** (superato da DEC-117) `web` su Vercel o in locale con `pnpm dev`, `worker` come processo Node separato; migrazioni e seed if-empty all'avvio; database Postgres (DEC-115).
 
 ## Alternative considerate
 - **FastAPI + PostgreSQL** (specifica): scartata su richiesta del cliente.

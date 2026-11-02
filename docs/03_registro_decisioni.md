@@ -214,3 +214,18 @@ Formato:
 - Rimosso il comando `cli backup` (`VACUUM INTO`, specifico di SQLite/file locale): da sostituire con il backup/branching nativo di Neon/Vercel Postgres.
 - **Rischio noto, non risolto in questo incremento**: la suite di test (`tests/api/commands.test.ts`, `tests/integration/oracle-db.test.ts`, `tests/integration/inapp-import.test.ts`, `tests/integration/perf-reset.test.ts`) va in timeout contro il Postgres remoto condiviso (hook `beforeAll`/test oltre 10-300 s), perché il seed esegue molte INSERT singole in sequenza e ogni round trip di rete costa ordini di grandezza più di una SQLite in memoria. Il test NFR-002/NFR-003 (1.000 procedure, soglia p95 ≤ 2 s) non è più verificabile così com'è contro un database remoto. Da valutare: batch insert nel seed loader, timeout di test più alti, o un'istanza Postgres locale solo per CI/test pur mantenendo Neon in produzione.
 - Stato: attiva; il rischio sopra resta da chiudere prima di considerare il porting completo.
+
+### DEC-116 — Migrazioni serializzate con advisory lock
+- Data: 2026-10-23 · Autore: agente
+- Contesto: su Vercel più avvii a freddo concorrenti possono chiamare `migrate()` sullo stesso database e i DDL concorrenti falliscono con «tuple concurrently updated».
+- Decisione: `migrate()` prende un `pg_advisory_lock` di sessione (`src/infrastructure/db/connection.ts`); chi arriva dopo attende e trova tutto già applicato.
+- Stato: attiva.
+
+### DEC-117 — Distribuzione su Vercel, Docker rimosso, correzioni di porting
+- Data: 2026-11-02 · Autore: agente
+- Contesto: la demo è pubblicata su Vercel con database Postgres (Neon) e storage Vercel Blob (DEC-112…DEC-116); su questa macchina Docker non è mai stato installato (DEC-100).
+- Decisione: rimossi `Dockerfile` e `docker-compose.yml`; avvio locale con `pnpm install && pnpm db:bootstrap && pnpm dev`, reset con `pnpm db:reset` o dalla pagina Amministrazione. Variabili di ambiente su Vercel: `POSTGRES_URL`, `BLOB_READ_WRITE_TOKEN`, `DEMO_DATASET`, `DEMO_PASSWORD`, `SESSION_SECRET`, `APP_REFERENCE_DATE`, `APP_ALLOWED_ORIGINS` (origini ammesse dal controllo CSRF, altrimenti ogni salvataggio è rifiutato) e `COOKIE_SECURE=1`. Il dataset `inapp` è incluso nel bundle (`seed/inapp/**` in `outputFileTracingIncludes`) e `maxDuration` è portato a 60 s su layout, login e reset per il primo caricamento su DB vuoto.
+- Correzioni di porting: ogni chiamata asincrona nelle rotte `/api/*` è attesa con `await` (prima la risposta partiva prima del commit su Postgres e la scrittura si perdeva su Vercel: consegna della memoria, alert, SAL, riprogrammazioni…); `worker/main.ts` usa `ON CONFLICT (dedupe_key) DO NOTHING`; il modulo del passo in corso si ricrea a ogni cambio di passo.
+- Guida demo: i passi del percorso per fasi e quelli delle guide per attore dichiarano il passo atteso (`expect`); il pannello avvisa se la pratica è più avanti, più indietro o a un altro passo e propone il passo corrispondente.
+- Documenti `02`, `06` e ADR-0001: segnati come storici per SQLite e Docker; sezioni operative su container rimosse.
+- Stato: attiva. Rischio noto: la suite di test non è stata rieseguita su Postgres (serve un database di test dedicato: i test svuotano le tabelle).
