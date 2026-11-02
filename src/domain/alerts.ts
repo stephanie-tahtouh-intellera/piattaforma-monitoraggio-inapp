@@ -22,19 +22,32 @@ export interface AlertPolicy {
 const BOTH: Channel[] = ["IN_APP", "EMAIL"];
 const APP: Channel[] = ["IN_APP"];
 
-/** Policy di default (guida §8.3), sovrascrivibili da config/alert_policies. */
+const MEMORY_POLICY: AlertPolicy = {
+  code: "MEMORY",
+  rule: "MILESTONE_DEADLINE",
+  levels: [
+    { level: "T-1M", severity: "LOW", recipients: ["OWNER"], channels: APP },
+    { level: "T-10", severity: "LOW", recipients: ["OWNER"], channels: APP },
+    { level: "T-5", severity: "HIGH", recipients: ["OWNER"], channels: BOTH },
+    { level: "T-2", severity: "HIGH", recipients: ["OWNER", "PROCUREMENT"], channels: BOTH },
+    { level: "T0", severity: "HIGH", recipients: ["OWNER", "PROCUREMENT", "EXECUTIVE"], channels: BOTH },
+    { level: "T+1", severity: "CRITICAL", recipients: ["OWNER", "PROCUREMENT", "EXECUTIVE"], channels: BOTH },
+  ],
+};
+
+/**
+ * Policy di default (guida §8.3), sovrascrivibili da config/alert_policies.
+ * DEC-111 (incremento 3): gli anticipi degli alert alla Struttura sulla consegna della memoria dipendono dal tipo di procedura
+ * (nel workbook la memoria è fissata 1, 2, 4, 7 o 9 mesi prima dell'avvio): promemoria ravvicinati per l'affidamento diretto,
+ * un promemoria in più a 2 mesi per le procedure lunghe. DA VALIDARE con il cliente.
+ */
 export const DEFAULT_POLICIES: Record<string, AlertPolicy> = {
-  MEMORY: {
-    code: "MEMORY",
-    rule: "MILESTONE_DEADLINE",
-    levels: [
-      { level: "T-1M", severity: "LOW", recipients: ["OWNER"], channels: APP },
-      { level: "T-10", severity: "LOW", recipients: ["OWNER"], channels: APP },
-      { level: "T-5", severity: "HIGH", recipients: ["OWNER"], channels: BOTH },
-      { level: "T-2", severity: "HIGH", recipients: ["OWNER", "PROCUREMENT"], channels: BOTH },
-      { level: "T0", severity: "HIGH", recipients: ["OWNER", "PROCUREMENT", "EXECUTIVE"], channels: BOTH },
-      { level: "T+1", severity: "CRITICAL", recipients: ["OWNER", "PROCUREMENT", "EXECUTIVE"], channels: BOTH },
-    ],
+  MEMORY: MEMORY_POLICY,
+  MEMORY_SHORT: { ...MEMORY_POLICY, code: "MEMORY_SHORT", levels: MEMORY_POLICY.levels.filter((l) => l.level !== "T-1M") },
+  MEMORY_LONG: {
+    ...MEMORY_POLICY,
+    code: "MEMORY_LONG",
+    levels: [{ level: "T-2M", severity: "LOW", recipients: ["OWNER"], channels: APP }, ...MEMORY_POLICY.levels],
   },
   BLOCKING: {
     code: "BLOCKING",

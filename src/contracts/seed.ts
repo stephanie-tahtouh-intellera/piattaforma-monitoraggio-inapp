@@ -106,7 +106,7 @@ export const TemplateSchema = z.object({
       blocking: z.boolean(),
       offsetDays: z.number().int(),
       minDurationDays: z.number().int(),
-      alertPolicy: z.enum(["MEMORY", "BLOCKING", "STANDARD"]),
+      alertPolicy: z.enum(["MEMORY", "MEMORY_SHORT", "MEMORY_LONG", "BLOCKING", "STANDARD"]),
       minLeadDays: z.number().int(),
       expectedDocuments: z.array(z.object({ type: z.string(), timing: z.enum(["WITH", "BEFORE"]), severity: z.enum(["LOW", "MEDIUM", "HIGH", "CRITICAL"]) })),
       key: z.boolean().optional(),

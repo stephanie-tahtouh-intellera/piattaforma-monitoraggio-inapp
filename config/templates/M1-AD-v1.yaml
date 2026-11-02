@@ -17,7 +17,7 @@ milestones:
     blocking: true
     offsetDays: 0
     minDurationDays: 0
-    alertPolicy: MEMORY
+    alertPolicy: MEMORY_SHORT
     minLeadDays: 10
     key: true
     stage: 1

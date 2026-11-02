@@ -99,7 +99,7 @@ export type SalState =
   | "REJECTED"
   | "SUSPENDED";
 
-export type AlertPolicyCode = "MEMORY" | "BLOCKING" | "STANDARD";
+export type AlertPolicyCode = "MEMORY" | "MEMORY_SHORT" | "MEMORY_LONG" | "BLOCKING" | "STANDARD";
 export type DocTiming = "WITH" | "BEFORE";
 
 export interface ExpectedDocument {

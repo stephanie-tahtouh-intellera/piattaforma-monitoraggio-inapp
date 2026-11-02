@@ -1,3 +1,4 @@
+import { DEFAULT_POLICIES } from "@/domain/alerts";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { loadTemplates } from "@/infrastructure/config/templates";
@@ -45,7 +46,7 @@ export default async function TemplatesPage() {
                   <td className="num">{m.offsetDays} gg</td>
                   <td className="num">{m.minDurationDays} gg</td>
                   <td>{m.blocking ? "Sì" : "No"}</td>
-                  <td>{m.alertPolicy}</td>
+                  <td>{m.alertPolicy}<div className="small muted">{(DEFAULT_POLICIES[m.alertPolicy]?.levels ?? []).map((l) => l.level).join(" · ")}</div></td>
                   <td className="small">{m.expectedDocuments.map((d) => `${d.type} (${d.timing === "BEFORE" ? "prerequisito" : "alla consegna"})`).join(", ") || "—"}</td>
                 </tr>
               ))}

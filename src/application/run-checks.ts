@@ -98,7 +98,7 @@ function emailFor(a: AlertCandidate, proc: { code: string; title: string; progra
 }
 
 function levelRank(level: string): number {
-  const order = ["T-1M", "T-10", "T-5", "T-2", "T0", "T+1", "FLAG"];
+  const order = ["T-2M", "T-1M", "T-10", "T-5", "T-2", "T0", "T+1", "FLAG"];
   return order.indexOf(level);
 }
 
