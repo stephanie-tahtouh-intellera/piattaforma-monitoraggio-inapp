@@ -1,4 +1,5 @@
 import { hashSync } from "@node-rs/argon2";
+import { economicSettings } from "@/application/economic-settings";
 import { DomainError } from "@/application/errors";
 import { calendarFromDb, runChecks } from "@/application/run-checks";
 import { ARGON_OPTS, familyOfDataset } from "@/application/seed-loader";
@@ -7,7 +8,8 @@ import { selectTemplate } from "@/domain/milestones";
 import { DEFAULT_SETTINGS, ROLES, type AwardCriterion, type EngineSettings, type Instrument, type ProcedureType, type Role } from "@/domain/model";
 import { memoryAssistantProvider, type MemoryAssistantProvider } from "@/application/memory-assistant";
 import { buildMemoryOutline, MEMORY_ASSISTANT_NOTICE } from "@/domain/memory-draft";
-import { computeEconomicFrame, DEFAULT_INCENTIVE_PCT, DEFAULT_VAT_PCT } from "@/domain/economic-frame";
+import { computeEconomicFrame, DEFAULT_VAT_PCT } from "@/domain/economic-frame";
+import { annualAllocationMatches } from "@/domain/finance";
 import { Money } from "@/domain/money";
 import { writeAudit } from "@/infrastructure/audit";
 import { configuredReferenceDate, dbClock, systemNowIso } from "@/infrastructure/clock";
@@ -27,8 +29,14 @@ export interface DraftInput {
   instrument?: Instrument | undefined;
   /** Importo programmato IVA inclusa (percorso senza quadro economico, usato da seed e test). */
   programmed?: string | undefined;
-  /** Quadro economico (DEC-111): se presente, il programmato è calcolato e `programmed` è ignorato. */
-  frame?: { base: string; vatPct?: bigint | undefined; anacFee?: string | undefined; hasDec: boolean; incentivePct?: bigint | undefined } | undefined;
+  /** Quadro economico: se presente, il programmato è calcolato e `programmed` è ignorato. */
+  frame?: {
+    base: string;
+    vatPct?: bigint | undefined;
+    anacFee?: string | undefined;
+    incentivesDecision: "YES" | "NO" | "TO_VERIFY";
+    incentivePct?: bigint | undefined;
+  } | undefined;
   annual: Record<string, string>;
   memoryDue: string;
   /** Progetto (Operazione/Attività) a cui è collegata la gara; obbligatorio se esiste un catalogo progetti (DEC-111). */
@@ -44,13 +52,24 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     if (!(await db.prepare("SELECT code FROM projects WHERE code = ? AND active = 1").get(input.project))) throw new DomainError("VALIDATION_ERROR", "Progetto non valido", 422);
   } else if (projectCount > 0) throw new DomainError("VALIDATION_ERROR", "Indica il progetto a cui è collegata la gara", 422);
   if (!input.frame && !input.programmed) throw new DomainError("VALIDATION_ERROR", "Indica la base di gara o l'importo programmato", 422);
+  if (input.frame?.incentivesDecision === "YES" && input.frame.incentivePct === undefined) {
+    throw new DomainError("VALIDATION_ERROR", "Indica la percentuale degli incentivi per funzioni tecniche", 422);
+  }
+  const economicConfig = await economicSettings(db);
   const frame = input.frame
-    ? computeEconomicFrame({ base: Money.parse(input.frame.base), vatPct: input.frame.vatPct ?? DEFAULT_VAT_PCT, anacFee: Money.parse(input.frame.anacFee || "0"), hasDec: input.frame.hasDec, incentivePct: input.frame.incentivePct ?? DEFAULT_INCENTIVE_PCT })
+    ? computeEconomicFrame({
+        base: Money.parse(input.frame.base),
+        vatPct: input.frame.vatPct ?? DEFAULT_VAT_PCT,
+        anacFee: Money.parse(input.frame.anacFee || "0"),
+        incentivesDecision: input.frame.incentivesDecision,
+        incentivePct: input.frame.incentivePct,
+        incentivesReduceAvailable: economicConfig.incentivesReduceAvailable,
+      })
     : null;
   const programmed = frame ? frame.total : Money.parse(input.programmed!);
   const annual = Object.entries(input.annual).filter(([, v]) => v && v !== "0").map(([y, v]) => ({ year: Number(y), amount: Money.parse(v) }));
   const sum = Money.sum(annual.map((a) => a.amount));
-  if (!sum.eq(programmed)) throw new DomainError("VALIDATION_ERROR", `Il riparto per annualità (${sum.toString()}) deve coincidere con l'importo a disposizione della struttura (${programmed.toString()})`, 422);
+  if (!annualAllocationMatches(annual.map((a) => a.amount), programmed)) throw new DomainError("VALIDATION_ERROR", `Il riparto per annualità (${sum.toString()}) deve coincidere con l'importo a disposizione della struttura (${programmed.toString()})`, 422);
   const memoryDue = isoDate(input.memoryDue);
   if (memoryDue < (await configuredReferenceDate(db))) throw new DomainError("VALIDATION_ERROR", "La data obiettivo della memoria non può essere nel passato", 422);
   const templates = loadTemplates();
@@ -64,8 +83,8 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     const insProc = await db
       .prepare(
         `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents, cig, cup, is_draft, created_by, created_at,
-             base_cents, vat_pct_hundredths, anac_fee_cents, has_dec, incentive_pct_hundredths, incentive_cents, project_code)
-           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             base_cents, vat_pct_hundredths, anac_fee_cents, incentive_pct_hundredths, incentive_cents, project_code, incentives_decision, incentives_reduce_available)
+           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         code,
@@ -81,15 +100,25 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
         frame ? frame.base.cents : null,
         Number(frame ? frame.vatPct : DEFAULT_VAT_PCT),
         frame ? frame.anacFee.cents : 0,
-        frame?.hasDec ? 1 : 0,
-        Number(frame?.hasDec ? frame.incentivePct : 0n),
+        frame?.incentivePct ?? 0n,
         frame ? frame.incentive.cents : 0,
         input.project ?? null,
+        frame?.incentivesDecision ?? null,
+        frame?.incentivesReduceAvailable ? 1 : 0,
       );
     const pid = Number(insProc.lastInsertRowid);
     const insVer = await db
-      .prepare("INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, created_by, created_at) VALUES (?, 1, 0, 'Bozza 1', 'Creazione bozza', ?, ?, ?)")
-      .run(pid, programmed.cents, actor.login, now);
+      .prepare("INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, created_by, created_at, incentives_decision, incentive_pct_hundredths, incentive_cents, incentives_reduce_available) VALUES (?, 1, 0, 'Bozza 1', 'Creazione bozza', ?, ?, ?, ?, ?, ?, ?)")
+      .run(
+        pid,
+        programmed.cents,
+        actor.login,
+        now,
+        frame?.incentivesDecision ?? null,
+        frame?.incentivePct ?? null,
+        frame?.incentive.cents ?? null,
+        frame?.incentivesReduceAvailable ? 1 : 0,
+      );
     const vid = Number(insVer.lastInsertRowid);
     await db.prepare("UPDATE procedures SET current_version_id = ? WHERE id = ?").run(vid, pid);
     let prev: IsoDate | null = null;
@@ -109,6 +138,21 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     await db
       .prepare("INSERT INTO evidences (procedure_id, field, value, source_type, method, confidence, author, created_at) VALUES (?, 'programmed', ?, 'MANUAL', 'MANUAL', '1.00', ?, ?)")
       .run(pid, programmed.toString(), actor.login, now);
+    if (frame) {
+      await audit(db, actor, {
+        action: "INCENTIVES_SET",
+        entityType: "PROCEDURE",
+        entityId: code,
+        procedureCode: code,
+        before: null,
+        after: {
+          decision: frame.incentivesDecision,
+          percentage: frame.incentivePct?.toString() ?? null,
+          amount: frame.incentive.toString(),
+          reduceAvailable: frame.incentivesReduceAvailable,
+        },
+      });
+    }
     await audit(db, actor, { action: "DRAFT_CREATE", entityType: "PROCEDURE", entityId: code, procedureCode: code, after: { ...input } });
     return { code, pid };
   });
@@ -136,9 +180,22 @@ export async function submitMemory(db: Db, actor: Actor, code: string, date: str
     const vno = ((await db.prepare("SELECT MAX(version_no) AS n FROM procedure_versions WHERE procedure_id = ?").get(p.id)) as { n: number }).n + 1;
     const insVer = await db
       .prepare(
-        "INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, created_by, created_at, approved_by, approved_at) VALUES (?, ?, 1, ?, 'Consegna memoria: baseline congelata', ?, ?, ?, ?, ?)",
+        "INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, created_by, created_at, approved_by, approved_at, incentives_decision, incentive_pct_hundredths, incentive_cents, incentives_reduce_available) VALUES (?, ?, 1, ?, 'Consegna memoria: baseline congelata', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
-      .run(p.id, vno, `V${vno} – baseline`, agg.programmed.cents, actor.login, now, actor.login, now);
+      .run(
+        p.id,
+        vno,
+        `V${vno} – baseline`,
+        agg.programmed.cents,
+        actor.login,
+        now,
+        actor.login,
+        now,
+        agg.technicalIncentives.decision,
+        agg.technicalIncentives.pctHundredths,
+        agg.technicalIncentives.amount.cents,
+        agg.technicalIncentives.reduceAvailable ? 1 : 0,
+      );
     const vid = Number(insVer.lastInsertRowid);
     for (const m of agg.milestones) if (m.forecastDate) await db.prepare("INSERT INTO milestone_forecasts (version_id, milestone_code, date) VALUES (?, ?, ?)").run(vid, m.code, m.forecastDate);
     for (const l of agg.forecastLines)
@@ -150,7 +207,21 @@ export async function submitMemory(db: Db, actor: Actor, code: string, date: str
     await db
       .prepare("INSERT INTO evidences (procedure_id, field, value, source_type, excerpt, method, confidence, author, created_at) VALUES (?, 'milestone.MEMORY_SUBMISSION.actual', ?, 'MANUAL', ?, 'MANUAL', '1.00', ?, ?)")
       .run(p.id, d, note, actor.login, now);
-    await audit(db, actor, { action: "MEMORY_SUBMIT", entityType: "PROCEDURE", entityId: code, procedureCode: code, before: { owner: "STRUCTURE" }, after: { owner: "PROCUREMENT", baseline: `V${vno}` }, reason: note });
+    const incentives = {
+      decision: agg.technicalIncentives.decision,
+      percentage: agg.technicalIncentives.pctHundredths?.toString() ?? null,
+      amount: agg.technicalIncentives.amount.toString(),
+      reduceAvailable: agg.technicalIncentives.reduceAvailable,
+    };
+    await audit(db, actor, {
+      action: "MEMORY_SUBMIT",
+      entityType: "PROCEDURE",
+      entityId: code,
+      procedureCode: code,
+      before: { owner: "STRUCTURE", incentives },
+      after: { owner: "PROCUREMENT", baseline: `V${vno}`, incentives },
+      reason: note,
+    });
   });
   await runChecks(db, await dbClock(db), { procedureIds: [p.id] });
 }
@@ -172,6 +243,19 @@ export async function updateEngineSettings(db: Db, actor: Actor, s: Partial<Engi
     await audit(db, actor, { action: "CONFIG_UPDATE", entityType: "CONFIG", entityId: "engine.settings", before, after: { ...next, extraHolidays } });
   });
   return runChecks(db, await dbClock(db));
+}
+
+export async function updateEconomicSettings(db: Db, actor: Actor, settings: { incentivesReduceAvailable: boolean }) {
+  requireAction(actor, "admin");
+  const before = await economicSettings(db);
+  const now = systemNowIso();
+  await tx(db, async (tdb) => {
+    await tdb
+      .prepare("INSERT INTO config (key, value_json, updated_at, updated_by) VALUES ('economic.settings', ?, ?, ?) ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, version = config.version + 1, updated_at = excluded.updated_at, updated_by = excluded.updated_by")
+      .run(JSON.stringify(settings), now, actor.login);
+    await audit(tdb, actor, { action: "CONFIG_UPDATE", entityType: "CONFIG", entityId: "economic.settings", before, after: settings });
+  });
+  return settings;
 }
 
 /** US-102: utenti, ruoli e ambiti; disattivazione senza cancellazione (resta nello storico). */
@@ -224,7 +308,7 @@ export async function proposeMemoryText(db: Db, actor: Actor, code: string): Pro
   if (provider === "disabled") throw new DomainError("ASSISTANT_DISABLED", "L'assistente alla memoria non è attivo (si abilita da Amministrazione)", 409);
   const row = (await db
     .prepare(
-      "SELECT p.title, p.procedure_type, p.award_criterion, p.has_dec, p.is_draft, st.name AS structure_name, pr.name AS project_name FROM procedures p LEFT JOIN structures st ON st.code = p.structure_code LEFT JOIN projects pr ON pr.code = p.project_code WHERE p.id = ?",
+      "SELECT p.title, p.procedure_type, p.award_criterion, p.incentives_decision, p.is_draft, st.name AS structure_name, pr.name AS project_name FROM procedures p LEFT JOIN structures st ON st.code = p.structure_code LEFT JOIN projects pr ON pr.code = p.project_code WHERE p.id = ?",
     )
     .get(p.id)) as Record<string, any>;
   if (!row.is_draft) throw new DomainError("INVALID_TRANSITION", "La memoria è già stata consegnata: la procedura non è più in bozza", 409);
@@ -234,7 +318,7 @@ export async function proposeMemoryText(db: Db, actor: Actor, code: string): Pro
     project: row.project_name ?? null,
     type: row.procedure_type,
     awardCriterion: row.award_criterion ?? null,
-    hasDec: row.has_dec === 1,
+    incentivesDecision: row.incentives_decision ?? "TO_VERIFY",
   });
   await tx(db, (tdb) => audit(tdb, actor, { action: "MEMORY_TEXT_PROPOSED", entityType: "PROCEDURE", entityId: code, procedureCode: code, after: { provider } }));
   return { provider, text, notice: MEMORY_ASSISTANT_NOTICE };

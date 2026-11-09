@@ -1,4 +1,5 @@
 import { projectFromOperation } from "@/domain/project";
+import { DEFAULT_ECONOMIC_SETTINGS } from "@/application/economic-settings";
 import { hashSync } from "@node-rs/argon2";
 import { createHash, randomUUID } from "node:crypto";
 import { existsSync, readFileSync, statSync } from "node:fs";
@@ -41,6 +42,7 @@ export async function seedReference(db: Db, clock: Clock, password = process.env
     const cfg = db.prepare("INSERT INTO config (key, value_json, updated_at, updated_by) VALUES (?, ?, ?, 'seed') ON CONFLICT (key) DO NOTHING");
     await cfg.run("demo.reference_date", JSON.stringify(process.env.APP_REFERENCE_DATE ?? "2026-10-01"), clock.nowIso());
     await cfg.run("engine.settings", JSON.stringify(DEFAULT_SETTINGS), clock.nowIso());
+    await cfg.run("economic.settings", JSON.stringify(DEFAULT_ECONOMIC_SETTINGS), clock.nowIso());
     await cfg.run("llm.provider", JSON.stringify("disabled"), clock.nowIso());
     await cfg.run("ocr.enabled", JSON.stringify(true), clock.nowIso());
   });
@@ -158,9 +160,11 @@ async function insertProcedureBatch(
     const agg = aggs.get(p.code)!;
     return [
       p.code, dataset, p.title, p.structure, p.type, p.awardCriterion ?? null, p.instrument ?? null, agg.template.code, agg.programmed.cents,
-      p.documentsTracked === false ? 0 : 1, agg.costComponents.cents, p.cig ?? `CIG-DEMO-${p.code.replace("-", "")}`, p.cup ?? `CUP-DEMO-${p.code.replace("-", "")}`,
+      p.documentsTracked === false ? 0 : 1, Money.parse(p.anacFee ?? "0").cents, p.cig ?? `CIG-DEMO-${p.code.replace("-", "")}`, p.cup ?? `CUP-DEMO-${p.code.replace("-", "")}`,
       p.sourceKey ?? null, p.operation ?? null, projectFromOperation(p.operation)?.code ?? null, p.activityStart ?? null, p.activityEnd ?? null, p.sourceStatus ?? null, p.iterText ?? null, p.sourceRow ?? null,
-      p.operator ?? null, now,
+      p.operator ?? null, now, p.incentives ? Money.parse(p.incentives.base).cents : null, 2200,
+      p.incentives?.decision ?? null, agg.technicalIncentives.pctHundredths, agg.technicalIncentives.amount.cents,
+      p.incentives?.reduceAvailable ? 1 : 0,
     ];
   });
   const procIds = await batchInsertReturningIds(
@@ -169,7 +173,7 @@ async function insertProcedureBatch(
     [
       "code", "dataset", "title", "structure_code", "procedure_type", "award_criterion", "instrument", "template_code", "programmed_cents",
       "documents_tracked", "anac_fee_cents", "cig", "cup", "source_key", "operation", "project_code", "activity_start", "activity_end", "source_status", "iter_text",
-      "source_row", "operator_code", "created_at",
+      "source_row", "operator_code", "created_at", "base_cents", "vat_pct_hundredths", "incentives_decision", "incentive_pct_hundredths", "incentive_cents", "incentives_reduce_available",
     ],
     procRows,
   );
@@ -181,19 +185,25 @@ async function insertProcedureBatch(
   for (const p of procedures) {
     const pid = idByCode.get(p.code)!;
     const agg = aggs.get(p.code)!;
+    const incentiveSnapshot = [
+      p.incentives?.decision ?? null,
+      agg.technicalIncentives.pctHundredths,
+      agg.technicalIncentives.amount.cents,
+      p.incentives?.reduceAvailable ? 1 : 0,
+    ];
     if (p.baseline) {
-      versionRows.push([pid, 1, 1, p.baseline.label, "Programmazione importata (versione precedente del Piano)", agg.programmed.cents, actor, now, actor, now]);
-      versionRows.push([pid, 2, 0, p.currentLabel ?? "V2 – corrente", "Versione corrente del Piano (import)", agg.programmed.cents, actor, now, actor, now]);
+      versionRows.push([pid, 1, 1, p.baseline.label, "Programmazione importata (versione precedente del Piano)", agg.programmed.cents, actor, now, actor, now, ...incentiveSnapshot]);
+      versionRows.push([pid, 2, 0, p.currentLabel ?? "V2 – corrente", "Versione corrente del Piano (import)", agg.programmed.cents, actor, now, actor, now, ...incentiveSnapshot]);
       versionPlan.push({ code: p.code, hasBaseline: true });
     } else {
-      versionRows.push([pid, 1, 1, "V1 – baseline", "Programmazione importata", agg.programmed.cents, actor, now, actor, now]);
+      versionRows.push([pid, 1, 1, "V1 – baseline", "Programmazione importata", agg.programmed.cents, actor, now, actor, now, ...incentiveSnapshot]);
       versionPlan.push({ code: p.code, hasBaseline: false });
     }
   }
   const versionIds = await batchInsertReturningIds(
     db,
     "procedure_versions",
-    ["procedure_id", "version_no", "is_baseline", "label", "reason", "programmed_cents", "created_by", "created_at", "approved_by", "approved_at"],
+    ["procedure_id", "version_no", "is_baseline", "label", "reason", "programmed_cents", "created_by", "created_at", "approved_by", "approved_at", "incentives_decision", "incentive_pct_hundredths", "incentive_cents", "incentives_reduce_available"],
     versionRows,
   );
   const bidByCode = new Map<string, number | null>();
@@ -261,7 +271,7 @@ async function insertProcedureBatch(
 
     for (const x of p.payments) paymentRows.push([pid, x.sal, Money.parse(x.amount).cents, x.date, x.reference ?? null, actor, now]);
 
-    for (const m of p.movements) movementRows.push([pid, m.type, Money.parse(m.amount).cents, m.year, m.date, "seed", actor, now]);
+    for (const m of p.movements) movementRows.push([pid, m.type, Money.parse(m.amount).cents, m.year, m.date, m.reference ?? "seed", actor, now]);
 
     for (const d of p.documents) {
       const full = documentsRoot ? path.join(documentsRoot, d.file.replace(/^casi:/, "")) : null;

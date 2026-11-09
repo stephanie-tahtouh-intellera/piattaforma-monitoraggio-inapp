@@ -8,6 +8,7 @@ import type {
   ProcedureType,
   SalInstance,
   SalState,
+  TechnicalIncentives,
 } from "@/domain/model";
 import { Money } from "@/domain/money";
 import { templateByCode } from "../config/templates";
@@ -15,6 +16,28 @@ import type { Db } from "../db/connection";
 
 export const cents = (v: number | bigint | null | undefined): Money => Money.ofCents(BigInt(v ?? 0));
 const dt = (v: string | null | undefined): IsoDate | null => (v ? isoDate(v) : null);
+
+function mapIncentiveCalculation(
+  row: { proposed_value: string | null; locator: string | null; file_name: string } | undefined,
+): TechnicalIncentives["determinationCalculation"] {
+  if (!row?.proposed_value) return null;
+  return { amount: Money.parse(row.proposed_value), documentName: row.file_name, page: row.locator };
+}
+
+function incentiveCostComponent(p: ProcedureRow): Money {
+  const incentive = cents(p.incentive_cents);
+  return cents(p.anac_fee_cents).add(p.incentives_reduce_available === 1 ? incentive.neg() : incentive);
+}
+
+function technicalIncentives(p: ProcedureRow, determinationCalculation: TechnicalIncentives["determinationCalculation"]): TechnicalIncentives {
+  return {
+    decision: p.incentives_decision,
+    pctHundredths: p.incentives_decision === "YES" ? BigInt(p.incentive_pct_hundredths) : null,
+    amount: cents(p.incentive_cents),
+    reduceAvailable: p.incentives_reduce_available === 1,
+    determinationCalculation,
+  };
+}
 
 export interface ProcedureRow {
   id: number;
@@ -30,9 +53,10 @@ export interface ProcedureRow {
   anac_fee_cents: number;
   base_cents: number | null;
   vat_pct_hundredths: number;
-  has_dec: number;
   incentive_pct_hundredths: number;
   incentive_cents: number;
+  incentives_decision: "YES" | "NO" | "TO_VERIFY" | null;
+  incentives_reduce_available: number;
   documents_tracked: number;
   is_draft: number;
   cig: string | null;
@@ -174,17 +198,23 @@ export async function loadAggregate(db: Db, procedureId: number): Promise<Proced
   }[];
 
   const movementRows = (await db
-    .prepare("SELECT type, amount_cents, year, date FROM financial_movements WHERE procedure_id = ? ORDER BY id")
+    .prepare("SELECT type, amount_cents, year, date, reference FROM financial_movements WHERE procedure_id = ? ORDER BY id")
     .all(procedureId)) as {
     type: ProcedureAggregate["movements"][number]["type"];
     amount_cents: number;
     year: number;
     date: string;
+    reference: string | null;
   }[];
 
   const documentRows = (await db
     .prepare("SELECT doc_type, subtype FROM documents WHERE procedure_id = ? AND doc_type IS NOT NULL")
     .all(procedureId)) as { doc_type: string; subtype: string | null }[];
+  const incentiveCalc = (await db
+    .prepare(
+      "SELECT vi.proposed_value, vi.locator, d.file_name FROM validation_items vi JOIN documents d ON d.id = vi.document_id WHERE vi.procedure_id = ? AND vi.field = 'incentive.calculation' AND vi.status IN ('OPEN', 'APPROVED') AND d.doc_type = 'DETERMINA_INDIZIONE' ORDER BY vi.id DESC LIMIT 1",
+    )
+    .get(procedureId)) as { proposed_value: string | null; locator: string | null; file_name: string } | undefined;
 
   return {
     code: p.code,
@@ -197,8 +227,9 @@ export async function loadAggregate(db: Db, procedureId: number): Promise<Proced
     cancelled: p.cancelled_at !== null,
     closed: p.closed_at !== null,
     programmed: cents(p.programmed_cents),
-    // Tassa gara e incentivi sono costi fuori contratto inclusi nel programmato (DEC-035, DEC-111)
-    costComponents: cents(p.anac_fee_cents + p.incentive_cents),
+    // Include gli incentivi solo se presenti nei record legacy; le nuove bozze li registrano a zero.
+    costComponents: incentiveCostComponent(p),
+    technicalIncentives: technicalIncentives(p, mapIncentiveCalculation(incentiveCalc)),
     template,
     milestones,
     contract: c
@@ -217,7 +248,7 @@ export async function loadAggregate(db: Db, procedureId: number): Promise<Proced
     payments,
     forecastLines: lines,
     budget: budgetRows.map((r) => ({ year: r.year, source: r.source, amount: cents(r.amount_cents) })),
-    movements: movementRows.map((r) => ({ type: r.type, amount: cents(r.amount_cents), year: r.year, date: isoDate(r.date) })),
+    movements: movementRows.map((r) => ({ type: r.type, amount: cents(r.amount_cents), year: r.year, date: isoDate(r.date), reference: r.reference })),
     documentsTracked: p.documents_tracked === 1,
     documents: documentRows.map((r) => ({ type: r.doc_type, subtype: r.subtype })),
   };
@@ -239,7 +270,7 @@ function groupBy<T, K>(rows: T[], key: (r: T) => K): Map<K, T[]> {
 }
 
 /**
- * Come loadAggregate, ma per molte procedure in blocco (DEC-115): 11 query totali invece di
+ * Come loadAggregate, ma per molte procedure in blocco (DEC-115): query in blocco invece di
  * ~12 per procedura. Usato solo da runChecks (il ciclo che gira su tutte le procedure); gli altri
  * punti di lettura restano su loadAggregate, invariato, perché caricano una sola procedura alla
  * volta e non hanno bisogno di questa ottimizzazione.
@@ -351,13 +382,14 @@ export async function loadAggregatesBulk(db: Db, procedureIds: number[]): Promis
   const budgetByProcedure = groupBy(budgetRows, (r) => r.procedure_id);
 
   const movementRows = (await db
-    .prepare("SELECT procedure_id, type, amount_cents, year, date FROM financial_movements WHERE procedure_id = ANY(?) ORDER BY id")
+    .prepare("SELECT procedure_id, type, amount_cents, year, date, reference FROM financial_movements WHERE procedure_id = ANY(?) ORDER BY id")
     .all(procedureIds)) as {
     procedure_id: number;
     type: ProcedureAggregate["movements"][number]["type"];
     amount_cents: number;
     year: number;
     date: string;
+    reference: string | null;
   }[];
   const movementsByProcedure = groupBy(movementRows, (r) => r.procedure_id);
 
@@ -365,6 +397,13 @@ export async function loadAggregatesBulk(db: Db, procedureIds: number[]): Promis
     .prepare("SELECT procedure_id, doc_type, subtype FROM documents WHERE procedure_id = ANY(?) AND doc_type IS NOT NULL")
     .all(procedureIds)) as { procedure_id: number; doc_type: string; subtype: string | null }[];
   const documentsByProcedure = groupBy(documentRows, (r) => r.procedure_id);
+  const incentiveCalcRows = (await db
+    .prepare(
+      "SELECT vi.procedure_id, vi.proposed_value, vi.locator, d.file_name FROM validation_items vi JOIN documents d ON d.id = vi.document_id WHERE vi.procedure_id = ANY(?) AND vi.field = 'incentive.calculation' AND vi.status IN ('OPEN', 'APPROVED') AND d.doc_type = 'DETERMINA_INDIZIONE' ORDER BY vi.id",
+    )
+    .all(procedureIds)) as { procedure_id: number; proposed_value: string | null; locator: string | null; file_name: string }[];
+  const incentiveCalcByProcedure = new Map<number, (typeof incentiveCalcRows)[number]>();
+  for (const row of incentiveCalcRows) incentiveCalcByProcedure.set(row.procedure_id, row);
 
   for (const pid of procedureIds) {
     const p = byId.get(pid);
@@ -431,7 +470,8 @@ export async function loadAggregatesBulk(db: Db, procedureIds: number[]): Promis
       cancelled: p.cancelled_at !== null,
       closed: p.closed_at !== null,
       programmed: cents(p.programmed_cents),
-      costComponents: cents(p.anac_fee_cents + p.incentive_cents),
+      costComponents: incentiveCostComponent(p),
+      technicalIncentives: technicalIncentives(p, mapIncentiveCalculation(incentiveCalcByProcedure.get(pid))),
       template,
       milestones,
       contract: c
@@ -450,7 +490,7 @@ export async function loadAggregatesBulk(db: Db, procedureIds: number[]): Promis
       payments,
       forecastLines: lines,
       budget: (budgetByProcedure.get(pid) ?? []).map((r) => ({ year: r.year, source: r.source, amount: cents(r.amount_cents) })),
-      movements: (movementsByProcedure.get(pid) ?? []).map((r) => ({ type: r.type, amount: cents(r.amount_cents), year: r.year, date: isoDate(r.date) })),
+      movements: (movementsByProcedure.get(pid) ?? []).map((r) => ({ type: r.type, amount: cents(r.amount_cents), year: r.year, date: isoDate(r.date), reference: r.reference })),
       documentsTracked: p.documents_tracked === 1,
       documents: (documentsByProcedure.get(pid) ?? []).map((r) => ({ type: r.doc_type, subtype: r.subtype })),
     });

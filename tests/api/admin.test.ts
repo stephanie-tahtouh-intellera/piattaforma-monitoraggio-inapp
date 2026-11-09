@@ -35,35 +35,66 @@ describe("[US-013][US-033] bozza e consegna memoria", () => {
   });
 });
 
-describe("[DEC-111] quadro economico della bozza", () => {
+describe("quadro economico della bozza", () => {
   test("il programmato è calcolato: contratto + tassa gara + incentivi; il riparto deve coincidere", async () => {
     const s = await as("struttura.si");
-    const frame = { base: "100000.00", anacFee: "250.00", hasDec: true };
+    const frame = { base: "100000.00", anacFee: "250.00", incentivesDecision: "YES" as const, incentivePct: 200n };
     // totale = 122.000 + 250 + 2.000 = 124.250
     await expect(createDraft(db, s, { title: "Servizio con quadro economico", type: "DIRECT_AWARD_MEPA", frame, annual: { "2026": "100000.00" }, memoryDue: "2026-11-02" })).rejects.toThrow(/124250.00/);
     const { code } = await createDraft(db, s, { title: "Servizio con quadro economico", type: "DIRECT_AWARD_MEPA", frame, annual: { "2026": "24250.00", "2027": "100000.00" }, memoryDue: "2026-11-02" });
     const d = await procedureDetail(db, s, code);
     expect(d.evaluation.programmed).toBe("124250.00");
-    expect(d.procedure.economicFrame).toMatchObject({ base: "100000.00", gross: "122000.00", anac_fee: "250.00", incentive: "2000.00", total: "124250.00", has_dec: true });
-    // tassa e incentivi sono costi fuori contratto inclusi nel programmato (DEC-035)
+    expect(d.procedure.economicFrame).toMatchObject({ base: "100000.00", gross: "122000.00", anac_fee: "250.00", incentive: "2000.00", incentives_decision: "YES", total: "124250.00" });
+    expect(d.procedure.economicFrame).not.toHaveProperty("has_dec");
     const row = (await db.prepare("SELECT anac_fee_cents, incentive_cents, base_cents FROM procedures WHERE code = ?").get(code)) as { anac_fee_cents: number; incentive_cents: number; base_cents: number };
     expect(row).toEqual({ anac_fee_cents: 25000, incentive_cents: 200000, base_cents: 10000000 });
   });
 
-  test("senza DEC niente incentivi; il percorso con importo programmato resta valido", async () => {
+  test("No non calcola incentivi; il percorso con importo programmato resta valido", async () => {
     const s = await as("struttura.si");
-    const { code } = await createDraft(db, s, { title: "Servizio senza DEC", type: "DIRECT_AWARD_MEPA", frame: { base: "10000.00", hasDec: false }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" });
-    expect((await procedureDetail(db, s, code)).procedure.economicFrame).toMatchObject({ incentive: "0.00", total: "12200.00", has_dec: false });
+    const { code } = await createDraft(db, s, { title: "Servizio senza incentivi", type: "DIRECT_AWARD_MEPA", frame: { base: "10000.00", incentivesDecision: "NO" }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" });
+    expect((await procedureDetail(db, s, code)).procedure.economicFrame).toMatchObject({ incentive: "0.00", total: "12200.00", incentives_decision: "NO" });
     const legacy = await createDraft(db, s, { title: "Bozza senza quadro", type: "DIRECT_AWARD_MEPA", programmed: "5000.00", annual: { "2026": "5000.00" }, memoryDue: "2026-11-02" });
     expect((await procedureDetail(db, s, legacy.code)).procedure.economicFrame).toBeNull();
     await expect(createDraft(db, s, { title: "Bozza vuota", type: "OPEN", annual: { "2026": "1.00" }, memoryDue: "2026-11-02" })).rejects.toThrow(/base di gara/);
+  });
+
+  test("la consegna congela la scelta nella baseline e l'audit conserva autore, data e valore precedente", async () => {
+    const s = await as("struttura.si");
+    const { code } = await createDraft(db, s, {
+      title: "Servizio con incentivi auditati",
+      type: "DIRECT_AWARD_MEPA",
+      frame: { base: "10000.00", incentivesDecision: "YES", incentivePct: 150n },
+      annual: { "2026": "12350.00" },
+      memoryDue: "2026-11-02",
+    });
+    const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(code)) as { id: number }).id;
+    const pdf = readFileSync(path.join(process.env.APP_ROOT ?? process.cwd(), "seed", "scenarios", "documents", "P-001", "memoria_bozza.pdf"));
+    await storeUpload(db, s.login, pid, code, "capitolato.pdf", pdf, "DOCUMENTO_TECNICO");
+    await submitMemory(db, s, code, "2026-10-01", "Baseline incentivi");
+    const baseline = (await db.prepare("SELECT incentives_decision, incentive_pct_hundredths, incentive_cents FROM procedure_versions WHERE procedure_id = ? AND is_baseline = 1").get(pid)) as {
+      incentives_decision: string;
+      incentive_pct_hundredths: number;
+      incentive_cents: number;
+    };
+    expect(baseline).toEqual({ incentives_decision: "YES", incentive_pct_hundredths: 150, incentive_cents: 15000 });
+    const auditEvent = (await db.prepare("SELECT actor, at, before_json, after_json FROM audit_events WHERE procedure_code = ? AND action = 'INCENTIVES_SET'").get(code)) as {
+      actor: string;
+      at: string;
+      before_json: string;
+      after_json: string;
+    };
+    expect(auditEvent.actor).toBe(s.login);
+    expect(auditEvent.at).toBeTruthy();
+    expect(JSON.parse(auditEvent.before_json)).toBeNull();
+    expect(JSON.parse(auditEvent.after_json)).toMatchObject({ decision: "YES", percentage: "150", amount: "150.00" });
   });
 });
 
 describe("[DEC-111] capitolato insieme alla memoria", () => {
   test("con il quadro economico la memoria non si consegna senza capitolato; senza quadro il vincolo non c'è", async () => {
     const s = await as("struttura.si");
-    const { code } = await createDraft(db, s, { title: "Servizio con capitolato", type: "DIRECT_AWARD_MEPA", frame: { base: "10000.00", hasDec: false }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" });
+    const { code } = await createDraft(db, s, { title: "Servizio con capitolato", type: "DIRECT_AWARD_MEPA", frame: { base: "10000.00", incentivesDecision: "NO" }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" });
     await expect(submitMemory(db, s, code, "2026-10-01", null)).rejects.toThrow(/capitolato/);
     const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(code)) as { id: number }).id;
     const pdf = readFileSync(path.join(process.env.APP_ROOT ?? process.cwd(), "seed", "scenarios", "documents", "P-001", "memoria_bozza.pdf"));
@@ -107,7 +138,7 @@ describe("[DEC-111] ogni gara è collegata a un progetto", () => {
   test("senza catalogo il progetto non è richiesto; con il catalogo è obbligatorio, deve esistere e filtra il portafoglio", async () => {
     const s = await as("struttura.si");
     const admin = await as("admin");
-    const base = { title: "Servizio con progetto", type: "DIRECT_AWARD_MEPA" as const, frame: { base: "10000.00", hasDec: false }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" };
+    const base = { title: "Servizio con progetto", type: "DIRECT_AWARD_MEPA" as const, frame: { base: "10000.00", incentivesDecision: "NO" as const }, annual: { "2026": "12200.00" }, memoryDue: "2026-11-02" };
     await createDraft(db, s, base);
     await createProject(db, admin, "op01-a1", "Operazione 1 – Attività 1");
     await expect(createDraft(db, s, base)).rejects.toThrow(/progetto/);

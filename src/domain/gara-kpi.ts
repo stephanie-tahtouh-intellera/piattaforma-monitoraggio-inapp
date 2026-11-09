@@ -10,6 +10,7 @@ export interface GaraKpiInput {
   /** Base di gara IVA esclusa inserita nella bozza; assente per le procedure importate dal workbook. */
   base: Money | null;
   anacFee: Money;
+  /** Incentivi presenti nel quadro economico; i record storici restano invariati. */
   incentive: Money;
   /** Aliquota IVA in centesimi di punto (2200 = 22,00 %). */
   vatPctHundredths: bigint;
@@ -29,7 +30,7 @@ export interface GaraKpi {
   ribassoHundredths: bigint | null;
 }
 
-/** Base di gara ricavata dal programmato: (programmato − tassa gara − incentivi) / (1 + IVA), arrotondata ai centesimi. */
+/** Base ricavata dai componenti fuori contratto: (programmato − tassa − incentivi) / (1 + IVA). */
 export function derivedBase(programmed: Money, anacFee: Money, incentive: Money, vatPctHundredths: bigint): Money {
   const gross = programmed.cents - anacFee.cents - incentive.cents;
   return Money.ofCents(divRoundHalfUp(gross * 10000n, 10000n + vatPctHundredths));

@@ -1,15 +1,12 @@
 import { Money } from "./money";
 
 /**
- * Quadro economico della procedura, calcolato dalla Struttura prima della memoria (DEC-111).
- * Solo aritmetica deterministica su `Money`; aliquote e percentuali sono parametri `DA VALIDARE`.
- * Percentuali in centesimi di punto (22,00 % = 2200n, 2,00 % = 200n).
+ * Quadro economico calcolato deterministicamente. Percentuali espresse in centesimi di punto.
  */
 export const DEFAULT_VAT_PCT = 2200n;
-/** Tetto degli incentivi per funzioni tecniche sulla base di gara (D.Lgs. 36/2023, art. 45, DA VALIDARE). */
-export const DEFAULT_INCENTIVE_PCT = 200n;
-/** Quota degli incentivi destinata al personale; il resto va al fondo per l'innovazione (DA VALIDARE). */
-export const INCENTIVE_PERSONNEL_SHARE_PCT = 8000n;
+export const MAX_INCENTIVE_PCT = 200n;
+
+export type IncentivesDecision = "YES" | "NO" | "TO_VERIFY";
 
 export interface EconomicFrameInput {
   /** Base di gara senza IVA. */
@@ -17,9 +14,9 @@ export interface EconomicFrameInput {
   vatPct?: bigint;
   /** Contributo ANAC a carico della stazione appaltante (importo fisso). */
   anacFee: Money;
-  /** Presenza del DEC / direttore dell'esecuzione: senza, non maturano incentivi. */
-  hasDec: boolean;
-  incentivePct?: bigint;
+  incentivesDecision: IncentivesDecision;
+  incentivePct?: bigint | null;
+  incentivesReduceAvailable?: boolean;
 }
 
 export interface EconomicFrame {
@@ -29,40 +26,39 @@ export interface EconomicFrame {
   /** Base + IVA: l'importo del contratto. */
   gross: Money;
   anacFee: Money;
-  hasDec: boolean;
-  incentivePct: bigint;
+  incentivesDecision: IncentivesDecision;
+  incentivePct: bigint | null;
   incentive: Money;
-  incentivePersonnel: Money;
-  incentiveFund: Money;
-  /** Importo a disposizione della struttura: contratto + tassa gara + incentivi. È il «programmato». */
+  incentivesReduceAvailable: boolean;
   total: Money;
 }
 
 export function computeEconomicFrame(i: EconomicFrameInput): EconomicFrame {
   const vatPct = i.vatPct ?? DEFAULT_VAT_PCT;
-  const incentivePct = i.incentivePct ?? DEFAULT_INCENTIVE_PCT;
+  const incentivePct = i.incentivesDecision === "YES" ? (i.incentivePct ?? null) : null;
   if (i.base.isNegative() || i.anacFee.isNegative()) throw new RangeError("Gli importi non possono essere negativi");
-  if (vatPct < 0n || incentivePct < 0n) throw new RangeError("Le percentuali non possono essere negative");
+  if (vatPct < 0n || (incentivePct !== null && incentivePct < 0n)) throw new RangeError("Le percentuali non possono essere negative");
   const vat = i.base.percent(vatPct);
   const gross = i.base.add(vat);
-  const incentive = i.hasDec ? i.base.percent(incentivePct) : Money.ZERO;
-  const incentivePersonnel = incentive.percent(INCENTIVE_PERSONNEL_SHARE_PCT);
+  const incentive = incentivePct === null ? Money.ZERO : i.base.percent(incentivePct);
+  const incentivesReduceAvailable = i.incentivesReduceAvailable ?? false;
+  const total = gross.add(i.anacFee).add(incentivesReduceAvailable ? incentive.neg() : incentive);
+  if (total.isNegative()) throw new RangeError("Gli incentivi superano l'importo a disposizione della struttura");
   return {
     base: i.base,
     vatPct,
     vat,
     gross,
     anacFee: i.anacFee,
-    hasDec: i.hasDec,
+    incentivesDecision: i.incentivesDecision,
     incentivePct,
     incentive,
-    incentivePersonnel,
-    incentiveFund: incentive.sub(incentivePersonnel),
-    total: gross.add(i.anacFee).add(incentive),
+    incentivesReduceAvailable,
+    total,
   };
 }
 
-/** Rappresentazione per API e UI: importi come stringhe "47600.00", percentuali come "22.00". */
+/** Rappresentazione API: importi come stringhe "47600.00", percentuali come "22.00". */
 export function frameToJson(f: EconomicFrame) {
   const pct = (p: bigint) => `${p / 100n}.${(p % 100n).toString().padStart(2, "0")}`;
   return {
@@ -71,11 +67,11 @@ export function frameToJson(f: EconomicFrame) {
     vat: f.vat.toString(),
     gross: f.gross.toString(),
     anac_fee: f.anacFee.toString(),
-    has_dec: f.hasDec,
-    incentive_pct: pct(f.incentivePct),
+    incentives_decision: f.incentivesDecision,
+    incentive_pct: f.incentivePct === null ? "" : pct(f.incentivePct),
     incentive: f.incentive.toString(),
-    incentive_personnel: f.incentivePersonnel.toString(),
-    incentive_fund: f.incentiveFund.toString(),
+    incentives_reduce_available: f.incentivesReduceAvailable,
+    incentive_over_cap: f.incentivePct !== null && f.incentivePct > MAX_INCENTIVE_PCT,
     total: f.total.toString(),
   };
 }

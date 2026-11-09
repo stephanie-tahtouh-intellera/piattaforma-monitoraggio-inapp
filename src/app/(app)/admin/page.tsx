@@ -5,6 +5,7 @@ import { can } from "@/server/authz";
 import { systemStatus } from "@/server/queries";
 import { engineSettings } from "@/application/run-checks";
 import { executionModuleEnabled } from "@/application/modules";
+import { economicSettings } from "@/application/economic-settings";
 import Link from "next/link";
 import { db, pageActor } from "@/server/page";
 import { ActionForm } from "@/ui/action-form";
@@ -23,6 +24,7 @@ export default async function AdminPage() {
   const projects = (await database.prepare("SELECT code, name FROM projects ORDER BY code").all()) as { code: string; name: string }[];
   const assistantProvider = await memoryAssistantProvider(database);
   const es = await engineSettings(database);
+  const eco = await economicSettings(database);
   const extra = ((await database.prepare("SELECT value_json FROM config WHERE key='calendar.extra_holidays'").get()) as { value_json: string } | undefined)?.value_json;
   const module2Enabled = await executionModuleEnabled(database);
   return (
@@ -64,6 +66,26 @@ export default async function AdminPage() {
             submitLabel="Salva"
             successMessage="Configurazione dei moduli salvata e auditata."
             fields={[{ name: "execution", label: "Mostra il Modulo 2 (anteprima)", type: "checkbox", defaultValue: String(module2Enabled) }]}
+          />
+        </section>
+        <section className="card stack">
+          <h2>Quadro economico degli incentivi</h2>
+          <p className="muted">Scelta configurabile e da validare con INAPP. Default: gli incentivi si aggiungono a contratto IVA inclusa e tassa gara, mantenendo la formula già usata dalla demo. Selezionando “Sì”, il loro importo viene sottratto dalla disponibilità e dal riparto richiesto.</p>
+          <ActionForm
+            endpoint="/api/admin/config/economic"
+            method="PUT"
+            submitLabel="Salva"
+            successMessage="Configurazione economica salvata e auditata."
+            fields={[{
+              name: "incentivesReduceAvailable",
+              label: "Gli incentivi riducono l'importo a disposizione della struttura?",
+              type: "select",
+              defaultValue: String(eco.incentivesReduceAvailable),
+              options: [
+                { value: "false", label: "No — si aggiungono (default)" },
+                { value: "true", label: "Sì — si sottraggono" },
+              ],
+            }]}
           />
         </section>
         <section className="card stack" data-tour="assistente-memoria">

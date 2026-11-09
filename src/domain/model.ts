@@ -1,5 +1,6 @@
 import type { IsoDate } from "./dates";
 import type { Money } from "./money";
+import type { IncentivesDecision } from "./economic-frame";
 
 export type Role =
   | "STRUCTURE_USER"
@@ -207,6 +208,21 @@ export interface Movement {
   amount: Money;
   year: number;
   date: IsoDate;
+  reference: string | null;
+}
+
+export interface DeterminationIncentiveCalculation {
+  amount: Money;
+  documentName: string;
+  page: string | null;
+}
+
+export interface TechnicalIncentives {
+  decision: IncentivesDecision | null;
+  pctHundredths: bigint | null;
+  amount: Money;
+  reduceAvailable: boolean;
+  determinationCalculation: DeterminationIncentiveCalculation | null;
 }
 
 export interface ProcedureDocument {
@@ -227,8 +243,9 @@ export interface ProcedureAggregate {
   cancelled: boolean;
   closed: boolean;
   programmed: Money;
-  /** Componenti di costo fuori contratto incluse negli impegni (contributo ANAC, DEC-035). */
+  /** Componenti del quadro economico fuori contratto (tassa gara e incentivi, secondo configurazione). */
   costComponents: Money;
+  technicalIncentives: TechnicalIncentives;
   template: ProcessTemplate;
   milestones: MilestoneInstance[];
   contract: ContractInfo | null;

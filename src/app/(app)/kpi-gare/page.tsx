@@ -94,7 +94,7 @@ export default async function GareKpiPage({ searchParams }: { searchParams: Prom
         </table>
       </div>
       <p className="small muted">
-        Ribasso = (base di gara − aggiudicato) / base di gara. Un valore negativo indica un aggiudicato superiore alla base. Il programmato comprende contratto IVA inclusa, tassa gara e incentivi (DEC-111).
+        Ribasso = (base di gara − aggiudicato) / base di gara. Un valore negativo indica un aggiudicato superiore alla base. Il programmato comprende contratto IVA inclusa, tassa gara e incentivi secondo la configurazione della procedura; i valori storici restano invariati.
       </p>
     </>
   );

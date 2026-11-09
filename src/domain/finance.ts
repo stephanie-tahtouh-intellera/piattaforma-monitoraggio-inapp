@@ -4,6 +4,10 @@ import type { ForecastLine, ProcedureAggregate } from "./model";
 
 export type YearMap = Map<number, Money>;
 
+export function annualAllocationMatches(amounts: Iterable<Money>, expected: Money): boolean {
+  return Money.sum(amounts).eq(expected);
+}
+
 function addTo(map: YearMap, year: number, m: Money): void {
   map.set(year, (map.get(year) ?? Money.ZERO).add(m));
 }

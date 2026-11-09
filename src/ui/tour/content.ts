@@ -69,8 +69,8 @@ const PROCESS: Tour = {
     {
       path: "/procedure/nuova", target: "main section.card", role: "STRUCTURE_USER", stage: 0,
       title: "0 · Piano: creazione della bozza",
-      body: "Si parte dalla bozza: la Struttura inserisce oggetto, tipologia, data obiettivo della memoria e quadro economico (base di gara, IVA, tassa gara, riparto per annualità). La bozza non genera date effettive: la baseline si congela solo alla consegna della memoria.",
-      tryIt: "Scegli il progetto (Operazione / Attività) e compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
+      body: "Si parte dalla bozza: la Struttura inserisce oggetto, tipologia, data obiettivo della memoria e quadro economico (base di gara, IVA, tassa gara e riparto per annualità). Sotto «Tassa gara» indica se sono previsti incentivi per funzioni tecniche: Sì, No o Da verificare; con Sì inserisce la percentuale, mentre l'importo è calcolato sulla base di gara al netto dell'IVA. Il riparto deve coincidere con l'importo a disposizione della struttura. La baseline si congela solo alla consegna della memoria.",
+      tryIt: "Scegli il progetto (Operazione / Attività), compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, incentivi «Da verificare», riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
       can: ["Creare altre bozze con «Nuova procedura in bozza» (in alto a destra, anche da Dashboard e Portafoglio)"],
     },
     {
@@ -131,7 +131,7 @@ const PROCESS: Tour = {
       path: ITER, target: PASSO, role: "PROCUREMENT_OFFICER", stage: 2,
       title: "2 · Determina di indizione ◆",
       expect: "INDICTION",
-      body: "È una data chiave: con la determina si indice la procedura, si acquisisce il CIG, si nomina il RUP e si autorizzano gli impegni. Le date chiave hanno alert e riprogrammazione dedicati.",
+      body: "È una data chiave: con la determina si indice la procedura, si acquisisce il CIG, si nomina il RUP e si autorizzano gli impegni. Il sistema controlla gli incentivi dichiarati nella memoria: se sono previsti, segnala il calcolo assente o l'incoerenza con prenotazione/impegno; se sono «Da verificare», mostra una segnalazione non bloccante. Una proposta estratta dalla determina riporta documento e pagina e va verificata. Le date chiave hanno alert e riprogrammazione dedicati.",
       tryIt: "Registra la determina con nota «Det. n. 312 del 01/10/2026».",
     },
     {
@@ -209,7 +209,7 @@ const ROLE_TOURS: Tour[] = [
     steps: [
       { path: "/", target: "section[aria-label='Indicatori principali']", title: "La tua dashboard", body: "Vedi solo le procedure della tua struttura: indicatori e totali sono calcolati sul tuo perimetro. Ogni indicatore apre il portafoglio filtrato.", can: ["Leggere procedure monitorate, alert critici e importo a rischio"] },
       { path: "/portafoglio", target: ".table-wrap", title: "Le pratiche della struttura", body: "Quattro procedure in fasi diverse: BZ-001 (bozza), CD-01 (memoria da consegnare), CD-02 (presa in carico dell'Ufficio Gare), CD-07 (in attesa della controfirma del fornitore). La colonna Owner indica a chi tocca.", can: ["Filtrare, ordinare, esportare", "Creare una nuova procedura in bozza"] },
-      { path: "/procedure/nuova", target: "main form", title: "Inserimento nel piano", body: "Fase 0 dello schema: oggetto, tipologia, quadro economico (base di gara, IVA, tassa gara, incentivi se c'è il DEC), riparto per annualità e data obiettivo della memoria. Il riquadro a destra calcola l'importo a disposizione della struttura prima della memoria; il sistema sceglie il modello di procedura e calcola le date dei passi.", tryIt: "Crea «Servizi di hosting del portale», affidamento diretto MePA, base di gara 40.000,00 €, nessun DEC: il totale è 48.800,00 €, da ripartire sul 2027; memoria entro il 30/10/2026." },
+      { path: "/procedure/nuova", target: "main form", title: "Inserimento nel piano", body: "Fase 0 dello schema: oggetto, tipologia, quadro economico (base di gara, IVA e tassa gara), riparto per annualità e data obiettivo della memoria. Il riquadro a destra calcola l'importo a disposizione della struttura prima della memoria; il sistema sceglie il modello di procedura e calcola le date dei passi.", tryIt: "Crea «Servizi di hosting del portale», affidamento diretto MePA, base di gara 40.000,00 € e tassa gara pari a zero: il totale è 48.800,00 €, da ripartire sul 2027; memoria entro il 30/10/2026." },
       { path: "/procedure/CD-01?tab=iter", expect: "MEMORY_SUBMISSION", target: PASSO, title: "Memoria in scadenza", body: "CD-01 ha la memoria prevista per il 07/10/2026: mancano meno di 10 giorni, la procedura è ambra e hai ricevuto il reminder. Il passo è nella tua corsia.", tryIt: "Registra la consegna della memoria al 01/10/2026: il reminder si chiude e la pratica passa all'Ufficio Gare." },
       { path: "/procedure/CD-01?tab=documents", target: "[data-tour='upload']", title: "Fascicolo documentale", body: "Carica memoria e documento tecnico (PDF, Office o ZIP, controllati per tipo e contenuto). Il testo è estratto, anche con OCR, e i dati riconosciuti vanno in validazione.", can: ["Caricare documenti e archivi ZIP", "Aprire i documenti"] },
       { path: "/procedure/CD-07?tab=iter", target: ".iter-board", title: "Seguire una pratica fino alla stipula", body: "CD-07 è quasi alla fine del Modulo 1: aggiudicata, garanzia acquisita, ora tocca al fornitore controfirmare. La vista a corsie mostra chi ha fatto cosa e quando.", can: ["Consultare l'avanzamento senza poter registrare i passi delle altre corsie"] },
@@ -337,7 +337,7 @@ const HELP: Record<string, PageHelp> = {
     sections: [
       ["Base di gara", "IVA esclusa. Per le bozze è quella inserita nel quadro economico; per le procedure importate è ricavata dal programmato (segnata con ≈) perché il workbook non la riporta."],
       ["Aggiudicato e ribasso", "L'aggiudicato è l'importo netto del contratto; il ribasso è (base − aggiudicato) / base, calcolato dal sistema. Il totale è ponderato sulle sole gare aggiudicate."],
-      ["Programmato", "È l'importo a disposizione della struttura: contratto IVA inclusa, tassa gara e incentivi."],
+      ["Programmato", "Per le nuove bozze è l'importo a disposizione della struttura: contratto IVA inclusa e tassa gara. I valori già registrati non vengono modificati."],
     ],
     actions: { ALL: ["Filtrare per progetto e fase"] },
   },
@@ -371,7 +371,7 @@ const HELP: Record<string, PageHelp> = {
   draft: {
     title: "Nuova procedura in bozza",
     summary: "Fase 0 dello schema: inserimento nel piano di programmazione da parte della Struttura.",
-    sections: [["Dati della bozza", "Oggetto, tipologia, criterio, data obiettivo della memoria."], ["Quadro economico", "Base di gara, IVA, tassa gara e, se è previsto il DEC, incentivi per funzioni tecniche: il totale è calcolato dal sistema e va ripartito per annualità."]],
+    sections: [["Dati della bozza", "Oggetto, tipologia, criterio, data obiettivo della memoria."], ["Quadro economico", "Base di gara, IVA e tassa gara: il totale è calcolato dal sistema e va ripartito per annualità."]],
     actions: { STRUCTURE_USER: ["Creare la bozza"], ADMIN: ["Creare la bozza"] },
   },
   "procedure.overview": {

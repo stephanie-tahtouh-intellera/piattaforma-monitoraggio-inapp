@@ -23,7 +23,7 @@ beforeAll(async () => {
 describe("[DEC-105][DEC-107] casi dimostrativi del Modulo 1: ogni corsia ha un passo da svolgere", () => {
   test("casi caricati accanto al portafoglio reale, con i modelli del Modulo 1 e il Modulo 2 nascosto", async () => {
     const rows = (await db.prepare("SELECT code, template_code FROM procedures WHERE dataset = 'casi-demo' ORDER BY code").all()) as { code: string; template_code: string }[];
-    expect(rows.map((r) => r.code)).toEqual(["BZ-001", "CD-01", "CD-02", "CD-03", "CD-04", "CD-05", "CD-06", "CD-07", "CD-08"]);
+    expect(rows.map((r) => r.code)).toEqual(["BZ-001", "CD-01", "CD-02", "CD-03", "CD-04", "CD-05", "CD-06", "CD-07", "CD-08", "INCENTIVI-SENZA-CALCOLO", "S18-DEMO"]);
     expect(rows.every((r) => r.template_code.startsWith("M1-"))).toBe(true);
     const real = (await db.prepare("SELECT COUNT(*) n, SUM(CASE WHEN template_code LIKE 'M1-%' THEN 1 ELSE 0 END) m1 FROM procedures WHERE dataset = 'inapp'").get()) as { n: number; m1: number };
     expect(real).toEqual({ n: 82, m1: 82 });

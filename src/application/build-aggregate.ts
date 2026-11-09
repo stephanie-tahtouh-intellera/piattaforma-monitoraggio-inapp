@@ -2,6 +2,7 @@ import type { SeedProcedure } from "@/contracts/seed";
 import { addDays, isoDate, type BusinessCalendar, type IsoDate } from "@/domain/dates";
 import { selectTemplate } from "@/domain/milestones";
 import type { ForecastLine, MilestoneInstance, ProcedureAggregate, ProcessTemplate, SalInstance, TemplateFamily } from "@/domain/model";
+import { computeEconomicFrame } from "@/domain/economic-frame";
 import { Money, parsePercent, splitByPercent } from "@/domain/money";
 
 const d = (s: string | undefined | null): IsoDate | null => (s ? isoDate(s) : null);
@@ -18,6 +19,21 @@ export function buildAggregateFromSeed(
   family: TemplateFamily = "v1",
 ): ProcedureAggregate {
   const template = selectTemplate(templates, p.type, p.awardCriterion ?? null, p.instrument ?? null, family);
+  const incentivePct = p.incentives?.pct ? parsePercent(p.incentives.pct) : null;
+  if (p.incentives?.decision === "YES" && incentivePct === null) throw new RangeError(`Percentuale incentivi mancante per ${p.code}`);
+  const frame = p.incentives
+    ? computeEconomicFrame({
+        base: Money.parse(p.incentives.base),
+        anacFee: Money.parse(p.anacFee ?? "0"),
+        incentivesDecision: p.incentives.decision,
+        incentivePct,
+        incentivesReduceAvailable: p.incentives.reduceAvailable,
+      })
+    : null;
+  const programmed = frame?.total ?? Money.parse(p.programmed);
+  if (frame && !programmed.eq(Money.parse(p.programmed))) throw new RangeError(`Il programmato seed non coincide con il quadro economico per ${p.code}`);
+  const determination = p.extractionProposals.find((x) => x.field === "incentive.calculation");
+  const determinationDoc = determination ? p.documents.find((x) => x.file === determination.document && x.type === "DETERMINA_INDIZIONE") : undefined;
   const milestones: MilestoneInstance[] = [];
   let prev: IsoDate | null = null;
   for (const def of template.milestones) {
@@ -84,8 +100,23 @@ export function buildAggregateFromSeed(
     draft: false,
     cancelled: p.events.some((e) => e.type === "CANCEL"),
     closed: p.events.some((e) => e.type === "CLOSE"),
-    programmed: Money.parse(p.programmed),
-    costComponents: p.anacFee ? Money.parse(p.anacFee) : Money.ZERO,
+    programmed,
+    costComponents: frame
+      ? frame.total.sub(frame.gross)
+      : p.anacFee ? Money.parse(p.anacFee) : Money.ZERO,
+    technicalIncentives: {
+      decision: p.incentives?.decision ?? null,
+      pctHundredths: incentivePct,
+      amount: frame?.incentive ?? Money.ZERO,
+      reduceAvailable: p.incentives?.reduceAvailable ?? false,
+      determinationCalculation: determination && determinationDoc
+        ? {
+            amount: Money.parse(determination.value),
+            documentName: determinationDoc.title ?? determinationDoc.file.split("/").at(-1) ?? determinationDoc.file,
+            page: determination.page ? `pag. ${determination.page}` : null,
+          }
+        : null,
+    },
     template,
     milestones,
     contract: p.contract
@@ -104,7 +135,7 @@ export function buildAggregateFromSeed(
     payments,
     forecastLines: lines,
     budget: p.budget.map((b) => ({ year: b.year, source: b.source ?? "ORDINARIO_DEMO", amount: Money.parse(b.amount) })),
-    movements: p.movements.map((m) => ({ type: m.type, amount: Money.parse(m.amount), year: m.year, date: isoDate(m.date) })),
+    movements: p.movements.map((m) => ({ type: m.type, amount: Money.parse(m.amount), year: m.year, date: isoDate(m.date), reference: m.reference ?? null })),
     documents: p.documents.map((x) => ({ type: x.type, subtype: x.subtype ?? null })),
     documentsTracked: p.documentsTracked ?? true,
   };

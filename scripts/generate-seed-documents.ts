@@ -1,6 +1,6 @@
 /* Genera una volta i PDF sintetici (DEC-070): dataset scenarios, oppure i casi dimostrativi con l'argomento "casi" (DEC-105). Metadati fissi, hash in SHA256SUMS. */
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 
@@ -45,14 +45,23 @@ const DOCS: Doc[] = [
 /** Documenti dei casi dimostrativi (DEC-105/107): uno per ogni atto citato in seed/inapp/casi-demo.json. */
 function casiDocs(): Doc[] {
   const ds = JSON.parse(readFileSync(path.resolve(__dirname, "..", "seed", "inapp", "casi-demo.json"), "utf8")) as {
-    procedures: { code: string; title: string; programmed: string; operator?: string; documents: { type: string; file: string; title?: string }[] }[];
+    procedures: {
+      code: string;
+      title: string;
+      programmed: string;
+      cig?: string;
+      operator?: string;
+      extractionProposals?: { field: string; excerpt: string }[];
+      documents: { type: string; file: string; title?: string }[];
+    }[];
   };
   const eur = (v: string) => `€ ${Number(v.split(".")[0]).toLocaleString("it-IT")},${v.split(".")[1] ?? "00"}`;
   const ops: Record<string, string> = { "SUP-ALFA": "Fornitore Demo Alfa S.r.l.", "SUP-BETA": "Fornitore Demo Beta S.r.l.", "SUP-EPSILON": "Fornitore Demo Epsilon S.p.A." };
   const out: Doc[] = [];
   for (const p of ds.procedures) {
-    const cig = `CIG-DEMO-${p.code.replace("-", "")}`;
+    const cig = p.cig ?? `CIG-DEMO-${p.code.replace("-", "")}`;
     const op = p.operator ? (ops[p.operator] ?? p.operator) : "operatore da individuare";
+    const incentiveCalculation = p.extractionProposals?.find((x) => x.field === "incentive.calculation")?.excerpt;
     for (const d of p.documents) {
       const file = d.file.replace(/^casi:/, "");
       const head = `Oggetto: ${p.title} - ${cig}`;
@@ -60,7 +69,7 @@ function casiDocs(): Doc[] {
         MEMORIA: [head, "1. Fabbisogno e obiettivi dell'intervento.", `5. Stima dei costi: ${eur(p.programmed)} IVA inclusa.`, "7. Fonte di finanziamento: PN Giovani, Donne e Lavoro (demo)."],
         DOCUMENTO_TECNICO: [head, "Attività, deliverable, durata e requisiti tecnici del servizio.", "Criteri di verifica della regolare esecuzione."],
         DOCUMENTI_OPERATORE: [head, `Operatore: ${op}.`, "DGUE, dichiarazioni sui requisiti generali e speciali, visura camerale, DURC."],
-        DETERMINA_INDIZIONE: [head, "DETERMINA di indire la procedura, di acquisire il CIG e di nominare il RUP.", `Impegno di spesa complessivo pari ad ${eur(p.programmed)} IVA inclusa, ripartito per annualità.`],
+        DETERMINA_INDIZIONE: [head, "DETERMINA di indire la procedura, di acquisire il CIG e di nominare il RUP.", `Impegno di spesa complessivo pari ad ${eur(p.programmed)} IVA inclusa, ripartito per annualità.`, ...(incentiveCalculation ? [incentiveCalculation] : [])],
         DETERMINA_AGGIUDICAZIONE: [head, `DETERMINA di aggiudicare a ${op} per l'importo di ${eur(p.programmed)} IVA inclusa.`],
         GARANZIA_DEFINITIVA: [head, `Garanzia definitiva prestata da ${op} ai sensi della normativa vigente.`],
         ODA: [head, `Ordine diretto di acquisto MePA intestato a ${op}.`, `Totale ordine ${eur(p.programmed)} IVA inclusa. In attesa di accettazione del fornitore.`],
@@ -145,7 +154,6 @@ async function rasterPdf(d: Doc): Promise<Uint8Array> {
 }
 
 async function main() {
-  if (CASI) rmSync(OUT, { recursive: true, force: true });
   const sums: string[] = [];
   for (const d of CASI ? casiDocs() : DOCS) {
     const bytes = d.raster ? await rasterPdf(d) : await textPdf(d);

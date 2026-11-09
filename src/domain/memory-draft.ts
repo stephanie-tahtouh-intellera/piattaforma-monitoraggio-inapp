@@ -9,7 +9,7 @@ export interface MemoryOutlineInput {
   project: string | null;
   type: string;
   awardCriterion: string | null;
-  hasDec: boolean;
+  incentivesDecision: "YES" | "NO" | "TO_VERIFY";
 }
 
 const TYPE_TEXT: Record<string, string> = {
@@ -31,6 +31,7 @@ export function buildMemoryOutline(i: MemoryOutlineInput): string {
   const typeText = TYPE_TEXT[i.type] ?? i.type;
   const criterion = i.awardCriterion ? ` (${CRITERION_TEXT[i.awardCriterion] ?? i.awardCriterion})` : "";
   const project = i.project ?? "[da indicare]";
+  const incentives = { YES: "Sì", NO: "No", TO_VERIFY: "Da verificare" }[i.incentivesDecision];
   return [
     `OGGETTO: ${i.title}`,
     `Struttura richiedente: ${i.structure}`,
@@ -50,7 +51,7 @@ export function buildMemoryOutline(i: MemoryOutlineInput): string {
     "[Indicare la durata prevista e le eventuali opzioni.]",
     "",
     "5. Quadro economico",
-    `[Richiamare il quadro economico della bozza (base di gara, IVA, tassa gara${i.hasDec ? ", incentivi per funzioni tecniche" : ""}) senza ripetere gli importi a mano: sono quelli calcolati dal sistema.]`,
+    `[Richiamare il quadro economico della bozza (base di gara, IVA, tassa gara e incentivi per funzioni tecniche: ${incentives}) senza ripetere gli importi a mano: sono quelli calcolati dal sistema.]`,
     "",
     "6. Motivazione della scelta della procedura",
     `[Motivare il ricorso a ${typeText}${criterion}.]`,

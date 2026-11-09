@@ -33,6 +33,12 @@ export const SeedProcedure = z.object({
   instrument: z.enum(["MEPA", "OFF_MEPA", "CONSIP_AQ"]).optional(),
   programmed: money,
   anacFee: money.optional(),
+  incentives: z.object({
+    decision: z.enum(["YES", "NO", "TO_VERIFY"]),
+    base: money,
+    pct: pct.optional(),
+    reduceAvailable: z.boolean().default(false),
+  }).optional(),
   documentsTracked: z.boolean().optional(),
   baseline: z.object({ label: z.string(), milestones: z.record(z.string(), date), activityStart: date.optional() }).optional(),
   currentLabel: z.string().optional(),
@@ -62,7 +68,7 @@ export const SeedProcedure = z.object({
   payments: z.array(z.object({ sal: z.number().int(), amount: money, date, reference: z.string().optional() })).default([]),
   lines: z.array(z.object({ date, amount: money, anchor: z.string(), source: z.string().optional() })).default([]),
   movements: z
-    .array(z.object({ type: z.enum(["RESERVATION", "COMMITMENT", "LIQUIDATION", "PAYMENT", "RELEASE", "REVERSAL"]), amount: money, year: z.number().int(), date }))
+    .array(z.object({ type: z.enum(["RESERVATION", "COMMITMENT", "LIQUIDATION", "PAYMENT", "RELEASE", "REVERSAL"]), amount: money, year: z.number().int(), date, reference: z.string().optional() }))
     .default([]),
   budget: z.array(z.object({ year: z.number().int(), amount: money, source: z.string().optional() })).default([]),
   documents: z.array(z.object({ type: z.string(), subtype: z.string().optional(), file: z.string(), title: z.string().optional() })).default([]),

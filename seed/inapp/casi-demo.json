@@ -637,6 +637,119 @@
      "date": "2026-09-07"
     }
    ]
+  },
+  {
+   "code": "S18-DEMO",
+   "title": "Esempio sintetico S18 — incentivi con calcolo presente (importi fittizi)",
+   "structure": "STUDI_ANALISI",
+   "type": "NEGOTIATED",
+   "instrument": "OFF_MEPA",
+   "programmed": "121277.00",
+   "cig": "B9767741AB",
+   "incentives": {
+    "decision": "YES",
+    "base": "98200.00",
+    "pct": "1.50",
+    "reduceAvailable": false
+   },
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-09-10"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-09-12"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-09-15"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-09-20"
+    },
+    "INDICTION": {
+     "actual": "2026-09-25"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-06-30",
+     "amount": "121277.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "121277.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:S18-DEMO/determina_indizione.pdf",
+     "title": "Determina di indizione – S18 (esempio sintetico)"
+    }
+   ],
+   "extractionProposals": [
+    {
+     "document": "casi:S18-DEMO/determina_indizione.pdf",
+     "field": "incentive.calculation",
+     "value": "1473.00",
+     "page": 1,
+     "excerpt": "Importo fittizio: base € 98.200,00 × 1,50% = € 1.473,00.",
+     "confidence": "1.00"
+    }
+   ]
+  },
+  {
+   "code": "INCENTIVI-SENZA-CALCOLO",
+   "title": "Caso sintetico — incentivi previsti senza calcolo in determina (importi fittizi)",
+   "structure": "STUDI_ANALISI",
+   "type": "NEGOTIATED",
+   "instrument": "OFF_MEPA",
+   "programmed": "121277.00",
+   "incentives": {
+    "decision": "YES",
+    "base": "98200.00",
+    "pct": "1.50",
+    "reduceAvailable": false
+   },
+   "milestones": {
+    "MEMORY_SUBMISSION": {
+     "actual": "2026-09-10"
+    },
+    "TAKEN_IN_CHARGE": {
+     "actual": "2026-09-12"
+    },
+    "FUNDING_CHECK": {
+     "actual": "2026-09-15"
+    },
+    "PRELIMINARY_INQUIRY": {
+     "actual": "2026-09-20"
+    },
+    "INDICTION": {
+     "actual": "2026-09-25"
+    }
+   },
+   "lines": [
+    {
+     "date": "2027-06-30",
+     "amount": "121277.00",
+     "anchor": "CONTRACT_SIGNED"
+    }
+   ],
+   "budget": [
+    {
+     "year": 2027,
+     "amount": "121277.00"
+    }
+   ],
+   "documents": [
+    {
+     "type": "DETERMINA_INDIZIONE",
+     "file": "casi:INCENTIVI-SENZA-CALCOLO/determina_indizione.pdf",
+     "title": "Determina di indizione senza calcolo incentivi (esempio sintetico)"
+    }
+   ]
   }
  ]
 }

@@ -376,7 +376,14 @@ export async function procedureDetail(db: Db, actor: Actor, code: string) {
       economicFrame:
         p.base_cents === null || p.base_cents === undefined
           ? null
-          : frameToJson(computeEconomicFrame({ base: Money.ofCents(BigInt(p.base_cents)), vatPct: BigInt(p.vat_pct_hundredths), anacFee: Money.ofCents(BigInt(p.anac_fee_cents)), hasDec: p.has_dec === 1, incentivePct: BigInt(p.incentive_pct_hundredths) })),
+          : frameToJson(computeEconomicFrame({
+              base: Money.ofCents(BigInt(p.base_cents)),
+              vatPct: BigInt(p.vat_pct_hundredths),
+              anacFee: Money.ofCents(BigInt(p.anac_fee_cents)),
+              incentivesDecision: p.incentives_decision ?? "TO_VERIFY",
+              incentivePct: p.incentives_decision === "YES" ? BigInt(p.incentive_pct_hundredths ?? 0) : null,
+              incentivesReduceAvailable: p.incentives_reduce_available === 1,
+            })),
     },
     evaluation: {
       status: ev.status,

@@ -30,6 +30,13 @@ async function checkStep(page: Page, tourId: string, i: number) {
 }
 
 test.describe.serial("[DEC-106] guida demo", () => {
+  test("nuova bozza: scelta incentivi predefinita e nessun campo DEC", async ({ page }) => {
+    await loginWithTour(page, "struttura.si");
+    await page.goto("/procedure/nuova");
+    await expect(page.getByLabel("Incentivi funzioni tecniche")).toHaveValue("TO_VERIFY");
+    await expect(page.getByText(/direttore dell'esecuzione|\bDEC\b/i)).toHaveCount(0);
+  });
+
   for (const role of TOUR_ORDER) {
     const tour = ROLE_TOUR[role];
     test(`percorso ${role} (${tour.login}, ${tour.steps.length} passi)`, async ({ page }) => {

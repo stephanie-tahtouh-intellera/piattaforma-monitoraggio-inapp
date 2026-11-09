@@ -90,6 +90,45 @@ export function evaluateAnomalies(
   const out: AnomalyCandidate[] = [];
   const docTypes = new Set(agg.documents.map((d) => d.type));
   const byCode = new Map(agg.milestones.map((m) => [m.code, m]));
+  const indictionCompleted = Boolean(byCode.get("INDICTION")?.actualDate);
+
+  if (indictionCompleted) {
+    const incentives = agg.technicalIncentives;
+    if (incentives.decision === "TO_VERIFY") {
+      out.push({
+        rule: "INCENTIVES_TO_VERIFY",
+        target: "TECHNICAL_INCENTIVES",
+        severity: "LOW",
+        message: "Incentivi per funzioni tecniche da verificare: decisione non definita.",
+      });
+    } else if (incentives.decision === "YES") {
+      const determination = incentives.determinationCalculation;
+      if (!determination) {
+        out.push({
+          rule: "INCENTIVE_CALCULATION_MISSING",
+          target: "DETERMINA_INDIZIONE",
+          severity: "MEDIUM",
+          message: "Documento incompleto: calcolo incentivi assente nella determina di indizione.",
+        });
+      } else {
+        const commitments = agg.movements.filter((m) => m.type === "COMMITMENT");
+        const reservations = agg.movements.filter((m) => m.type === "RESERVATION");
+        const checkedType = commitments.length ? "impegno" : "prenotazione";
+        const checkedMovements = commitments.length ? commitments : reservations;
+        if (checkedMovements.length) {
+          const registered = Money.sum(checkedMovements.map((m) => m.amount));
+          if (!determination.amount.eq(registered)) {
+            out.push({
+              rule: "INCENTIVE_AMOUNT_MISMATCH",
+              target: "TECHNICAL_INCENTIVES",
+              severity: "MEDIUM",
+              message: `Incoerenza incentivi: calcolo da determina ${determination.amount.toString()} vs ${checkedType} ${registered.toString()} (${determination.documentName}${determination.page ? `, ${determination.page}` : ""}).`,
+            });
+          }
+        }
+      }
+    }
+  }
 
   // Documenti attesi (§8.7): BEFORE sulla milestone attiva vicina o scaduta; WITH sull'ultima completata.
   let lastCompleted: MilestoneEvaluation | null = null;

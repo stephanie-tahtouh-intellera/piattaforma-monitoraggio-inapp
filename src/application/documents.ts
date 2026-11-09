@@ -214,12 +214,14 @@ export function extractFields(pages: { page: number; text: string; method: strin
       const before = t.slice(Math.max(0, at - 90), at).replace(/\s+/g, " ").toLowerCase();
       const after = t.slice(at + m[0].length, at + m[0].length + 40).replace(/\s+/g, " ").toLowerCase();
       const ctx = t.slice(Math.max(0, at - 80), at + m[0].length + 40).replace(/\s+/g, " ").trim();
+      const incentiveMention = /incentiv/.test(`${before.slice(-80)} ${after}`);
       // riferimenti normativi e soglie citate nel testo: non sono dati della procedura
-      if (/d\.\s?lgs|soglia|inferiore|superiore|obbligo|mercato elettronico|art\.\s?\d/.test(before.slice(-70))) continue;
+      if (!incentiveMention && /d\.\s?lgs|soglia|inferiore|superiore|obbligo|mercato elettronico|art\.\s?\d/.test(before.slice(-70))) continue;
       const pct = /(\d{1,3})\s*%[^%]*$/.exec(before.slice(-70));
       const year = /(?:annualit[aà]|previsione|esercizio)\s*(\d{4})(?!.*(?:annualit|previsione|esercizio))/.exec(before.slice(-90));
       let field: string | null = null;
-      if (pct) field = `sal.installment.${pct[1]}%`;
+      if (incentiveMention) field = "incentive.calculation";
+      else if (pct) field = `sal.installment.${pct[1]}%`;
       else if (year) field = `commitment.${year[1]}`;
       else if (/^[^a-z]{0,6}(oltre iva|iva esclusa|\+ ?iva|al netto)/.test(after)) field = "amount.net";
       else if (/^[^a-z]{0,6}(iva inclusa|iva compresa|comprensiv)/.test(after)) field = "amount.gross";

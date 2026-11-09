@@ -19,22 +19,34 @@ const Draft = z.object({
   type: z.enum(["DIRECT_AWARD", "DIRECT_AWARD_MEPA", "MEPA_ORDER", "CENTRAL_PURCHASING_ORDER", "NEGOTIATED", "OPEN", "FRAMEWORK_AGREEMENT"]),
   award_criterion: z.enum(["LOWEST_PRICE", "MEAT"]).optional(),
   project: z.string().min(2).max(40).optional(),
-  // Quadro economico (DEC-111): con `base` il programmato è calcolato; `programmed` resta per compatibilità
+  // Quadro economico: con `base` il programmato è calcolato; `programmed` resta per compatibilità
   programmed: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
   base: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
   vat_pct: z.string().regex(/^\d+([.,]\d{1,2})?$/, "Percentuale non valida").optional(),
   anac_fee: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
-  has_dec: z.boolean().optional(),
+  incentives_decision: z.enum(["YES", "NO", "TO_VERIFY"]).default("TO_VERIFY"),
   incentive_pct: z.string().regex(/^\d+([.,]\d{1,2})?$/, "Percentuale non valida").optional(),
   memory_due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   y2026: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2027: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2028: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2029: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
+}).superRefine((b, ctx) => {
+  if (b.base && b.incentives_decision === "YES" && !b.incentive_pct) {
+    ctx.addIssue({ code: "custom", path: ["incentive_pct"], message: "Indica la percentuale degli incentivi per funzioni tecniche" });
+  }
 });
 /** US-013: creazione bozza (Struttura). */
 export const POST = route(async ({ db, actor, req }) => {
   const b = await body(req, Draft);
   const r = await createDraft(db, actor!, {
     title: b.title, type: b.type, awardCriterion: b.award_criterion, project: b.project, programmed: b.programmed, memoryDue: b.memory_due,
-    frame: b.base ? { base: b.base, vatPct: b.vat_pct ? parsePct(b.vat_pct) : undefined, anacFee: b.anac_fee, hasDec: b.has_dec ?? false, incentivePct: b.incentive_pct ? parsePct(b.incentive_pct) : undefined } : undefined,
+    frame: b.base
+      ? {
+          base: b.base,
+          vatPct: b.vat_pct ? parsePct(b.vat_pct) : undefined,
+          anacFee: b.anac_fee,
+          incentivesDecision: b.incentives_decision,
+          incentivePct: b.incentive_pct ? parsePct(b.incentive_pct) : undefined,
+        }
+      : undefined,
     annual: { "2026": b.y2026 ?? "", "2027": b.y2027 ?? "", "2028": b.y2028 ?? "", "2029": b.y2029 ?? "" },
   });
   return { ...r, redirect: `/procedure/${r.code}` };

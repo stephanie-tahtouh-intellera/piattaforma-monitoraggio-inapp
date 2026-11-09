@@ -189,10 +189,25 @@ export async function approveSimulation(db: Db, actor: Actor, simCode: string, r
     const vno = ((await db.prepare("SELECT MAX(version_no) AS n FROM procedure_versions WHERE procedure_id = ?").get(p.id)) as { n: number }).n + 1;
     const v = await db
       .prepare(
-        `INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, simulation_id, created_by, created_at, approved_by, approved_at)
-         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO procedure_versions (procedure_id, version_no, is_baseline, label, reason, programmed_cents, simulation_id, created_by, created_at, approved_by, approved_at, incentives_decision, incentive_pct_hundredths, incentive_cents, incentives_reduce_available)
+         VALUES (?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(p.id, vno, `V${vno} – riprogrammazione ${simCode}`, reason, agg.programmed.cents, s.id, s.created_by, now, actor.login, now);
+      .run(
+        p.id,
+        vno,
+        `V${vno} – riprogrammazione ${simCode}`,
+        reason,
+        agg.programmed.cents,
+        s.id,
+        s.created_by,
+        now,
+        actor.login,
+        now,
+        agg.technicalIncentives.decision,
+        agg.technicalIncentives.pctHundredths,
+        agg.technicalIncentives.amount.cents,
+        agg.technicalIncentives.reduceAvailable ? 1 : 0,
+      );
     const vid = Number(v.lastInsertRowid);
     const mf = db.prepare("INSERT INTO milestone_forecasts (version_id, milestone_code, date) VALUES (?, ?, ?)");
     for (const m of agg.milestones) {
