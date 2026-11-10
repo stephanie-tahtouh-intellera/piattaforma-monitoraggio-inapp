@@ -17,11 +17,11 @@ MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert →
 ## Regole non negoziabili
 - Date, importi, stati, permessi e simulazioni: **solo logica deterministica** nel dominio (`src/domain`, TS puro). Mai LLM.
 - Baseline immutabile; effettivi intangibili; ogni variazione è una nuova versione approvata da un umano, con audit.
-- Audit e movimenti finanziari append-only (trigger SQLite in `db/sql/triggers.sql`): storni e compensazioni, mai cancellazioni. I trigger si rimuovono solo da `db/sql/` e da `infrastructure/db/reset.ts`.
-- Importi: `Money` (centesimi `bigint`) nel dominio, `*_cents INTEGER` nel DB, stringhe `"47600.00"` in JSON. Mai `number`, mai `REAL`, mai `TOTAL`/`AVG`/divisioni SQL sugli importi, nessuna aritmetica sugli importi nella UI.
+- Audit e movimenti finanziari append-only (trigger PL/pgSQL in `db/sql/triggers.sql`): storni e compensazioni, mai cancellazioni. I trigger si rimuovono solo da `db/sql/` e da `src/infrastructure/db/reset.ts`.
+- Importi: `Money` (centesimi `bigint`) nel dominio, `*_cents BIGINT` nel DB Postgres, stringhe `"47600.00"` in JSON. Mai `number`, mai `REAL`, mai `TOTAL`/`AVG`/divisioni SQL sugli importi, nessuna aritmetica sugli importi nella UI.
 - Data di business solo dal `Clock` (`APP_REFERENCE_DATE`, default 2026-10-01). In dominio e application niente `Date.now()`, `new Date()` o `Temporal.Now`.
 - RBAC e controllo object-level lato server negli use case, su ogni endpoint e su ogni lettura dei Server Component.
-- Mutazioni solo tramite route handler `/api/*` con contratto Zod; Server Actions vietate. Dentro `uow.write` nessun I/O esterno.
+- Mutazioni solo tramite route handler `/api/*`; validare gli input con Zod, applicare RBAC/object-level lato server; Server Actions vietate. Dentro le transazioni Postgres nessun I/O esterno.
 - **Dati reali INAPP**: su indicazione del cliente si usano nella demo (DEC-071). Le copie versionate stanno in `seed/inapp/`; gli originali nella radice restano esclusi da git. `DEMO_DATASET=inapp` (default) carica il portafoglio reale; `DEMO_DATASET=scenarios` carica le 12 procedure dell'oracle usate da test e DoD.
 - **Logo e colori INAPP** obbligatori (DEC-081): logo bianco in `public/brand/`, palette di `docs/design/tokens.css`.
 - **Processo INAPP** (DEC-107): il portafoglio reale segue lo schema `docs/design/schema-processo-inapp.webp`, Modulo 1 (modelli `config/templates/M1-*.yaml`, famiglia `m1`, passi per corsia e date chiave); il dataset `scenarios` resta sui modelli v1 (oracle). Il Modulo 2 è nascosto nella demo (`modules.execution`, DEC-108).
@@ -38,13 +38,13 @@ MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert →
 ## Comandi
 <!-- Da creare in I0; mantenerli allineati al README. -->
 - Avvio: `pnpm install && pnpm db:bootstrap && pnpm dev` (worker: `pnpm worker`)
-- Quality gate: `bash scripts/check.sh` (ciclo veloce sull'host: `pnpm verify`)
+- Verifica: `pnpm verify` (typecheck + guards + test; i test svuotano il database indicato da `POSTGRES_URL`, vedi README). E2E: `pnpm test:e2e` (stesso avviso).
 - Test: `pnpm test` (unit + integration + api) · `pnpm test:e2e` · `pnpm test -- tests/unit/<file>`
 - Reset demo: `pnpm db:reset`
-- Backup: non più da CLI; usare il backup/branching di Neon/Vercel Postgres (DEC-115)
-- Run-checks a una data: `pnpm run-checks -- --date 2026-10-01`
-- Schema DB: `pnpm db:generate` (rivedere il SQL generato) · `pnpm db:migrate`
-- OpenAPI: `pnpm openapi` (rigenera `docs/openapi.json`)
+- Backup: non da CLI; usare backup/branching Neon/Vercel Postgres (DEC-115).
+- Run-checks a una data: `pnpm cli run-checks --date 2026-10-01`
+- Schema DB: migrazioni SQL numerate in `db/migrations/`; il bootstrap le applica automaticamente.
+- Test: **`pnpm test`, `pnpm verify` e `pnpm test:e2e` svuotano il Postgres indicato da `POSTGRES_URL`**. Non lanciarli contro un database con dati da conservare (vedi README e DEC-117).
 
 ## Ambiente
 - Windows: sviluppo e collaudo in locale con Node 22 + pnpm 10 (DEC-100). Fine riga LF (`.gitattributes`).
@@ -52,7 +52,6 @@ MVP dimostrativo su dati **sintetici**: programmazione → memoria → alert →
 - DB: Postgres (Vercel Postgres/Neon, DEC-115), un solo database per locale/test/Vercel via `POSTGRES_URL`; nessun file `.db` in nessun ambiente. Lo storage dei documenti caricati resta in `./.data/storage` (ignorato da git) senza `BLOB_READ_WRITE_TOKEN`.
 - Indirizzi locali:
   - web e API: http://localhost:3000;
-  - OpenAPI: http://localhost:3000/api/docs;
   - UI e-mail demo (Mailpit): http://localhost:8025.
 - **Deployment Vercel** (DEC-113/DEC-114/DEC-115): richiede `POSTGRES_URL` (store "Postgres" del progetto Vercel, Neon) sia in locale sia su Vercel. Su Vercel servono anche `BLOB_READ_WRITE_TOKEN` (store Vercel Blob) e `DEMO_DATASET=scenarios`.
 

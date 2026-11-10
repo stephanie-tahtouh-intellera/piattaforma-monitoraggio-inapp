@@ -22,3 +22,6 @@ test-results/
 playwright-report/
 .claude/settings.local.json
 /scripts/tmp/
+
+# Riepilogo modifiche (file di lavoro, non versionato)
+docs/riepilogo_modifiche.xlsx

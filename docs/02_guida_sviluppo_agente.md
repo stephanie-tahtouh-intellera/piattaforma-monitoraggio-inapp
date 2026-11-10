@@ -1,8 +1,10 @@
 # Guida di sviluppo per l'AI coding agent — Piattaforma INAPP MVP
 
-> **Versione guida:** 1.1 (integra 05 documenti reali, 06 Next.js + SQLite, 07 design, 08 risposte alle criticità) · **Specifica di riferimento:** v1.0 del 01/10/2026 ([00_specifica_originale_v1_0.md](00_specifica_originale_v1_0.md)) · **Analisi:** [01_analisi_criticita.md](01_analisi_criticita.md)
+> **Versione guida:** 1.2 (stato operativo aggiornato al 2026-11-04; integra DEC-111 e DEC-115…117) · **Specifica di riferimento:** v1.0 del 01/10/2026 ([00_specifica_originale_v1_0.md](00_specifica_originale_v1_0.md)) · **Analisi:** [01_analisi_criticita.md](01_analisi_criticita.md)
 >
 > Questa guida rende la specifica **eseguibile in autonomia**: risolve le incoerenze, fissa i default mancanti e definisce l'oracle dei test. Il "cosa" (storie, criteri di accettazione) resta nella specifica; qui sono fissati il "come", le regole precise e i valori attesi.
+>
+> **Stato corrente:** le sezioni che descrivono SQLite, Docker Compose, Drizzle, bindRoute/OpenAPI e database di test usa-e-getta sono il piano originario e non descrivono il codice attuale. Per stack e procedure operative valgono gli aggiornamenti qui marcati DEC-115…117 e il registro [03_registro_decisioni.md](03_registro_decisioni.md); per l'avanzamento effettivo fa fede [04_avanzamento.md](04_avanzamento.md). I test attuali usano Postgres e svuotano il database configurato: vedere §12 prima di eseguirli.
 
 ## Indice
 0. [Gerarchia delle fonti](#0-gerarchia-delle-fonti)
@@ -30,7 +32,7 @@ In caso di conflitto prevale, nell'ordine:
 1. **Principi non negoziabili** della specifica (§2.4) e **istruzioni vincolanti** (§12.3).
 2. **Questa guida**, scritta per risolvere i conflitti della specifica.
 3. **La specifica** (storie, criteri, NFR, API) per tutto ciò che la guida non tratta.
-4. **Il registro decisioni** [03_registro_decisioni.md](03_registro_decisioni.md) (DEC-1xx aggiunte da te), che colma i vuoti ma non contraddice 1–3, salvo approvazione umana annotata.
+4. **Il registro decisioni** [03_registro_decisioni.md](03_registro_decisioni.md), che colma i vuoti ma non contraddice 1–3, salvo approvazione umana annotata. Le decisioni successive DEC-115…117 prevalgono sulle decisioni tecniche originarie che dichiarano esplicitamente superate.
 
 Quando la guida cambia un elemento della specifica, lo dichiara con un riferimento `CR-xx` all'analisi.
 
@@ -44,7 +46,7 @@ Quando la guida cambia un elemento della specifica, lo dichiara con un riferimen
 
 ## 1. Missione e definizione di successo
 
-**Missione:** consegnare il vertical slice end-to-end della specifica: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. Deve avviarsi con `docker compose up --build`, girare sui dati sintetici e restare operativo anche con l'AI disattivata.
+**Missione:** mantenere il vertical slice end-to-end: programmazione → memoria → alert → riprogrammazione → contratto → SAL → pagamento → impatto sulla previsione di spesa. In locale si avvia con Postgres configurato, `pnpm db:bootstrap` e `pnpm dev`; la demo è distribuibile su Vercel. Il core resta operativo con l'assistente disattivato.
 
 **Il successo si misura così (DoD §13.2 della specifica, resa verificabile):**
 
@@ -67,15 +69,15 @@ Quando la guida cambia un elemento della specifica, lo dichiara con un riferimen
 1. Leggi `CLAUDE.md`, poi in questa guida le §2–3 e la sezione dell'incremento corrente (§11).
 2. Leggi [04_avanzamento.md](04_avanzamento.md) e le ultime voci di [03_registro_decisioni.md](03_registro_decisioni.md).
 3. `git status` e `git log --oneline -15`.
-4. Avvia lo stack ed esegui la quality gate (§12.4). **Se è rossa, la riporti a verde prima di qualsiasi nuova funzionalità.**
+4. Verifica che il database configurato sia appropriato prima di avviare test (§12.2); non lanciare una suite che svuota dati condivisi. Esegui le verifiche non distruttive e registra ogni gate non eseguita.
 
 ### 2.2 Ciclo per ogni storia
 1. Prendi la prossima storia non completata dell'incremento corrente, nell'ordine della §11.
 2. Rileggi la storia nella specifica e le regole collegate in questa guida.
 3. Scrivi i test che coprono **ogni criterio di accettazione**, con l'ID nel titolo per la tracciabilità (`describe('[US-040] …')` / `test('[T-004] …')`, in Vitest e Playwright).
-4. Implementa nell'ordine: dominio (funzioni pure) → application (use case, porte) → infrastruttura → API (route handler con contratto Zod e `bindRoute`, RBAC object-level nello use case) → UI (stati loading/empty/error/unauthorized).
+4. Implementa nell'ordine: dominio (funzioni pure) → application/server → infrastruttura → API (route handler, validazione Zod, RBAC object-level) → UI (stati loading/empty/error/unauthorized).
 5. Esegui la quality gate.
-6. Aggiorna `04_avanzamento.md` e, se serve, README, contratti Zod e `docs/openapi.json` (`pnpm openapi`).
+6. Aggiorna `04_avanzamento.md`, README e contratti Zod eventualmente coinvolti.
 7. Fai commit `feat(US-040): …`.
 
 ### 2.3 Gestione delle ambiguità (senza fermarsi)
@@ -162,83 +164,73 @@ Fermati solo se:
 | DEC-080 | Accessibilità | WCAG 2.1 AA (L. 4/2004, Linee guida AgID, EN 301 549). `@axe-core/playwright` sulle pagine UI-01…UI-10 senza violazioni serious/critical, più una checklist manuale (tastiera, focus, lettore di schermo) in I8. | CR-29, M-11 |
 | DEC-081 | Design system e logo | La UI segue [07_design_brand_identity.md](07_design_brand_identity.md) e i token di `docs/design/tokens.css` (prefisso `--ds-`, Tailwind 4): palette INAPP (`#003567`, `#0059B3`), font Titillium Web, alta densità. **Si usa il logo ufficiale INAPP** (versione bianca, `public/brand/inapp-logo-white.svg`, scaricata da inapp.gov.it) sull'header `#003567`/`#0059B3` e nel login, secondo le regole d'uso di 07 §5.1. Il banner DEMO resta sempre visibile. Importi con `Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', useGrouping:'always'})`. | 07, utente |
 | DEC-082 | IA e conformità | Il core resta senza IA, coerente con la L. 132/2025 (art. 14) e con l'AI Act. Prima di abilitare un LLM servono: avviso all'utente (AI Act, art. 50), DPIA (GDPR, art. 35), minimizzazione dei dati personali presenti nei documenti, fornitore cloud qualificato per la PA. | D-07, M-16 |
-| DEC-090 | E-mail demo | **Mailpit** al posto di MailHog (non più mantenuto), con lo stesso ruolo: SMTP sulla porta 1025, UI sulla 8025. Invio con nodemailer. | CR-35 |
-| DEC-091 | Next.js fullstack | **Next.js fullstack** (App Router) su un'unica origine, senza backend separato. Le mutazioni passano **solo** dai route handler `/api/*` definiti da contratti Zod; **Server Actions vietate**. I Server Component leggono tramite le query dell'application layer con l'`Actor` della sessione; TanStack Query solo per mutazioni e parti interattive. Sulle mutazioni: CSRF a doppio invio firmato (`X-CSRF-Token`) e controllo dell'Origin. I tipi del client vengono da `z.infer` sui contratti. | CR-36, 06 §1.2 |
-| DEC-092 | Code e job | Nessun Redis. Coda di job su tabella SQLite con **lease atomico** (`BEGIN IMMEDIATE` + `UPDATE … RETURNING`), deduplicazione con indice unico e reaper dei lease scaduti. Un solo scheduler attivo, eletto tramite la tabella `leader_lease`; heartbeat in DB. Il `worker` è un processo separato con lo stesso codebase. | 06 §2.3 |
+| DEC-090 | E-mail demo | Mailpit è un SMTP locale opzionale (porta 1025, UI 8025) per nodemailer. Non è avviato o distribuito dall'app; senza un SMTP disponibile gli alert restano consultabili nell'app. | CR-35, DEC-117 |
+| DEC-091 | Next.js fullstack | **Next.js fullstack** (App Router) su un'unica origine, senza backend separato. Le mutazioni passano dai route handler `/api/*`; **Server Actions vietate**. Le rotte usano il wrapper comune `route()` in `src/server/http.ts`, che applica sessione, CSRF, controllo dell'Origin e envelope degli errori. La validazione Zod è nel codice delle route. RBAC e visibilità object-level si applicano lato server. | CR-36, 06 §1.2 |
+| DEC-092 | Code e job | Nessun Redis. Coda job persistita nel database, deduplicazione con indice unico e reaper dei lease scaduti. Un solo scheduler attivo, eletto tramite `leader_lease`; heartbeat in DB. Il worker è un processo Node separato. Per la versione Postgres vedere DEC-115 e `src/application/run-checks.ts`. | 06 §2.3 |
 | DEC-093 | Layout dei test | Test Vitest in `tests/{unit,integration,api}`; E2E Playwright in `e2e/` nella radice. | — |
 | DEC-094 | Milestone attiva | Gli alert di scadenza e la finestra di attenzione considerano solo la milestone **attiva** di ogni catena (la prima non completata né N/A, con i predecessori completati), i SAL aperti e i pagamenti dovuti. Le milestone a valle di una in ritardo non generano rumore. | — |
 | DEC-095 | Seed come fatti | Il seed contiene **solo fatti di input**: anagrafiche, date, importi, piani, movimenti registrati, documenti. Stati, health, alert, residui e rilasci si **calcolano**. Gli eventi (annullamento di P-011, pagamenti, chiusura di P-006) passano dagli use case durante il caricamento. | — |
-| DEC-096 | SQLite come unico DB | WAL, `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout=5000`. Per ogni processo: una connessione di scrittura con mutex e transazioni `IMMEDIATE` brevi senza I/O esterno, più una di sola lettura (`query_only`). Porte asincrone. Trigger e FTS in `db/sql/*.sql`, riapplicati dopo ogni migrazione. Il file sta su un volume Docker nominato, mai in un bind mount di una cartella Windows. | CR-37…41, 06 §2 |
+| DEC-096 | SQLite, decisione superata | Decisione originaria sostituita da DEC-115: il database attuale è Postgres, collegato con `pg`; non usare le regole SQLite (WAL, `BEGIN IMMEDIATE`, FTS5) come descrizione del runtime. Schema, trigger e migrazioni sono SQL/Postgres. | CR-37…41, superata da DEC-115 |
 | DEC-097 | Autenticazione | Autenticazione custom con sessioni su DB, dove si salva solo lo `sha256` del token. Password con argon2id (`@node-rs/argon2`). Scadenza per inattività 8 h, assoluta 12 h. Rotazione della sessione a login, cambio ruolo e impersonazione. Ripiego: Better Auth (ADR-0001). | CR-43, 06 §1.7 |
-| DEC-098 | Contratti API | I **contratti Zod** in `src/contracts` sono l'unica fonte per validazione, tipi del client e OpenAPI (`@asteasolutions/zod-to-openapi`). `docs/openapi.json` è versionato e verificato nella gate; Swagger UI su `/api/docs`. | 06 §1.9 |
+| DEC-098 | Contratti API | La decisione originaria su OpenAPI e `bindRoute` non è implementata nel repository attuale. Le route sono in `src/app/api/**/route.ts`, il wrapper comune è `src/server/http.ts` e i payload delle rotte usano Zod localmente. Non dichiarare una spec OpenAPI o `/api/docs` disponibili finché non sono presenti nel codice. | 06 §1.9, stato corrente |
 | DEC-099 | Documenti in JS | Estrazione del testo con `unpdf`, rendering con `@napi-rs/canvas`, OCR con `tesseract.js` (dati `ita` locali, nessuna CDN), tutto nel worker; pagine PNG pre-renderizzate all'import. Ordine di estrazione: XML incorporato (ordini MePA) → layer di testo con coordinate → OCR, obbligatorio se il testo copre la pagina sotto la soglia. | CR-45, P-19, 06 §1.12 |
-| DEC-100 | Ambiente di sviluppo | Sulla macchina di sviluppo **Docker non è installato** e Node è alla v22.16 (pnpm 10). Si sviluppa e si collauda in locale (`pnpm dev`, worker con `pnpm worker`, DB in `./.data/`). Dal DEC-117 **Docker non è più usato**: non esistono `Dockerfile` né `docker-compose.yml`; il DB è Postgres (DEC-115). `engines.node` = `>=22.12`. Mailpit è opzionale in locale: senza SMTP raggiungibile l'outbox resta consultabile in-app e nella pagina Amministrazione. | ambiente |
+| DEC-100 | Ambiente di sviluppo | Node `>=22.12` e pnpm 10. Avvio web con `pnpm dev`, worker con `pnpm worker`; Postgres richiesto tramite `POSTGRES_URL`. I documenti caricati vanno su disco in locale e su Vercel Blob quando configurato. Docker non è usato (DEC-117). Mailpit/SMTP è opzionale in locale: senza server raggiungibile gli alert restano consultabili nell'app. | ambiente, DEC-115…117 |
 
 ---
 
 ## 4. Architettura e stack concreti
 
-> Stack unico TypeScript: Next.js fullstack + SQLite (ADR-0001, DEV-004). Nessun componente Python. Dettagli e motivazioni: [06_architettura_nextjs_sqlite.md](06_architettura_nextjs_sqlite.md).
+> Stack unico TypeScript: Next.js fullstack + Postgres (DEC-115; ADR-0001 e DEV-004 descrivono la scelta storica di SQLite). Nessun componente Python. Il documento [06_architettura_nextjs_sqlite.md](06_architettura_nextjs_sqlite.md) è storico per il database e Docker.
 
 ### 4.1 Servizi
-_Aggiornato (DEC-117): `web` (Next.js: UI, API REST `/api/*`, `/health`, `/ready`, `/api/docs`) su Vercel o in locale con `pnpm dev`; `worker` (scheduler `RUN_CHECKS` ogni 5 min, coda job, dispatcher outbox) con `pnpm worker` in locale; Postgres su Neon; documenti su disco (`./.data/storage`) o Vercel Blob. Nessun container._
+_Stato attuale (DEC-113…117): web Next.js su Vercel o in locale con `pnpm dev`; API REST in route handler `/api/*`, health `/health` e readiness `/ready`; worker Node (`pnpm worker`) per scheduler e dispatcher outbox in locale. Postgres su Neon/Vercel Postgres; documenti su disco (`.data/storage`) in locale o Vercel Blob su Vercel. Nessun container._
 
-### 4.2 Librerie di riferimento (versioni esatte nel lockfile)
-- **Piattaforma:** Node.js 24 LTS, TypeScript 6.0 (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`), pnpm 12 (`packageManager` fissato).
-- **Web/API:** Next.js 16 (App Router), React 19, Zod 4, @asteasolutions/zod-to-openapi 9 + swagger-ui-dist, TanStack Query 5, TanStack Table, React Hook Form + `zodResolver`, shadcn/ui (Radix) + Tailwind 4, Recharts 3.
-- **Persistenza:** better-sqlite3 13 (SQLite 3.53 con FTS5/JSON), Drizzle ORM 0.45 + drizzle-kit 0.31.
-- **Dominio:** solo `temporal-polyfill` (date `PlainDate`); `Money` su `bigint`, implementazione interna.
-- **Sicurezza:** @node-rs/argon2 (argon2id), @oslojs/crypto ed @oslojs/encoding (hash, HMAC, base64url), rate-limiter-flexible.
-- **Job e notifiche:** croner (scheduler), nodemailer → SMTP.
-- **Documenti:** unpdf/pdfjs-dist (testo, rendering), @napi-rs/canvas, tesseract.js 7 con `ita.traineddata` in `vendor/tessdata/`, yauzl (ZIP), file-type (MIME), @react-pdf/renderer (PDF generati), exceljs (XLSX), csv-stringify (CSV), yaml.
-- **Log:** pino (JSON, redazione).
-- **Qualità:** ESLint 9 (flat) + eslint-config-next + typescript-eslint, Prettier, dependency-cruiser, Vitest 5 + @vitest/coverage-v8 + fast-check, Playwright + @axe-core/playwright. decimal.js solo nei test.
-- Puoi sostituire una libreria solo con una DEC-1xx motivata. Gli aggiornamenti di major passano da una DEC.
+### 4.2 Stack e dipendenze
+- Runtime dichiarato: Node `>=22.12`; versione delle dipendenze e package manager dal `package.json` e `pnpm-lock.yaml`.
+- Web: Next.js 16, React 19, TypeScript 6, Zod 4.
+- DB: Postgres tramite `pg`; non ci sono Drizzle né database SQLite nel runtime.
+- Altri componenti effettivamente usati: `croner`, `nodemailer`, `@vercel/blob`, `tesseract.js`, `unpdf`, `exceljs`, `pdf-lib`, `yauzl`, `yaml`.
+- L'elenco del `package.json` è la fonte per le dipendenze installate; non usare il piano storico sottostante per aggiungere librerie o script non presenti.
 
 ### 4.3 Layout del repository
 
 ```
-/src/domain/          # TS puro: entità, value object (Money, Percent, BusinessDate), regole pure
-/src/application/     # use case, query, porte (Clock, UnitOfWork, repository, JobQueue, Storage, Ocr, Llm, Notifier,
-                      #   PasswordHasher, Accounting, Procurement), authz (matrice §7 + object-level), errori applicativi
-/src/contracts/       # Zod: DTO request/response, MoneyString, codici d'errore, contratti delle route, schemi seed/config
-/src/infrastructure/  # db (Drizzle, repository, UoW, migrate, reset, sqlite/), auth, mail, ocr, pdf, export, storage,
-                      #   llm (disabled/fake), clock, config (env Zod), logging
-/src/composition/     # composition root server-only: porte → adapter, createContext(actor)
-/src/app/             # Next.js: (public)/login, (app)/… pagine UI-01…UI-10, api/**/route.ts, _http/ (bindRoute),
-                      #   health/route.ts, ready/route.ts
-/src/ui/              # componenti React, formatter it-IT, apiClient (CSRF, Idempotency-Key), hook TanStack Query
-/worker/              # main.ts (loop, scheduler, reaper, heartbeat), handlers/
-/cli/                 # bootstrap | migrate | seed [--if-empty|--reset] | run-checks [--date] | reset --yes | backup
-                      #   | restore <dir> | worker-health | search rebuild | audit verify | perf generate
-/db/migrations/       # SQL di drizzle-kit (+ migrazioni --custom)
-/db/sql/              # SQL post-migrazione idempotente (triggers.sql, fts.sql)
-/config/templates/*.yaml  /config/calendar.yaml  /config/alert_policies.yaml
-/seed/                # §10 (json, procedures.xlsx, documents/ + SHA256SUMS, expected_results.json, fixtures/)
-/vendor/              # tessdata/, fonts/ (licenze e SHA-256)
+/src/domain/          # TS puro: Money, date, calcoli economici, KPI, alert, simulazione
+/src/application/     # bootstrap, import, documenti, memoria, moduli e run-checks
+/src/contracts/       # formattazione e schemi del seed
+/src/infrastructure/  # Postgres (pg), migrazioni, repository, storage, OCR, clock e configurazione
+/src/server/          # query, comandi, auth/RBAC, route wrapper e funzioni lato server
+/src/app/             # pagine Next.js e route handler API
+/src/ui/              # componenti React e moduli d'interazione
+/worker/              # scheduler e dispatcher outbox
+/cli/                 # bootstrap | reset --yes | run-checks [--date] | audit-verify
+/db/migrations/       # migrazioni SQL numerate per Postgres
+/db/sql/              # trigger PL/pgSQL
+/config/templates/*.yaml
+/seed/                # dataset inapp e scenarios, oracle e documenti demo
 /tests/{unit,integration,api}/   /e2e/
-/scripts/             # check.sh, guards.ts, traceability.ts, openapi.ts, generate-seed-documents.ts, generate-seed-workbook.ts
-/docs/                # guida, adr/, openapi.json, runbook, traceability.md
+/scripts/             # guards e generazione documenti seed
+/docs/                # guida, decisioni, avanzamento, specifica e design
 .env.example  README.md  CLAUDE.md
 ```
 
 ### 4.4 Regole di dipendenza (da far rispettare)
-- `src/domain` importa solo da `src/domain` e da `temporal-polyfill`: niente `node:*`, `next`, `react`, `zod`, `drizzle-orm`, `better-sqlite3`. `src/application` importa solo da `domain` e da sé stesso. `src/contracts` importa solo `zod`. `src/ui` non importa `domain`, `application`, `infrastructure` né `composition` (solo i tipi e gli schemi di `contracts`). `infrastructure` e `composition` importano `server-only`. Controllo automatico con **dependency-cruiser** (`pnpm arch`, regole in `.dependency-cruiser.cjs`, cicli vietati).
+- `src/domain` contiene calcoli puri e value object; non deve dipendere da I/O, Next.js o React. Importi e date seguono i principi non negoziabili della guida.
 - Le funzioni di calcolo (date, importi, stati, health, simulazione) sono pure e prendono `referenceDate` come parametro.
-- Ogni mutazione passa da un route handler `/api/*` (Server Actions vietate) e da un use case che autorizza (permesso + object-level) e, **nella stessa transazione** `uow.write`, scrive dati, audit, outbox/job e snapshot. Nessun I/O esterno dentro la transazione.
-- I Server Component leggono solo tramite le query dell'application layer con l'`Actor` corrente (stessa autorizzazione delle API); mai `fetch` verso la propria `/api` né accesso diretto a Drizzle.
-- I valori derivati usati nelle liste (health, stato, prossima scadenza, importo a rischio, totali annui) stanno in `procedure_snapshot` e `procedure_snapshot_year`, con la ricerca in `procedure_search` (FTS5). Sono ricalcolati da `run_checks` e dopo ogni evento sulla procedura, nella stessa transazione (NFR-002).
-- Il frontend non fa aritmetica sugli importi: riceve `MoneyString` e la formatta con `Intl.NumberFormat('it-IT', …).format(stringa)`.
+- `src/application` contiene bootstrap, caricamento seed, import, documenti, eventi procedura e run-checks. `src/server` contiene query, comandi, auth/RBAC, wrapper HTTP e funzioni usate dalle pagine.
+- Le mutazioni passano da route handler `/api/*` (Server Actions vietate), validano l'input con Zod e verificano permessi e ambito lato server. Le transazioni sono gestite con `tx()` dall'adapter Postgres; non eseguire I/O esterno nella transazione.
+- Le pagine Server Component leggono tramite le query in `src/server/queries.ts` usando l'Actor autenticato. Non aggiungere accessi che aggirino RBAC/object-level.
+- Lo snapshot (`procedure_snapshot`, `procedure_snapshot_year`) è mantenuto da `run_checks`; la ricerca full-text attuale usa `TSVECTOR` e indice GIN, non FTS5.
+- Il frontend non fa aritmetica sugli importi: riceve valori monetari serializzati come stringhe e li formatta.
 
-### 4.5 Persistenza SQLite
-- Pragma su ogni connessione: `journal_mode=WAL`, `synchronous=FULL`, `foreign_keys=ON`, `busy_timeout=5000`, `temp_store=MEMORY`. Per processo: una connessione di scrittura (mutex + `BEGIN IMMEDIATE`) e una di lettura (`query_only=ON`). La UoW è rientrante con `SAVEPOINT`. Le porte sono asincrone.
-- Transazioni brevi (obiettivo < 50 ms; log `warn` oltre 200 ms); `run_checks` usa una transazione per procedura.
-- Tipi: importi `*_cents INTEGER` con CHECK `typeof='integer'` e `>= 0` (tipo custom Drizzle `moneyCents` ↔ `Money`); date `TEXT` con `CHECK (x IS date(x))`; istanti `TEXT` ISO-8601 UTC; enum con `CHECK (… IN (…))`; JSON solo per dati non interrogati, con `CHECK (json_valid(x))`. Vietate colonne `REAL/NUMERIC/DECIMAL` e, in SQL, `TOTAL`, `AVG`, `CAST AS REAL` e divisioni sugli importi.
-- Locking ottimistico con colonna `version`; `Idempotency-Key` in tabella con `UNIQUE(actor_id, key)`.
-- Migrazioni: `pnpm db:generate` (drizzle-kit, SQL rivisto a mano); `cli migrate` applica le migrazioni e poi `db/sql/*.sql` (trigger, FTS5), che sono idempotenti.
+### 4.5 Persistenza Postgres (DEC-115)
+- La connessione usa `pg` Pool e richiede `POSTGRES_URL`; `getDb()` applica migrazioni numerate e poi il SQL idempotente dei trigger. Le migrazioni sono serializzate con `pg_advisory_lock` (DEC-116).
+- `src/infrastructure/db/connection.ts` mantiene un adapter compatibile con i call site (`prepare().get/all/run`) e traduce i placeholder legacy in `$1…$n`. Le transazioni usano una connessione del pool con `BEGIN/COMMIT/ROLLBACK`.
+- Gli importi sono centesimi `bigint` nel dominio e `BIGINT` nel DB; `Money` converte gli importi, che in JSON restano stringhe. È vietata l'aritmetica monetaria in UI e l'uso di `REAL`/`AVG`/`TOTAL`/divisioni SQL sugli importi.
+- Ricerca full-text su `TSVECTOR`/indice GIN; i trigger append-only sono funzioni PL/pgSQL. Le istruzioni SQLite/FTS5 di questo documento e dei materiali storici non sono applicabili.
 
 ### 4.6 Job, scheduler, outbox
-- Tabella `job` con lease atomico (`UPDATE … WHERE id=(SELECT … LIMIT 1) RETURNING *` in `BEGIN IMMEDIATE`), `dedupe_key` unica, reaper dei lease scaduti, rinnovo del lease per i job lunghi. Effetti sul DB e completamento del job nella stessa transazione, condizionati a `locked_by`.
+- Coda persistita nel database, `dedupe_key` unica, lease e reaper dei lease scaduti. Non usare sintassi o assunzioni di locking SQLite (`BEGIN IMMEDIATE`) nel codice Postgres.
 - Scheduler `croner` nel worker; solo il leader (`leader_lease`) accoda `RUN_CHECKS` ogni 5 minuti (`dedupe_key = run_checks@<slot>`).
 - Outbox scritta nella stessa transazione dell'evento; il dispatcher invia con nodemailer (at-least-once, `Message-ID` stabile).
 - `worker_heartbeat` ogni 30 s. `cli run-checks --date` gira in-process e in modo sincrono (test, bootstrap); `POST /api/jobs/run-checks` accoda e risponde `202`.
@@ -250,19 +242,15 @@ _Aggiornato (DEC-117): `web` (Next.js: UI, API REST `/api/*`, `/health`, `/ready
 - `proxy.ts` non è un confine di sicurezza: genera il correlation ID e fa redirect se manca il cookie. L'autorizzazione sta negli use case.
 - Rate limit in memoria su login, import e assistente; audit dei login falliti.
 
-### 4.8 Convenzioni API (oltre alla §10.1 della specifica)
-- Ogni endpoint è un contratto Zod in `src/contracts/routes/` legato al `route.ts` con `bindRoute`. `docs/openapi.json` si genera con `pnpm openapi` ed è verificato nella gate; Swagger UI su `/api/docs`.
-- Paginazione `page`/`size` (size massima 100) in tutto il prodotto. Risposta: `{items, page, size, total}`.
-- Errori nell'envelope della §10.2. Codici stabili, ad esempio: `UNAUTHENTICATED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_ERROR`, `CSRF_REJECTED`, `FINANCIAL_INVARIANT_VIOLATION`, `INVALID_TRANSITION`, `STALE_SIMULATION`, `BLOCKING_CRITICALITY_REQUIRES_OVERRIDE`, `FOUR_EYES_VIOLATION`, `IDEMPOTENCY_CONFLICT`, `VERSION_CONFLICT`, `UPLOAD_REJECTED`, `INTERNAL_ERROR`.
-- `Idempotency-Key` obbligatoria su import, pagamenti, liquidazioni e approvazioni. Header `If-Match` (versione) su PATCH e transizioni.
-- Date ISO `YYYY-MM-DD`; importi come stringa decimale a 2 cifre (`MoneyString`); ogni valore consolidato include `source_type` ed `evidence_refs`. Nelle risposte `number` solo per campi non monetari in allowlist (test dei contratti).
-- `Cache-Control: no-store` sulle risposte con dati; segmenti autenticati dinamici, niente `'use cache'`.
-- In UI: date `gg/mm/aaaa`, importi `Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR'})` sulla stringa. Banner sempre visibile: **"Ambiente DEMO — data di riferimento 01/10/2026"**.
+### 4.8 API
+- Le route handler sono in `src/app/api/**/route.ts`; `src/server/http.ts` applica bootstrap, sessione, CSRF, envelope d'errore e correlation ID. I payload sono validati con Zod dove previsto.
+- La decisione originaria su `bindRoute`, OpenAPI e Swagger non è implementata: non esiste un comando `pnpm openapi` o una pagina `/api/docs`.
+- Per permessi, parametri, formati ed errori effettivi, consultare la route e il comando corrispondente; non assumere che i contratti della specifica siano già interamente implementati.
 
-### 4.9 Documenti, OCR, export
-- Upload in streaming con limite di dimensione, allowlist estensione + `file-type`, nome normalizzato, storage `/data/storage/<sha256[0:2]>/<sha256>`. ZIP estratti nel worker con `yauzl` e limiti contro path traversal, ZIP slip e archive bomb, con audit dei rifiuti.
-- Worker: testo nativo con `unpdf`; se una pagina ha meno di 30 caratteri → render a circa 300 dpi con `@napi-rs/canvas` → `tesseract.js` (`ita`, `langPath` locale, timeout di 60 s per pagina). Si salvano `method` e `confidence`. Le pagine PNG per il viewer si pre-renderizzano all'import. `OCR_ENABLED=false` produce un errore recuperabile.
-- Export: CSV (`csv-stringify`, `;`, BOM, importi `47600,00`), XLSX (`exceljs`; unica conversione `Money → number` ammessa: `moneyToSpreadsheetNumber`), PDF (`@react-pdf/renderer`, font in `vendor/fonts/`). Ogni export → `ExportRecord` + audit.
+### 4.9 Documenti e export
+- Lo storage configurato è locale (`.data/storage`) o Vercel Blob; implementazione in `src/infrastructure/documents/storage.ts`. Consultare il codice del flusso di upload prima di cambiare limiti, classificazione o persistenza.
+- OCR usa `unpdf`, `@napi-rs/canvas` e `tesseract.js` con i dati lingua locali. ZIP è gestito da `yauzl`.
+- CSV/XLSX/PDF sono generati dai moduli presenti in `src/server/exports.ts`; non assumere dipendenze o output diversi da quelli nel `package.json` e nei test.
 
 ---
 
@@ -332,6 +320,8 @@ Calcolati: `NOT_STARTED`, `UPCOMING`, `DUE_SOON`, `DUE_TODAY`, `OVERDUE`. Persis
 ## 6. Modello dati e API: integrazioni
 
 ### 6.1 Entità da aggiungere al modello della §5.1 della specifica
+> Il modello e la lista di endpoint di questa sezione sono proposte del piano originario, non un inventario del codice runtime. Il DB corrente è definito da `db/migrations/*.sql`; le API effettive sono le route presenti in `src/app/api/`. Per Postgres, importi e trigger seguono DEC-115.
+
 | Entità | Campi chiave | Motivo |
 |---|---|---|
 | `Supplier` | id, demo_name, vat_demo, is_demo | Fornitore e ambito di accesso |
@@ -356,7 +346,7 @@ Calcolati: `NOT_STARTED`, `UPCOMING`, `DUE_SOON`, `DUE_TODAY`, `OVERDUE`. Persis
 | `IdempotencyKey` | actor_id, key, route, request_hash, status, response_json | spec §10.1 |
 | `SystemMeta` | schema_version, seeded_at, db_epoch | bootstrap, reset |
 | `ProcedureSnapshotYear` | procedure_id, year, need_cents, available_cents | Filtro per annualità (NFR-002) |
-| `ProcedureSearch` (FTS5) | code, title, structure_label, supplier_name, cig, cup | Ricerca (US-011) |
+| `ProcedureSearch` (storico FTS5; attuale `TSVECTOR`) | code, title, structure_label, supplier_name, cig, cup | Ricerca (US-011) |
 | `DocumentPage` | document_id, page_no, text, method, confidence, png_path | OCR, viewer |
 | `FundingLine` | programme, operation, activity, chapter, source, funding_end_date | DEC-035 |
 | `CostComponent` | procedure_id, kind (`ANAC_FEE`, `TECH_INCENTIVES`), year, source, amount | DEC-035 |
@@ -366,7 +356,7 @@ Estensioni da applicare alle entità esistenti (P-14):
 - **`ContractVersion.reason`** ∈ {`SCHEDULE_CHANGE`, `PAYMENT_PLAN_CHANGE`, `END_DATE_CHANGE`, `SCOPE_CHANGE`, `TERMINATION`}. L'addendum è spesso il documento che porta il piano SAL, circa un mese dopo la stipula.
 - **`Document`** (metadati di atto): `act_type`, `act_number_demo`, `registration_date`, `signer_role`, atti richiamati. Un atto (es. una determina di accordo quadro) può essere associato a più procedure.
 
-**Vincoli.** SQLite non ha GRANT, quindi l'immutabilità si ottiene con trigger:
+**Vincoli storici del piano SQLite:** il runtime Postgres applica l'immutabilità tramite trigger PL/pgSQL in `db/sql/triggers.sql` (DEC-115):
 - **append-only tramite trigger** `BEFORE UPDATE/DELETE … RAISE(ABORT,'AUDIT_APPEND_ONLY')` sull'audit e sulle tabelle `financial_movement`, `procedure_version`, `payment_forecast_line`, `milestone_forecast`, `alert_notification` e `validation_decision`. Unica eccezione: su `procedure_version` è ammesso impostare l'approvazione quando è ancora NULL;
 - i trigger stanno in `db/sql/triggers.sql`, sono riapplicati dopo ogni migrazione e sono verificati da test e da `/ready`.
 
@@ -380,7 +370,8 @@ Le chiavi interne sono `INTEGER PRIMARY KEY`. I codici di business (`P-001`) son
 ### 6.2 Versionamento
 `ProcedureVersion` contiene lo snapshot di: date previste delle milestone, righe di previsione di pagamento, importo programmato e motivazione. Ha `version_no`, `is_baseline`, `created_from_simulation_id`, `approved_by`. Il forecast corrente è l'ultima versione approvata. Gli `ACTUAL` stanno su `ProcedureMilestone.actual_date` e sui movimenti, **fuori** dalle versioni (BR-006).
 
-### 6.3 Endpoint aggiuntivi (oltre alla §10 della specifica)
+### 6.3 Endpoint aggiuntivi (proposta storica)
+> I path seguenti provengono dal piano iniziale e non sono una descrizione dell'API attuale. Consultare `src/app/api/` prima di usare o documentare un endpoint.
 `POST /api/procedures/{id}/memory/submit` · `PATCH /api/procedures/{id}/milestones/{mid}` (forecast, sospensione, N/A, con motivazione) · `POST /api/procedures/{id}/cancel` · `POST /api/procedures/{id}/close` · `GET|POST /api/procedures/{id}/budget` · `GET /api/procedures/{id}/forecast?version=` · `POST /api/reschedules/{id}/submit` · `GET /api/reschedules/{id}` · `POST /api/sals/{id}/documents` (fornitore) · `POST /api/sals/{id}/invoices` · `POST /api/sals/{id}/liquidations` · `POST /api/payments/{id}/reverse` · `GET /api/validations` · `POST /api/validations/{id}/decide` · `POST /api/validations/bulk-approve` · `GET /api/anomalies` · `POST /api/alerts/{id}/suspend` · `GET /api/exports/portfolio.(csv|xlsx)` · `GET /api/exports/procedures/{id}.pdf` · `GET /api/documents/{id}/content` · `GET /api/documents/{id}/pages/{n}.png` · `POST /api/admin/impersonate` · `POST /api/admin/reset` (con token di conferma) · `GET /api/admin/jobs` · `GET|POST|PATCH /api/admin/users` · `GET /api/dashboard/operational` · `GET /api/system/status` · `POST /api/auth/logout` · `POST /api/me/active-role` · `GET /api/openapi.json` · `GET /api/docs` · `GET /api/admin/jobs/{id}`.
 
 Precisazioni: `POST /api/jobs/run-checks` risponde `202 {job_id}`; `GET /api/documents/{id}/pages/{n}.png` è servito dallo storage, perché le pagine sono pre-renderizzate dal worker.
@@ -880,6 +871,8 @@ Con i documenti attesi della §9.3 e la regola della §8.7, questi documenti pro
 
 ## 11. Piano a incrementi
 
+> **Piano storico:** la tabella sottostante è il piano originario e include componenti poi sostituiti (SQLite, Docker, backup locale, OpenAPI). Non è il backlog corrente e non va usata per dedurre che una feature sia ancora da implementare. Al 2026-11-04 I0–I7 risultano completati in locale (US-103 parziale), I8 è parziale e le richieste DEC-111 1–6 sono implementate. La richiesta 7 (indicatori desiderati per la dashboard iniziale) è in attesa di definizione con INAPP. Per lo stato effettivo e le attività residue fa fede [04_avanzamento.md](04_avanzamento.md).
+
 Ogni incremento si chiude con: stack pulito avviabile, quality gate verde, oracle delle sezioni attive verde, README aggiornato, tag git. Le dipendenze fra storie che contraddicono quest'ordine (CR-19) si risolvono così: **prima il percorso manuale/seed, poi quello automatico**.
 
 | Inc. | Contenuto | Storie | Sezioni oracle | Exit |
@@ -901,29 +894,23 @@ Ogni incremento si chiude con: stack pulito avviabile, quality gate verde, oracl
 ## 12. Test e quality gate
 
 ### 12.1 Livelli
-- **Unit** (`tests/unit`, Vitest, nessun I/O): calendario (weekend, festività, Pasquetta, fine anno), stati delle milestone, policy di alert e livelli, health, propagazione e simulazione (casi §10.5), `Money` e `divRoundHalfUp` (property-based con fast-check, decimal.js come oracle), arrotondamenti SAL, invarianti, KPI, matrice dei permessi. Copertura `src/domain/**` ≥ 70% delle righe (obiettivo 85%).
-- **Integration** (`tests/integration`, **SQLite reale**, lo stesso motore della demo): migrazioni da zero e da una versione precedente; presenza ed effetto dei trigger obbligatori (audit, movimenti e versioni immutabili) anche dopo una ricreazione di tabella; schema senza colonne `REAL/NUMERIC` e con CHECK sugli `*_cents`; seed idempotente (T-002); oracle; `run_checks` idempotente; locking ottimistico; idempotency key; **lease concorrente** (3 processi figli, 0 doppie acquisizioni); recupero dei lease scaduti; outbox at-least-once; reset transazionale; FTS5.
-- **API** (`tests/api`, route handler invocati in-process con `Request` reali e cookie di sessione): RBAC per ogni endpoint, con la matrice ruolo × endpoint generata dai contratti delle route, inclusi i 403 object-level (T-017); CSRF (header mancante o errato, Origin estraneo → 403 `CSRF_REJECTED`); envelope di errore; idempotenza; coerenza contratti ↔ `route.ts`; nessun `number` monetario nelle risposte.
-- **E2E** (`e2e/`, Playwright con `pnpm test:e2e`): flussi T-0xx, lo spec `demo-script.spec.ts` che ripete la §13.3 della specifica, verifica delle e-mail tramite l'API di Mailpit; axe sulle pagine UI-01…UI-10 senza violazioni serious/critical. Prima della suite: reset via `POST /api/admin/reset`.
+- **Unit** (`tests/unit`, Vitest): test del dominio puro, inclusi Money, date, alert, KPI e simulazione.
+- **Integration/API** (`tests/integration`, `tests/api`, Vitest): usano Postgres tramite `POSTGRES_URL`; `scenarioDb()` tronca tutte le tabelle applicative, ricarica `scenarios` e ricalcola i check. `fileParallelism` è disattivato perché il DB è condiviso fra i test. Non presumere un DB in memoria o isolato per file.
+- **API** (`tests/api`, comandi e route handler invocati con sessione): test di permessi, ambito object-level, validazione, risposte e invarianti di dominio. Non è presente una matrice automatica generata dai contratti route né una verifica OpenAPI.
+- **E2E** (`e2e/`, Playwright con `pnpm test:e2e`): `demo-script.spec.ts` sul dataset `scenarios` e `guida.spec.ts` sul dataset `inapp`; l'axe è incluso nei test UI. Il bootstrap E2E prepara i server e pulisce il database prima dell'avvio: valgono le cautele della §12.2.
 
-### 12.2 Database usa-e-getta
-- `globalSetup` di Vitest costruisce una sola volta `template.db` (migrazioni + `db/sql` + seed) e ne conserva la versione serializzata.
-- Ogni file di test apre una copia **in memoria** (`new Database(buffer)`). I test che richiedono WAL, file o più processi copiano il template in una cartella temporanea univoca e la cancellano alla fine.
-- Nessun test dipende dall'ordine di esecuzione o dal DB di un altro test. La data di business arriva sempre da `FixedClock` (2026-10-01, salvo casi espliciti).
-- Test oracle: template → `run_checks(2026-10-01)` → confronto campo per campo con `seed/expected_results.json`, sezioni attivate da `ORACLE_SECTIONS` (elenco esplicito, senza skip silenziosi).
+### 12.2 Sicurezza del database di test
+- **Pericolo: i test cancellano i dati.** `tests/helpers/db.ts` esegue `TRUNCATE ... RESTART IDENTITY CASCADE` su tutte le tabelle applicative del Postgres indicato da `POSTGRES_URL`; `e2e/clean-db.mjs` fa lo stesso prima degli E2E.
+- Non eseguire `pnpm test`, `pnpm verify` (che include `pnpm test`) o `pnpm test:e2e` contro il database Vercel, la demo o un database con dati da conservare. Il target deve essere isolato e sacrificabile.
+- Questo requisito operativo è in conflitto con DEC-115, che prevede un solo database per sviluppo, test e Vercel. La suite non è stata ancora convalidata sul Postgres post-porting; risolvere il conflitto prima di considerare verde la quality gate corrente.
+- I test usano `fixedClock("2026-10-01")`; la suite E2E avvia due server Next su database puliti e dataset `scenarios`/`inapp`.
 
 ### 12.3 Tracciabilità
-Ogni test porta nel titolo l'ID della storia o del test di collaudo (`describe('[US-040] …')`, `test('[T-004] …')`). `scripts/traceability.ts` genera `docs/traceability.md` (storia → test → esito) dai report JSON di Vitest e Playwright. La gate **fallisce** se una storia MUST dell'incremento chiuso non ha test.
+I test esistenti identificano storie e decisioni nei titoli (`describe('[DEC-111] …')`, `test('[T-004] …')`). Non è presente un generatore automatico di traceability; aggiornare i test delle storie modificate e l'avanzamento manualmente.
 
-### 12.4 Quality gate (`scripts/check.sh`, documentata nel README)
+### 12.4 Comandi di verifica attuali
 
-```
-pnpm verify
-pnpm test:e2e
-pnpm traceability --check
-```
-
-`pnpm verify` = `format:check` (Prettier) → `lint` (ESLint, regole type-aware) → `typecheck` (`tsc --noEmit`) → `arch` (dependency-cruiser) → `guards` → `test:ci` (unit + integration + api, con copertura e soglie) → `openapi:check` → `audit` (`pnpm audit --prod --audit-level high`, con eccezioni documentate in `docs/audit-exceptions.md`; saltato solo con `CHECK_OFFLINE=1`, annotandolo).
+Nel repository attuale `pnpm verify` esegue `pnpm typecheck`, `pnpm guards` e `pnpm test`. `pnpm test:e2e` è una suite separata. **Entrambi i comandi dei test svuotano il database puntato da `POSTGRES_URL`**: seguire §12.2 e non lanciarli su un database contenente dati da conservare.
 
 `pnpm guards` (`scripts/guards.ts`) fallisce se trova:
 - `Date.now`, `new Date()` senza argomenti o `Temporal.Now` fuori da `src/infrastructure/clock`;
@@ -933,7 +920,7 @@ pnpm traceability --check
 - un trigger di `REQUIRED_TRIGGERS` assente da `db/sql/triggers.sql`;
 - file `.env` versionati o un lockfile mancante.
 
-Su Windows la gate si esegue da Git Bash o WSL. Per un ciclo veloce si può lanciare `pnpm verify` sull'host; la gate valida resta quella nei container.
+Su Windows i comandi pnpm si eseguono in PowerShell o nel terminale VS Code. Docker non è richiesto.
 
 ---
 
@@ -944,11 +931,11 @@ Su Windows la gate si esegue da Git Bash o WSL. Per un ciclo veloce si può lanc
 - RBAC verificato via API, anche nei casi negativi;
 - audit scritto per le mutazioni sensibili;
 - UI con stati loading, empty, error e unauthorized, ed etichette accessibili;
-- contratti Zod aggiornati e `docs/openapi.json` rigenerato;
+- input delle route validati con Zod dove previsto;
 - nessuna regola duplicata tra UI e backend;
 - `04_avanzamento.md` aggiornato e commit fatto.
 
-**Incremento completato:** exit della §11, oracle delle sezioni attive verde, `pnpm db:reset && pnpm dev` funzionante da zero, README aggiornato, tag.
+**Incremento completato:** criteri d'accettazione coperti e verificati su un database appropriato, README e avanzamento aggiornati, tag. Per reset e collaudo Postgres vedere §12.2.
 
 **MVP completato:** DoD §13.2 della specifica + §1 di questa guida + evidenze §13.4 della specifica in `docs/evidenze/`. Le deviazioni registrate nel registro hanno impatto e workaround.
 
@@ -956,7 +943,7 @@ Su Windows la gate si esegue da Git Bash o WSL. Per un ciclo veloce si può lanc
 
 ## 14. Checklist di sessione
 
-**Apertura:** leggere avanzamento e registro → `git status/log` → stack su → quality gate verde → scegliere la storia.
+**Apertura:** leggere avanzamento e registro → `git status/log` → verificare che `POSTGRES_URL` non punti a un database con dati da conservare prima di qualsiasi test distruttivo → scegliere il lavoro non bloccato.
 
 **Chiusura:**
 - quality gate verde, oppure il problema è annotato con la diagnosi;
