@@ -136,7 +136,12 @@ export function databaseUrl(): string {
 
 /** Apre un pool di connessioni Postgres. */
 export async function openDb(url: string = databaseUrl()): Promise<Db> {
-  const pool = new Pool({ connectionString: url });
+  const pool = new Pool({
+    connectionString: url,
+    max: 5,
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
+  });
   globalThis.__inappPool = pool;
   return wrapExecutor(pool);
 }
