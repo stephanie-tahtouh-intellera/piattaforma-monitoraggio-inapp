@@ -222,17 +222,19 @@ export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boo
             Documenti attesi: {s.expectedDocuments.map((x) => DOC_TYPE_LABEL[x.type] ?? humanize(x.type)).join(", ")}. I file sono controllati per tipo, firma del contenuto e dimensione.
           </p>
           <UploadForm key={s.code} code={d.procedure.code} />
-          <h4>2. Registra il passo</h4>
         </div>
       ) : null}
       {s.canComplete ? (
-        <ActionForm
-          key={s.code}
-          endpoint={`/api/procedures/${d.procedure.code}/milestones/${s.code}/complete`}
-          submitLabel={s.action === "SIGN" ? "Accetto l'ordine e controfirmo il contratto" : "Registra il passo"}
-          fields={stepFields(d, s)}
-          successMessage="Passo registrato: il processo passa al passo successivo."
-        />
+        <>
+          {canUpload && s.expectedDocuments.length ? <h4>2. Registra il passo</h4> : null}
+          <ActionForm
+            key={s.code}
+            endpoint={`/api/procedures/${d.procedure.code}/milestones/${s.code}/complete`}
+            submitLabel={s.action === "SIGN" ? "Accetto l'ordine e controfirmo il contratto" : "Registra il passo"}
+            fields={stepFields(d, s)}
+            successMessage="Passo registrato: il processo passa al passo successivo."
+          />
+        </>
       ) : (
         <p className="muted small">
           Il passo è registrato da {OWNER_LABEL[s.owner] ?? s.owner}
