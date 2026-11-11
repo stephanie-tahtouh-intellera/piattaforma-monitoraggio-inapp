@@ -42,18 +42,19 @@ export async function applyDemoActions(db: Db): Promise<void> {
   // Procedura guida del percorso demo: fascicolo con memoria e documento tecnico, completezza documentale non tracciata
   await db.prepare("UPDATE procedures SET dataset = 'casi-demo', documents_tracked = 0 WHERE code = ?").run(draft.code);
   const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(draft.code)) as { id: number }).id;
-  for (const [type, file, title] of [
-    ["MEMORIA", "memoria.pdf", "Memoria per il Direttore Generale – BZ-001"],
-    ["DOCUMENTO_TECNICO", "documento_tecnico.pdf", "Documento tecnico – BZ-001"],
+  for (const [type, file, title, uploadedBy] of [
+    ["MEMORIA", "memoria.pdf", "Memoria per il Direttore Generale – BZ-001", "struttura.si"],
+    ["DOCUMENTO_TECNICO", "documento_tecnico.pdf", "Documento tecnico – BZ-001", "struttura.si"],
+    ["DOCUMENTI_OPERATORE", "documenti_operatore.pdf", "Documenti dell'operatore – BZ-001", "fornitore.alfa"],
   ] as const) {
     const full = documentFile(`casi:BZ-001/${file}`);
     const buf = readFileSync(full);
     await db
       .prepare(
         `INSERT INTO documents (procedure_id, file_path, file_name, sha256, size_bytes, doc_type, title, uploaded_by, uploaded_at, association_method, association_confidence)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'struttura.si', ?, 'UPLOAD', '1.00')`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'UPLOAD', '1.00')`,
       )
-      .run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, systemNowIso());
+      .run(pid, `casi:BZ-001/${file}`, file, createHash("sha256").update(buf).digest("hex"), statSync(full).size, type, title, uploadedBy, systemNowIso());
   }
   const plans: { code: string; by: Actor; source: string; date: string; cause: string; notes: string }[] = [
     {
