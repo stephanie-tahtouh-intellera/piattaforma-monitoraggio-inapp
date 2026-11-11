@@ -163,7 +163,7 @@ async function insertProcedureBatch(
       p.documentsTracked === false ? 0 : 1, Money.parse(p.anacFee ?? "0").cents, p.cig ?? `CIG-DEMO-${p.code.replace("-", "")}`, p.cup ?? `CUP-DEMO-${p.code.replace("-", "")}`,
       p.sourceKey ?? null, p.operation ?? null, projectFromOperation(p.operation)?.code ?? null, p.activityStart ?? null, p.activityEnd ?? null, p.sourceStatus ?? null, p.iterText ?? null, p.sourceRow ?? null,
       p.operator ?? null, now, p.incentives ? Money.parse(p.incentives.base).cents : null, 2200,
-      p.incentives?.decision ?? null, agg.technicalIncentives.pctHundredths, agg.technicalIncentives.amount.cents,
+      p.incentives?.decision ?? null, agg.technicalIncentives.pctHundredths ?? 0n, agg.technicalIncentives.amount.cents,
       p.incentives?.reduceAvailable ? 1 : 0,
     ];
   });
