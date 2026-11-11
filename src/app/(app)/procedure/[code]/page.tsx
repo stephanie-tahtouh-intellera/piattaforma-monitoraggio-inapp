@@ -64,6 +64,73 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
     : TABS.filter(([k]) => k === "iter" || k === "documents" || (k === "audit" && can(actor, "audit.read")));
   const turn = d.process.activeStep;
   const ref = d.referenceDate;
+  const showDocumentsFirst = tab === "documents" && d.documents.length > 0;
+
+  const memoriaSection = ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
+    <section className="card" style={{ marginBottom: 16 }} id="memoria" data-tour="memoria">
+      <h2>Consegna della memoria</h2>
+      <p className="muted">Alla consegna la baseline si congela, con il quadro economico qui sotto, e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
+      {p.economicFrame ? <div style={{ margin: "12px 0" }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
+      <div className="step-upload" data-tour="memoria-documenti" style={{ margin: "12px 0" }}>
+        <h3>Documenti da consegnare con la memoria</h3>
+        <ul>
+          <li>Memoria: {hasDoc("MEMORIA") ? <span className="badge badge-GREEN">caricata</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
+          <li>Capitolato (documento tecnico){p.economicFrame ? ", obbligatorio" : ""}: {hasDoc("DOCUMENTO_TECNICO") ? <span className="badge badge-GREEN">caricato</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
+        </ul>
+        {hasDoc("MEMORIA") || hasDoc("DOCUMENTO_TECNICO") ? <p className="small muted"><Link href={`/procedure/${p.code}?tab=documents`}>Vedi i documenti caricati nel fascicolo documentale</Link></p> : null}
+        <UploadForm code={p.code} docType="MEMORIA" label="Carica la memoria (PDF)" />
+        <UploadForm code={p.code} docType="DOCUMENTO_TECNICO" label="Carica il capitolato (PDF)" />
+      </div>
+      {assistantOn ? <MemoryAssistant code={p.code} /> : null}
+      <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
+    </section>
+  ) : null;
+
+  const documentsSection = tab === "documents" ? (
+    <section className="card">
+      <h2>Fascicolo documentale</h2>
+      {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <div data-tour="upload"><UploadForm code={p.code} /></div> : null}
+      {(d.documents as any[]).some((x) => x.processing_state === "OCR_PENDING" || x.processing_state === "STORED") && can(actor, "documents.import") ? (
+        <ActionForm endpoint="/api/documents/process" submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
+      ) : null}
+      <div className="table-wrap">
+        <table className="data">
+          <thead><tr><th>Documento</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
+          <tbody>
+            {(d.documents as any[]).map((x) => (
+              <tr key={x.id}>
+                <td>{x.title ?? x.file_name}</td>
+                <td className="num">{x.pages ?? "—"}</td>
+                <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{humanize(x.processing_state)}</span>}</td>
+                <td>{x.association_method} · affidabilità {x.association_confidence}</td>
+                <td><DateIt v={x.uploaded_at?.slice(0, 10)} /></td>
+                <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`} target="_blank" rel="noopener noreferrer">Apri</a> : <span className="muted small">file non disponibile</span>}</td>
+              </tr>
+            ))}
+            {d.documents.length === 0 ? <tr><td colSpan={6} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
+          </tbody>
+        </table>
+      </div>
+      {can(actor, "document.classify") && !p.cancelledAt && d.documents.length ? (
+        <div style={{ marginTop: 16 }} data-tour="classifica">
+          <h3>Correggi la classificazione di un documento</h3>
+          <p className="muted small">Cambia il tipo di atto o sposta il documento nella procedura giusta. La correzione richiede una motivazione ed è registrata nell'audit.</p>
+          <ActionForm
+            endpoint="/api/documents/classify"
+            submitLabel="Correggi classificazione"
+            variant="secondary"
+            successMessage="Classificazione corretta."
+            fields={[
+              { name: "document_id", label: "Documento", type: "select", required: true, options: (d.documents as any[]).map((x) => ({ value: String(x.id), label: x.title ?? x.file_name })) },
+              { name: "doc_type", label: "Nuovo tipo di atto", type: "select", options: [{ value: "", label: "Non cambiare" }, ...DOC_TYPES.map((t) => ({ value: t, label: DOC_TYPE_LABEL[t] ?? t }))] },
+              { name: "procedure", label: "Sposta nella procedura (codice)", help: "Solo se il documento è nella procedura sbagliata, ad esempio OP04-S18." },
+              { name: "note", label: "Motivazione", type: "textarea", required: true },
+            ]}
+          />
+        </div>
+      ) : null}
+    </section>
+  ) : null;
 
   return (
     <>
@@ -114,25 +181,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         ))}
       </nav>
 
-      {ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
-        <section className="card" style={{ marginBottom: 16 }} id="memoria" data-tour="memoria">
-          <h2>Consegna della memoria</h2>
-          <p className="muted">Alla consegna la baseline si congela, con il quadro economico qui sotto, e la titolarità passa all'Ufficio Gare (US-013, US-033).</p>
-          {p.economicFrame ? <div style={{ margin: "12px 0" }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
-          <div className="step-upload" data-tour="memoria-documenti" style={{ margin: "12px 0" }}>
-            <h3>Documenti da consegnare con la memoria</h3>
-            <ul>
-              <li>Memoria: {hasDoc("MEMORIA") ? <span className="badge badge-GREEN">caricata</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
-              <li>Capitolato (documento tecnico){p.economicFrame ? ", obbligatorio" : ""}: {hasDoc("DOCUMENTO_TECNICO") ? <span className="badge badge-GREEN">caricato</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
-            </ul>
-            {hasDoc("MEMORIA") || hasDoc("DOCUMENTO_TECNICO") ? <p className="small muted"><Link href={`/procedure/${p.code}?tab=documents`}>Vedi i documenti caricati nel fascicolo documentale</Link></p> : null}
-            <UploadForm code={p.code} docType="MEMORIA" label="Carica la memoria (PDF)" />
-            <UploadForm code={p.code} docType="DOCUMENTO_TECNICO" label="Carica il capitolato (PDF)" />
-          </div>
-          {assistantOn ? <MemoryAssistant code={p.code} /> : null}
-          <ActionForm endpoint={`/api/procedures/${p.code}/memory/submit`} submitLabel="Consegna memoria" fields={[{ name: "date", label: "Data di consegna", type: "date", required: true, defaultValue: ref }, { name: "note", label: "Protocollo o nota", type: "textarea" }]} successMessage="Memoria consegnata: baseline congelata." />
-        </section>
-      ) : null}
+      {showDocumentsFirst ? documentsSection : memoriaSection}
       {tab === "overview" && p.economicFrame && ev.status !== "DRAFT" ? <div style={{ marginBottom: 16 }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
       {tab === "overview" ? (
         <div className="grid grid-2">
@@ -183,51 +232,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
 
       {tab === "finance" ? <Finance d={d} actor={actor} /> : null}
 
-      {tab === "documents" ? (
-        <section className="card">
-          <h2>Fascicolo documentale</h2>
-          {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <div data-tour="upload"><UploadForm code={p.code} /></div> : null}
-          {(d.documents as any[]).some((x) => x.processing_state === "OCR_PENDING" || x.processing_state === "STORED") && can(actor, "documents.import") ? (
-            <ActionForm endpoint="/api/documents/process" submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
-          ) : null}
-          <div className="table-wrap">
-            <table className="data">
-              <thead><tr><th>Documento</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
-              <tbody>
-                {(d.documents as any[]).map((x) => (
-                  <tr key={x.id}>
-                    <td>{x.title ?? x.file_name}</td>
-                    <td className="num">{x.pages ?? "—"}</td>
-                    <td>{x.processing_state === "OCR_PENDING" ? <span className="badge badge-AMBER">OCR da eseguire</span> : x.processing_state === "TEXT_EXTRACTED" ? <span className="badge badge-GREEN">Testo estratto</span> : x.processing_state === "OCR_DONE" ? <span className="badge badge-GREEN">OCR eseguito</span> : x.processing_state === "OCR_FAILED" ? <span className="badge badge-RED">OCR non riuscito</span> : <span className="chip">{humanize(x.processing_state)}</span>}</td>
-                    <td>{x.association_method} · affidabilità {x.association_confidence}</td>
-                    <td><DateIt v={x.uploaded_at?.slice(0, 10)} /></td>
-                    <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`}>Apri</a> : <span className="muted small">file non disponibile</span>}</td>
-                  </tr>
-                ))}
-                {d.documents.length === 0 ? <tr><td colSpan={6} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
-              </tbody>
-            </table>
-          </div>
-          {can(actor, "document.classify") && !p.cancelledAt && d.documents.length ? (
-            <div style={{ marginTop: 16 }} data-tour="classifica">
-              <h3>Correggi la classificazione di un documento</h3>
-              <p className="muted small">Cambia il tipo di atto o sposta il documento nella procedura giusta. La correzione richiede una motivazione ed è registrata nell'audit.</p>
-              <ActionForm
-                endpoint="/api/documents/classify"
-                submitLabel="Correggi classificazione"
-                variant="secondary"
-                successMessage="Classificazione corretta."
-                fields={[
-                  { name: "document_id", label: "Documento", type: "select", required: true, options: (d.documents as any[]).map((x) => ({ value: String(x.id), label: x.title ?? x.file_name })) },
-                  { name: "doc_type", label: "Nuovo tipo di atto", type: "select", options: [{ value: "", label: "Non cambiare" }, ...DOC_TYPES.map((t) => ({ value: t, label: DOC_TYPE_LABEL[t] ?? t }))] },
-                  { name: "procedure", label: "Sposta nella procedura (codice)", help: "Solo se il documento è nella procedura sbagliata, ad esempio OP04-S18." },
-                  { name: "note", label: "Motivazione", type: "textarea", required: true },
-                ]}
-              />
-            </div>
-          ) : null}
-        </section>
-      ) : null}
+      {showDocumentsFirst ? memoriaSection : documentsSection}
 
       {tab === "alerts" ? (
         <section className="card">
