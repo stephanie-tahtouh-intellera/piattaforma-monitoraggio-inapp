@@ -64,7 +64,6 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
     : TABS.filter(([k]) => k === "iter" || k === "documents" || (k === "audit" && can(actor, "audit.read")));
   const turn = d.process.activeStep;
   const ref = d.referenceDate;
-  const showDocumentsFirst = tab === "documents" && d.documents.length > 0;
 
   const memoriaSection = ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN") ? (
     <section className="card" style={{ marginBottom: 16 }} id="memoria" data-tour="memoria">
@@ -181,7 +180,6 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         ))}
       </nav>
 
-      {showDocumentsFirst ? documentsSection : memoriaSection}
       {tab === "overview" && p.economicFrame && ev.status !== "DRAFT" ? <div style={{ marginBottom: 16 }}><EconomicFrameCard frame={p.economicFrame} /></div> : null}
       {tab === "overview" ? (
         <div className="grid grid-2">
@@ -227,12 +225,13 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       ) : null}
 
       {tab === "iter" ? <IterBoard d={d} canSubmitMemory={ev.status === "DRAFT" && (actor.role === "STRUCTURE_USER" || actor.role === "ADMIN")} canUpload={!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import"))} /> : null}
+      {tab === "iter" ? memoriaSection : null}
 
       {tab === "timeline" ? <Timeline d={d} /> : null}
 
       {tab === "finance" ? <Finance d={d} actor={actor} /> : null}
 
-      {showDocumentsFirst ? memoriaSection : documentsSection}
+      {documentsSection}
 
       {tab === "alerts" ? (
         <section className="card">
