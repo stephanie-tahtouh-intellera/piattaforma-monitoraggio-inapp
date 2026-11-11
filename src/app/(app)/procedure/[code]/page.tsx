@@ -122,9 +122,10 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           <div className="step-upload" data-tour="memoria-documenti" style={{ margin: "12px 0" }}>
             <h3>Documenti da consegnare con la memoria</h3>
             <ul>
-              <li>Memoria: <strong>{hasDoc("MEMORIA") ? "caricata" : "da caricare"}</strong></li>
-              <li>Capitolato (documento tecnico){p.economicFrame ? ", obbligatorio" : ""}: <strong>{hasDoc("DOCUMENTO_TECNICO") ? "caricato" : "da caricare"}</strong></li>
+              <li>Memoria: {hasDoc("MEMORIA") ? <span className="badge badge-GREEN">caricata</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
+              <li>Capitolato (documento tecnico){p.economicFrame ? ", obbligatorio" : ""}: {hasDoc("DOCUMENTO_TECNICO") ? <span className="badge badge-GREEN">caricato</span> : <span className="badge badge-AMBER">da caricare</span>}</li>
             </ul>
+            {hasDoc("MEMORIA") || hasDoc("DOCUMENTO_TECNICO") ? <p className="small muted"><Link href={`/procedure/${p.code}?tab=documents`}>Vedi i documenti caricati nel fascicolo documentale</Link></p> : null}
             <UploadForm code={p.code} docType="MEMORIA" label="Carica la memoria (PDF)" />
             <UploadForm code={p.code} docType="DOCUMENTO_TECNICO" label="Carica il capitolato (PDF)" />
           </div>
