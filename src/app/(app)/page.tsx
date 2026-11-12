@@ -112,9 +112,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </section>
       <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16 }}>
         <h2 id="bytype">Gare per tipo</h2>
-        <div style={{ maxWidth: 420 }}>
-          <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
-        </div>
+        <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
       </section>
 
       <section aria-label="Indicatori principali" className="grid kpi-grid">

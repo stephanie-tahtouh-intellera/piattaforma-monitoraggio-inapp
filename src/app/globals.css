@@ -160,6 +160,16 @@ table.data td .chip { height: auto; min-height: 22px; white-space: normal; }
 .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pager { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--ds-text-sm); }
 
+/* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
+.hbar-chart { list-style: none; margin: 0; padding: 0; max-width: 640px; }
+.hbar-chart li + li { margin-top: var(--space-2); }
+.hbar-chart a { display: grid; grid-template-columns: minmax(9rem, 16rem) 1fr 2.5rem; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; color: inherit; text-decoration: none; border-radius: var(--ds-radius-sm); }
+.hbar-chart a:hover, .hbar-chart a:focus-visible { background: var(--ds-color-bg-subtle); }
+.hbar-label { font-size: var(--ds-text-sm); color: var(--ds-color-text); }
+.hbar-track { height: 20px; background: var(--chart-grid); border-radius: var(--ds-radius-sm); overflow: hidden; }
+.hbar-fill { display: block; height: 100%; background: var(--chart-1); border-radius: var(--ds-radius-sm); }
+.hbar-value { font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-color-text); text-align: right; }
+
 /* ---------- Filtri e form ---------- */
 .filters { background: var(--ds-color-bg-subtle); border: 1px solid var(--brand-tint-border); border-radius: var(--ds-radius); padding: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-bottom: var(--space-3); }
 /* Filtri compatti: controlli da 32 px e colonne strette, così stanno su meno righe. */
