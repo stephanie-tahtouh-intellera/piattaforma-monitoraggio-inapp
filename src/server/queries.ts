@@ -150,6 +150,8 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
          SUM(CASE WHEN s.late = 1 THEN 1 ELSE 0 END) AS late,
          SUM(s.reschedule_required) AS to_reschedule,
          SUM(s.critical_alerts) AS critical_alerts,
+         SUM(CASE WHEN s.status NOT IN ('DRAFT','CLOSED','CANCELLED') THEN 1 ELSE 0 END) AS active,
+         SUM(CASE WHEN s.status = 'DRAFT' THEN 1 ELSE 0 END) AS to_start,
          SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END) AS programmed,
          SUM(COALESCE(s.contracted_cents, 0)) AS contracted,
          SUM(s.paid_cents) AS paid,
@@ -193,21 +195,35 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
   const byStatus = (await db
     .prepare(`SELECT s.status, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`)
     .all(...params)) as { status: string; n: number }[];
+  const byTypeRows = (await db
+    .prepare(`SELECT p.procedure_type AS type, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY p.procedure_type`)
+    .all(...params)) as { type: string; n: number }[];
+  const byType = byTypeRows.sort((a, b) => PROCEDURE_TYPE_ORDER.indexOf(a.type) - PROCEDURE_TYPE_ORDER.indexOf(b.type));
+  // Ogni versione oltre la baseline è una richiesta di riprogrammazione approvata (DEC-003): nessuna cancellazione, solo nuove versioni.
+  const reprogramRequests = (
+    (await db
+      .prepare(`SELECT COUNT(*) AS n FROM procedure_versions v JOIN procedures p ON p.id = v.procedure_id WHERE ${w} AND v.is_baseline = 0`)
+      .get(...params)) as { n: number }
+  ).n;
   return {
     referenceDate: k.reference_date ?? (await configuredReferenceDate(db)),
     updatedAt: k.updated_at,
     kpi: {
       proceduresTotal: k.total ?? 0,
+      proceduresActive: k.active ?? 0,
+      proceduresToStart: k.to_start ?? 0,
       proceduresLate: k.late ?? 0,
       toReschedule: k.to_reschedule ?? 0,
       criticalAlerts: k.critical_alerts ?? 0,
       openAnomalies: k.anomalies ?? 0,
+      reprogramRequests,
       programmed: money(k.programmed ?? 0),
       contracted: money(k.contracted ?? 0),
       paid: money(k.paid ?? 0),
       atRisk: { total: money(k.at_risk ?? 0), uncovered: money(k.uncovered ?? 0), slipping: money(k.slipping ?? 0) },
       health: { GREEN: k.green ?? 0, AMBER: k.amber ?? 0, RED: k.red ?? 0, NEUTRAL: k.neutral ?? 0 },
     },
+    byType,
     annual: years.map((y) => {
       const need = money(y.need);
       const available = money(y.available);

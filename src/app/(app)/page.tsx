@@ -8,6 +8,7 @@ import { AnnualChart } from "@/ui/annual-chart";
 import { AutoSubmitSelect } from "@/ui/auto-submit";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { HEALTH_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
+import { TypeChart } from "@/ui/type-chart";
 
 export const metadata = { title: "Dashboard" };
 
@@ -171,6 +172,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             aria={`${STATUS_LABEL[s.status] ?? s.status}: ${s.n} procedure`}
           />
         ))}
+      </section>
+
+      <h2 style={{ marginTop: 32 }}>Panoramica gare</h2>
+      <section aria-label="Panoramica gare" className="grid kpi-grid">
+        <Kpi label="Gare attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Gare attive: ${k.proceduresActive}`} />
+        <Kpi label="Gare da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Gare da avviare: ${k.proceduresToStart}`} />
+        <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} />
+      </section>
+      <section className="card" aria-labelledby="bytype" style={{ marginTop: 16 }}>
+        <h2 id="bytype">Gare per tipo</h2>
+        <TypeChart rows={data.byType} />
       </section>
 
       <section className="card" aria-labelledby="att" style={{ marginTop: 16 }}>
