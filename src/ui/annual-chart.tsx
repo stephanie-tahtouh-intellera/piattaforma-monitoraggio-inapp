@@ -18,6 +18,16 @@ const toUnits = (s: string | null | undefined) => (s ? Number.parseInt(s.split("
 const thousands = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 });
 const signed = (s: string | null | undefined) => (s && !s.startsWith("-") && toUnits(s) > 0 ? `+${formatEuro(s)}` : formatEuro(s));
 
+/** Barra con l'estremità del dato arrotondata (4px) e il lato della baseline squadrato (dataviz §4). */
+function barPath(x: number, y: number, w: number, h: number, roundTop: boolean) {
+  const r = Math.min(4, h, w / 2);
+  if (h <= 0) return "";
+  if (roundTop) {
+    return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
+  }
+  return `M${x},${y} H${x + w} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x + r} Q${x},${y + h} ${x},${y + h - r} Z`;
+}
+
 /** Passo "tondo" (1, 2, 2,5, 5 × 10^k) per un asse con circa `n` intervalli. */
 function niceStep(range: number, n: number) {
   const raw = Math.max(range, 1) / n;
@@ -96,7 +106,7 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
   const H = 240;
   const pad = { l: 56, r: 10, b: 28, t: 10 };
   const gw = (W - pad.l - pad.r) / rows.length;
-  const bw = Math.min(30, (gw - 16) / series.length);
+  const bw = Math.min(24, (gw - 16) / series.length);
   const span = Math.max(hi - lo, 1);
   const y = (v: number) => pad.t + ((hi - v) / span) * (H - pad.b - pad.t);
   const flat = rows.every((r) => toUnits(r.delta) === 0);
@@ -138,10 +148,13 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
                 const v = toUnits(raw);
                 const over = s.key === "margin" && v < 0;
                 const fill = over ? "var(--chart-overflow)" : s.key === "delta" ? "var(--chart-1)" : "var(--chart-7)";
+                const bx = x0 + j * (bw + 2);
+                const by = Math.min(y(v), y(0));
+                const bh = Math.max(Math.abs(y(v) - y(0)), v === 0 ? 0 : 1);
                 return (
-                  <rect key={s.key} x={x0 + j * (bw + 2)} y={Math.min(y(v), y(0))} width={bw} height={Math.max(Math.abs(y(v) - y(0)), v === 0 ? 0 : 1)} fill={fill} rx="2">
+                  <path key={s.key} d={barPath(bx, by, bw, bh, v >= 0)} fill={fill}>
                     <title>{`${r.year} — ${s.key === "delta" ? "Scostamento" : "Margine"} ${signed(raw)}`}</title>
-                  </rect>
+                  </path>
                 );
               })}
               <text x={x0 + (series.length * (bw + 2)) / 2} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--chart-axis)">
@@ -172,7 +185,7 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
   const H = 220;
   const pad = { l: 56, b: 28, t: 10 };
   const gw = (W - pad.l - 10) / rows.length;
-  const bw = Math.min(28, (gw - 16) / series.length);
+  const bw = Math.min(24, (gw - 16) / series.length);
   const y = (v: number) => H - pad.b - (v / max) * (H - pad.b - pad.t);
   const ticks: number[] = [];
   for (let t = 0; t <= max + step / 2; t += step) ticks.push(Math.round(t * 100) / 100);
@@ -212,11 +225,16 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
             <g key={r.year}>
               {series.map((s, j) => {
                 const v = toUnits(r[s.key as keyof Row] as string | null);
-                const h = H - pad.b - y(v);
+                const h = Math.max(H - pad.b - y(v), 0);
                 return (
-                  <rect key={s.key} x={x0 + j * (bw + 2)} y={y(v)} width={bw} height={Math.max(h, 0)} fill={s.key === "baseline" ? "url(#hatch-45)" : s.color} stroke={"stroke" in s ? s.stroke : "none"} rx="2">
+                  <path
+                    key={s.key}
+                    d={barPath(x0 + j * (bw + 2), y(v), bw, h, true)}
+                    fill={s.key === "baseline" ? "url(#hatch-45)" : s.color}
+                    stroke={"stroke" in s ? s.stroke : "none"}
+                  >
                     <title>{`${r.year} — ${s.label} ${formatEuro(r[s.key as keyof Row] as string | null)}`}</title>
-                  </rect>
+                  </path>
                 );
               })}
               {r.available ? (
