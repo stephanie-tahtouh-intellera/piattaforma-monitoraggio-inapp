@@ -2,7 +2,9 @@ import { centsToString } from "@/contracts/format";
 import { BusinessCalendar, daysBetween, type IsoDate } from "@/domain/dates";
 import { evaluateProcedure } from "@/domain/evaluate";
 import { mapToRecord } from "@/domain/finance";
-import { garaKpi, garaTotals, hundredthsToString, type GaraKpi } from "@/domain/gara-kpi";
+import { averageAwardDurationDays, awardDurationDays, garaKpi, garaTotals, hundredthsToString, type GaraKpi } from "@/domain/gara-kpi";
+import { isoDate } from "@/domain/dates";
+import type { ProcedureType } from "@/domain/model";
 import { Money } from "@/domain/money";
 import { alternatives, fastestCandidate } from "@/domain/reschedule";
 import { calendarFromDb, engineSettings } from "@/application/run-checks";
@@ -16,6 +18,9 @@ import { STATUS_STAGE } from "@/domain/model";
 import { computeEconomicFrame, frameToJson } from "@/domain/economic-frame";
 
 const money = (c: number | bigint | null | undefined) => centsToString(c ?? null);
+
+/** Ordine dei tipi di procedura nello schema di processo (DEC-107): variante A, poi variante B. */
+const PROCEDURE_TYPE_ORDER = ["DIRECT_AWARD", "DIRECT_AWARD_MEPA", "MEPA_ORDER", "CENTRAL_PURCHASING_ORDER", "NEGOTIATED", "OPEN", "FRAMEWORK_AGREEMENT"];
 
 /** Scostamento (previsione − baseline) e margine (disponibilità − previsione) per annualità: aritmetica solo qui, nel server. */
 const yearGaps = (need: string | null, baseline: string | null, available: string | null) => ({
@@ -546,6 +551,7 @@ export async function garaKpiList(db: Db, actor: Actor, f: PortfolioFilters) {
     if (page * 100 >= r.total) break;
   }
   const extra = new Map<string, Record<string, any>>();
+  const milestoneDates = new Map<string, { indiction: string | null; award: string | null }>();
   for (let i = 0; i < items.length; i += 500) {
     const codes = items.slice(i, i + 500).map((x) => x.code);
     const rows = (await db
@@ -555,11 +561,26 @@ export async function garaKpiList(db: Db, actor: Actor, f: PortfolioFilters) {
       )
       .all(...codes)) as Record<string, any>[];
     for (const r of rows) extra.set(r.code, r);
+    const msRows = (await db
+      .prepare(
+        `SELECT p.code, m.code AS milestone_code, m.actual_date
+         FROM procedures p JOIN milestones m ON m.procedure_id = p.id
+         WHERE p.code IN (${codes.map(() => "?").join(",")}) AND m.code IN ('INDICTION', 'AWARD')`,
+      )
+      .all(...codes)) as { code: string; milestone_code: "INDICTION" | "AWARD"; actual_date: string | null }[];
+    for (const r of msRows) {
+      const d = milestoneDates.get(r.code) ?? { indiction: null, award: null };
+      if (r.milestone_code === "INDICTION") d.indiction = r.actual_date;
+      else d.award = r.actual_date;
+      milestoneDates.set(r.code, d);
+    }
   }
   const kpis: GaraKpi[] = [];
+  const durations = new Map<string, number | null>();
   const out = items.map((it) => {
     const e = extra.get(it.code)!;
     const k = garaKpi({
+      procedureType: it.type as ProcedureType,
       programmed: Money.parse(it.programmed ?? "0.00"),
       base: e.base_cents === null ? null : Money.ofCents(BigInt(e.base_cents)),
       anacFee: Money.ofCents(BigInt(e.anac_fee_cents ?? 0)),
@@ -569,30 +590,114 @@ export async function garaKpiList(db: Db, actor: Actor, f: PortfolioFilters) {
       awardedGross: e.gross_cents === null ? null : Money.ofCents(BigInt(e.gross_cents)),
     });
     kpis.push(k);
+    const md = milestoneDates.get(it.code);
+    const duration = awardDurationDays(md?.indiction ? isoDate(md.indiction) : null, md?.award ? isoDate(md.award) : null);
+    durations.set(it.code, duration);
     return {
       code: it.code,
       title: it.title,
       project: it.project,
       status: it.status,
       owner: it.owner,
+      type: it.type,
+      competitive: k.competitive,
       programmed: k.programmed.toString(),
       base: k.base?.toString() ?? null,
       baseDerived: k.baseDerived,
       awardedNet: k.awardedNet?.toString() ?? null,
       awardedGross: k.awardedGross?.toString() ?? null,
       ribasso: k.ribassoHundredths === null ? null : hundredthsToString(k.ribassoHundredths),
+      awardDurationDays: duration,
     };
   });
   const t = garaTotals(kpis);
+  const byType = new Map<string, { kpis: GaraKpi[]; codes: string[] }>();
+  items.forEach((it, i) => {
+    if (!byType.has(it.type)) byType.set(it.type, { kpis: [], codes: [] });
+    const g = byType.get(it.type)!;
+    g.kpis.push(kpis[i]!);
+    g.codes.push(it.code);
+  });
+  const byTypeOut = [...byType.entries()]
+    .sort(([x], [y]) => PROCEDURE_TYPE_ORDER.indexOf(x) - PROCEDURE_TYPE_ORDER.indexOf(y))
+    .map(([type, g]) => {
+      const tt = garaTotals(g.kpis);
+      return {
+        type,
+        competitive: g.kpis[0]!.competitive,
+        count: tt.count,
+        awardedCount: tt.awardedCount,
+        programmed: tt.programmed.toString(),
+        base: tt.base.toString(),
+        awardedNet: tt.awardedNet.toString(),
+        ribasso: tt.ribassoHundredths === null ? null : hundredthsToString(tt.ribassoHundredths),
+        averageAwardDurationDays: averageAwardDurationDays(g.codes.map((c) => durations.get(c) ?? null)),
+      };
+    });
   return {
     items: out,
+    byType: byTypeOut,
     totals: {
       count: t.count,
       awardedCount: t.awardedCount,
       programmed: t.programmed.toString(),
       base: t.base.toString(),
       awardedNet: t.awardedNet.toString(),
+      competitiveAwardedCount: t.competitiveAwardedCount,
       ribasso: t.ribassoHundredths === null ? null : hundredthsToString(t.ribassoHundredths),
+      programmedCompetitive: t.programmedCompetitive.toString(),
+      competitiveProgrammedShare: t.competitiveProgrammedShareHundredths === null ? null : hundredthsToString(t.competitiveProgrammedShareHundredths),
+      averageAwardDurationDays: averageAwardDurationDays(items.map((it) => durations.get(it.code) ?? null)),
     },
+  };
+}
+
+/**
+ * KPI finanziari per tipo di gara (DEC-120): programmato, contrattualizzato, pagato, residuo, importo a rischio,
+ * procedure in ritardo e per salute, raggruppati per tipo di procedura. Stesso perimetro e filtri di `listProcedures`;
+ * somme su interi (`*_cents`) in SQL, nessuna media né divisione sugli importi.
+ */
+export async function financialKpiByType(db: Db, actor: Actor, f: Pick<PortfolioFilters, "status" | "type" | "project">) {
+  const scope = scopeSql(actor);
+  const where: string[] = [scope.sql];
+  const params: unknown[] = [...scope.params];
+  for (const [key, col] of [["status", "s.status"], ["type", "p.procedure_type"], ["project", "p.project_code"]] as const) {
+    const v = f[key];
+    if (v) {
+      const vals = v.split(",").filter(Boolean);
+      where.push(`${col} IN (${vals.map(() => "?").join(",")})`);
+      params.push(...vals);
+    }
+  }
+  const whereSql = where.join(" AND ");
+  const select = `COUNT(*) AS count,
+       SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END) AS programmed,
+       SUM(COALESCE(s.contracted_cents, 0)) AS contracted,
+       SUM(s.paid_cents) AS paid,
+       SUM(s.residual_cents) AS residual,
+       SUM(s.at_risk_cents) AS at_risk,
+       SUM(CASE WHEN s.late = 1 THEN 1 ELSE 0 END) AS late,
+       SUM(CASE WHEN s.health = 'RED' THEN 1 ELSE 0 END) AS red,
+       SUM(CASE WHEN s.health = 'AMBER' THEN 1 ELSE 0 END) AS amber,
+       SUM(CASE WHEN s.health = 'GREEN' THEN 1 ELSE 0 END) AS green`;
+  const rows = (await db
+    .prepare(`SELECT p.procedure_type AS type, ${select} FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${whereSql} GROUP BY p.procedure_type`)
+    .all(...params)) as Record<string, any>[];
+  const totalRow = (await db.prepare(`SELECT ${select} FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${whereSql}`).get(...params)) as Record<string, any>;
+  const toRow = (r: Record<string, any>) => ({
+    count: Number(r.count ?? 0),
+    programmed: money(r.programmed),
+    contracted: money(r.contracted),
+    paid: money(r.paid),
+    residual: money(r.residual),
+    atRisk: money(r.at_risk),
+    late: Number(r.late ?? 0),
+    health: { red: Number(r.red ?? 0), amber: Number(r.amber ?? 0), green: Number(r.green ?? 0) },
+  });
+  return {
+    byType: rows
+      .sort((a, b) => PROCEDURE_TYPE_ORDER.indexOf(a.type) - PROCEDURE_TYPE_ORDER.indexOf(b.type))
+      .map((r) => ({ type: r.type as string, ...toRow(r) })),
+    totals: toRow(totalRow ?? {}),
   };
 }
