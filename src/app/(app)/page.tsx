@@ -104,6 +104,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
+      <h2>Panoramica gare</h2>
+      <section aria-label="Panoramica gare" className="grid kpi-grid">
+        <Kpi label="Gare attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Gare attive: ${k.proceduresActive}`} />
+        <Kpi label="Gare da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Gare da avviare: ${k.proceduresToStart}`} />
+        <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} />
+      </section>
+      <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16 }}>
+        <h2 id="bytype">Gare per tipo</h2>
+        <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
+      </section>
+
       <section aria-label="Indicatori principali" className="grid kpi-grid">
         <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href={qs()} aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
         <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href={qs({ health: "RED" })} aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
@@ -172,17 +183,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             aria={`${STATUS_LABEL[s.status] ?? s.status}: ${s.n} procedure`}
           />
         ))}
-      </section>
-
-      <h2 style={{ marginTop: 32 }}>Panoramica gare</h2>
-      <section aria-label="Panoramica gare" className="grid kpi-grid">
-        <Kpi label="Gare attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Gare attive: ${k.proceduresActive}`} />
-        <Kpi label="Gare da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Gare da avviare: ${k.proceduresToStart}`} />
-        <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} />
-      </section>
-      <section className="card" aria-labelledby="bytype" style={{ marginTop: 16 }}>
-        <h2 id="bytype">Gare per tipo</h2>
-        <TypeChart rows={data.byType} />
       </section>
 
       <section className="card" aria-labelledby="att" style={{ marginTop: 16 }}>
