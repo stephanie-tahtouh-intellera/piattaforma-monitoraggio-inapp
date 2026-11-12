@@ -98,80 +98,84 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           ) : null}
         </div>
       </div>
-      <form className="filters" method="get" aria-label="Filtri del portafoglio">
-        <div className="field">
-          <label htmlFor="f-q">Ricerca</label>
-          <input id="f-q" name="q" type="search" defaultValue={f.q ?? ""} placeholder="Codice, oggetto, CIG" />
-        </div>
-        <div className="field">
-          <label htmlFor="f-health">Health</label>
-          <AutoSubmitSelect id="f-health" name="health" defaultValue={f.health ?? ""}>
-            <option value="">Tutti</option>
-            {Object.entries(HEALTH_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </AutoSubmitSelect>
-        </div>
-        <div className="field">
-          <label htmlFor="f-status">Fase</label>
-          <AutoSubmitSelect id="f-status" name="status" defaultValue={f.status ?? ""}>
-            <option value="">Tutte</option>
-            {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </AutoSubmitSelect>
-        </div>
-        {structures.length > 1 ? (
+      <form method="get" aria-label="Filtri del portafoglio">
+        <div className="filters" style={{ marginBottom: 8 }}>
           <div className="field">
-            <label htmlFor="f-structure">Struttura</label>
-            <AutoSubmitSelect id="f-structure" name="structure" defaultValue={f.structure ?? ""}>
-              <option value="">Tutte</option>
-              {structures.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
-            </AutoSubmitSelect>
+            <label htmlFor="f-q">Ricerca</label>
+            <input id="f-q" name="q" type="search" defaultValue={f.q ?? ""} placeholder="Codice, oggetto, CIG" />
           </div>
-        ) : null}
-        <div className="field">
-          <label htmlFor="f-type">Tipologia</label>
-          <AutoSubmitSelect id="f-type" name="type" defaultValue={f.type ?? ""}>
-            <option value="">Tutte</option>
-            {Object.entries(TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </AutoSubmitSelect>
+          <button className="btn btn-secondary btn-sm" type="submit">Cerca</button>
         </div>
-        {projects.length ? (
+        <div className="filters">
           <div className="field">
-            <label htmlFor="f-project">Progetto</label>
-            <AutoSubmitSelect id="f-project" name="project" defaultValue={f.project ?? ""}>
+            <label htmlFor="f-health">Health</label>
+            <AutoSubmitSelect id="f-health" name="health" defaultValue={f.health ?? ""}>
               <option value="">Tutti</option>
-              {projects.map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}
+              {Object.entries(HEALTH_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </AutoSubmitSelect>
           </div>
-        ) : null}
-        <div className="field">
-          <label htmlFor="f-year">Annualità</label>
-          <AutoSubmitSelect id="f-year" name="year" defaultValue={f.year ?? ""}>
-            <option value="">Tutte</option>
-            {years.map((y) => <option key={y} value={y}>{y}</option>)}
-          </AutoSubmitSelect>
+          <div className="field">
+            <label htmlFor="f-status">Fase</label>
+            <AutoSubmitSelect id="f-status" name="status" defaultValue={f.status ?? ""}>
+              <option value="">Tutte</option>
+              {Object.entries(STATUS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </AutoSubmitSelect>
+          </div>
+          {structures.length > 1 ? (
+            <div className="field">
+              <label htmlFor="f-structure">Struttura</label>
+              <AutoSubmitSelect id="f-structure" name="structure" defaultValue={f.structure ?? ""}>
+                <option value="">Tutte</option>
+                {structures.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+              </AutoSubmitSelect>
+            </div>
+          ) : null}
+          <div className="field">
+            <label htmlFor="f-type">Tipologia</label>
+            <AutoSubmitSelect id="f-type" name="type" defaultValue={f.type ?? ""}>
+              <option value="">Tutte</option>
+              {Object.entries(TYPE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+            </AutoSubmitSelect>
+          </div>
+          {projects.length ? (
+            <div className="field">
+              <label htmlFor="f-project">Progetto</label>
+              <AutoSubmitSelect id="f-project" name="project" defaultValue={f.project ?? ""}>
+                <option value="">Tutti</option>
+                {projects.map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}
+              </AutoSubmitSelect>
+            </div>
+          ) : null}
+          <div className="field">
+            <label htmlFor="f-year">Annualità</label>
+            <AutoSubmitSelect id="f-year" name="year" defaultValue={f.year ?? ""}>
+              <option value="">Tutte</option>
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
+            </AutoSubmitSelect>
+          </div>
+          <div className="field">
+            <label htmlFor="f-alerts">Alert</label>
+            <AutoSubmitSelect id="f-alerts" name="alerts" defaultValue={f.alerts ?? ""}>
+              <option value="">Indifferente</option>
+              <option value="open">Con alert aperti</option>
+              <option value="critical">Con alert critici</option>
+            </AutoSubmitSelect>
+          </div>
+          <div className="field">
+            <label htmlFor="f-res">Riprogrammazione</label>
+            <AutoSubmitSelect id="f-res" name="reschedule" defaultValue={f.reschedule ?? ""}>
+              <option value="">Indifferente</option>
+              <option value="1">Richiesta</option>
+            </AutoSubmitSelect>
+          </div>
+          <input type="hidden" name="sort" value={f.sort} />
+          <input type="hidden" name="dir" value={f.dir} />
+          {active.length ? (
+            <Link className="btn btn-secondary btn-sm" href="/portafoglio">
+              Azzera filtri
+            </Link>
+          ) : null}
         </div>
-        <div className="field">
-          <label htmlFor="f-alerts">Alert</label>
-          <AutoSubmitSelect id="f-alerts" name="alerts" defaultValue={f.alerts ?? ""}>
-            <option value="">Indifferente</option>
-            <option value="open">Con alert aperti</option>
-            <option value="critical">Con alert critici</option>
-          </AutoSubmitSelect>
-        </div>
-        <div className="field">
-          <label htmlFor="f-res">Riprogrammazione</label>
-          <AutoSubmitSelect id="f-res" name="reschedule" defaultValue={f.reschedule ?? ""}>
-            <option value="">Indifferente</option>
-            <option value="1">Richiesta</option>
-          </AutoSubmitSelect>
-        </div>
-        <input type="hidden" name="sort" value={f.sort} />
-        <input type="hidden" name="dir" value={f.dir} />
-        <button className="btn btn-primary sr-only" type="submit">Applica filtri</button>
-        {active.length ? (
-          <Link className="btn btn-secondary btn-sm" href="/portafoglio">
-            Azzera filtri
-          </Link>
-        ) : null}
       </form>
       {active.length ? (
         <div className="actions" style={{ marginBottom: 12 }}>
