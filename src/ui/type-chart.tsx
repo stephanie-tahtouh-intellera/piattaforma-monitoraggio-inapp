@@ -24,7 +24,7 @@ export function TypeChart({ rows, linkFor }: { rows: Row[]; linkFor: (type: stri
   const bw = Math.min(56, gw - 16);
   const y = (v: number) => pad.t + (1 - v / max) * (H - pad.b - pad.t);
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: 640 }}>
+    <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto" }}>
       <line x1={pad.l} y1={H - pad.b} x2={W - pad.r} y2={H - pad.b} stroke="var(--chart-grid)" />
       {data.map((r, i) => {
         const x = pad.l + i * gw + (gw - bw) / 2;

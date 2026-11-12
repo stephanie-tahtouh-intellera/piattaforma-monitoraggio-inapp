@@ -112,7 +112,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </section>
       <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16 }}>
         <h2 id="bytype">Gare per tipo</h2>
-        <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
+        <div style={{ maxWidth: 420 }}>
+          <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
+        </div>
       </section>
 
       <section aria-label="Indicatori principali" className="grid kpi-grid">
@@ -168,7 +170,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <section className="card" aria-labelledby="ann" style={{ marginTop: 16 }}>
         <h2 id="ann">Fabbisogno per annualità</h2>
-        <AnnualChart rows={data.annual} />
+        <div style={{ maxWidth: 480 }}>
+          <AnnualChart rows={data.annual} />
+        </div>
       </section>
 
       <h2 style={{ marginTop: 32 }}>Procedure per fase</h2>
