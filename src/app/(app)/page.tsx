@@ -5,6 +5,7 @@ import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact, formatPe
 import { dashboard, financialKpiByType, garaKpiList } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
 import { AnnualChart } from "@/ui/annual-chart";
+import { AutoSubmitSelect } from "@/ui/auto-submit";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { HEALTH_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 
@@ -68,27 +69,26 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <form className="filters" method="get">
             <div className="field">
               <label htmlFor="type">Tipo di gara</label>
-              <select id="type" name="type" defaultValue={type ?? ""}>
+              <AutoSubmitSelect id="type" name="type" defaultValue={type ?? ""}>
                 <option value="">Tutti</option>
                 {Object.entries(TYPE_LABEL).map(([tk, tv]) => (
                   <option key={tk} value={tk}>
                     {tv}
                   </option>
                 ))}
-              </select>
+              </AutoSubmitSelect>
             </div>
             <div className="field">
               <label htmlFor="structure">Struttura</label>
-              <select id="structure" name="structure" defaultValue={structure ?? ""}>
+              <AutoSubmitSelect id="structure" name="structure" defaultValue={structure ?? ""}>
                 <option value="">Tutte le strutture</option>
                 {structures.map((s) => (
                   <option key={s.code} value={s.code}>
                     {s.name}
                   </option>
                 ))}
-              </select>
+              </AutoSubmitSelect>
             </div>
-            <button className="btn btn-secondary btn-sm">Applica</button>
             {filtered ? <Link href="/">Azzera filtri</Link> : null}
           </form>
           {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? (
