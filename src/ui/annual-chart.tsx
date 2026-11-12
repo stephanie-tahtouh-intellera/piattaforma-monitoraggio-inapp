@@ -120,7 +120,7 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
         ) : null}
       </div>
       <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €{flat ? " · nessuno scostamento dalla baseline in nessuna annualità" : ""}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={aria}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--chart-axis)" : "var(--chart-grid)"} />
@@ -191,7 +191,7 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
         </span>
       </div>
       <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €</p>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-label={aria}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
         <defs>
           <pattern id="hatch-45" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
             <rect width="6" height="6" fill="var(--chart-baseline-fill)" />

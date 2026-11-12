@@ -168,9 +168,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
       <section className="card" aria-labelledby="ann" style={{ marginTop: 16 }}>
         <h2 id="ann">Fabbisogno per annualità</h2>
-        <div style={{ maxWidth: 480 }}>
-          <AnnualChart rows={data.annual} />
-        </div>
+        <AnnualChart rows={data.annual} />
       </section>
 
       <h2 style={{ marginTop: 32 }}>Procedure per fase</h2>
