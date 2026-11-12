@@ -55,7 +55,7 @@ Cambio dataset: Amministrazione → Reset demo, oppure `pnpm cli reset --yes --d
 3. Consegna del capitolato insieme alla memoria; il vincolo attuale si applica alle bozze con quadro economico.
 4. Assistente per la redazione della memoria: al momento propone solo uno schema deterministico, è disattivato di default e non usa un LLM.
 5. Alert per la consegna della memoria configurati in base al modello/tipo di procedura.
-6. KPI e importi per singola gara nella pagina «KPI gare».
+6. KPI e importi di gara (base d'asta, aggiudicato, ribasso, spesa su gara competitiva, giorni indizione → aggiudicazione) integrati nella dashboard, filtrabili per tipo di gara e struttura (DEC-120).
 7. Revisione degli indicatori della dashboard iniziale: **da definire con INAPP**. La dashboard attuale mostra già indicatori fisici e finanziari, ma l'elenco richiesto dal cliente non è ancora stato validato.
 
 Dettagli, assunzioni e test delle richieste sono registrati in [DEC-111](docs/03_registro_decisioni.md) e [DEC-118](docs/03_registro_decisioni.md); avanzamento e questioni aperte in [04_avanzamento.md](docs/04_avanzamento.md).

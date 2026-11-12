@@ -1,12 +1,12 @@
 import { OctagonAlert, Plus } from "lucide-react";
 import Link from "next/link";
 import { executionModuleEnabled } from "@/application/modules";
-import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact } from "@/contracts/format";
-import { dashboard } from "@/server/queries";
+import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact, formatPercentIt } from "@/contracts/format";
+import { dashboard, financialKpiByType, garaKpiList } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
 import { AnnualChart } from "@/ui/annual-chart";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
-import { HEALTH_LABEL, STATUS_LABEL } from "@/ui/labels";
+import { HEALTH_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 
 export const metadata = { title: "Dashboard" };
 
@@ -32,8 +32,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const actor = await pageActor();
   const q = await searchParams;
   const structure = sp(q.structure);
+  const type = sp(q.type);
   const database = await db();
-  const data = await dashboard(database, actor, { ...(structure ? { structure } : {}) });
+  const filters = { ...(structure ? { structure } : {}), ...(type ? { type } : {}) };
+  const data = await dashboard(database, actor, filters);
   const k = data.kpi;
   const module2 = await executionModuleEnabled(database);
   const signedCount = data.byStatus.filter((x) => ["EXECUTION", "CLOSING", "CLOSED"].includes(x.status)).reduce((t, x) => t + Number(x.n), 0);
@@ -42,6 +44,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     code: string;
     name: string;
   }[];
+  const canSeeGaraKpi = actor.role !== "SUPPLIER";
+  const r = canSeeGaraKpi ? await garaKpiList(database, actor, filters) : null;
+  const fin = canSeeGaraKpi ? await financialKpiByType(database, actor, filters) : null;
+  const filtered = Boolean(structure || type);
+  const qs = (extra: Record<string, string | undefined> = {}) => {
+    const u = new URLSearchParams();
+    if (type) u.set("type", type);
+    if (structure) u.set("structure", structure);
+    for (const [key, v] of Object.entries(extra)) if (v) u.set(key, v);
+    return `/portafoglio?${u.toString()}`;
+  };
   return (
     <>
       <div className="page-head">
@@ -52,19 +65,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </div>
         </div>
         <div className="actions head-actions">
-          <form className="actions" method="get">
-            <label htmlFor="structure" className="sr-only">
-              Struttura
-            </label>
-            <select id="structure" name="structure" defaultValue={structure ?? ""}>
-              <option value="">Tutte le strutture</option>
-              {structures.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+          <form className="filters" method="get">
+            <div className="field">
+              <label htmlFor="type">Tipo di gara</label>
+              <select id="type" name="type" defaultValue={type ?? ""}>
+                <option value="">Tutti</option>
+                {Object.entries(TYPE_LABEL).map(([tk, tv]) => (
+                  <option key={tk} value={tk}>
+                    {tv}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="structure">Struttura</label>
+              <select id="structure" name="structure" defaultValue={structure ?? ""}>
+                <option value="">Tutte le strutture</option>
+                {structures.map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <button className="btn btn-secondary btn-sm">Applica</button>
+            {filtered ? <Link href="/">Azzera filtri</Link> : null}
           </form>
           {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? (
             <Link className="btn btn-primary" href="/procedure/nuova">
@@ -75,22 +100,55 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </div>
 
       <section aria-label="Indicatori principali" className="grid kpi-grid">
-        <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href="/portafoglio" aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
-        <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href="/portafoglio?health=RED" aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
-        <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href="/portafoglio?reschedule=1" aria={`Procedure da riprogrammare: ${k.toReschedule}`} />
+        <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href={qs()} aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
+        <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href={qs({ health: "RED" })} aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} />
+        <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} />
         <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}`} extra={k.criticalAlerts ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico</div> : null} />
-        <Kpi label="Programmato" value={formatEuroCompact(k.programmed)} sub={`${formatEuro(k.programmed)} · escluse le annullate`} href="/portafoglio?sort=programmed&dir=desc" aria={`Programmato ${formatEuro(k.programmed)}`} />
-        <Kpi label="Contrattualizzato" value={formatEuroCompact(k.contracted)} sub={`${formatEuro(k.contracted)} · contratti stipulati`} href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Contrattualizzato ${formatEuro(k.contracted)}`} />
-        {module2 ? <Kpi label="Pagato" value={formatEuroCompact(k.paid)} sub={formatEuro(k.paid)} href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Pagato ${formatEuro(k.paid)}`} /> : <Kpi label="Contratti stipulati" value={signedCount} sub="procedure con Modulo 1 completato" href="/portafoglio?status=EXECUTION,CLOSING,CLOSED" aria={`Contratti stipulati: ${signedCount}`} />}
-        <Kpi
-          label="Importo a rischio"
-          value={formatEuroCompact(k.atRisk.total)}
-          sub={formatEuro(k.atRisk.total)}
-          href="/portafoglio?sort=risk&dir=desc"
-          aria={`Importo a rischio ${formatEuro(k.atRisk.total)}: non coperto ${formatEuro(k.atRisk.uncovered)}, in slittamento ${formatEuro(k.atRisk.slipping)}`}
-          extra={<div className="kpi-split"><span title="Fabbisogno oltre la disponibilità sulla previsione approvata">Non coperto {formatEuro(k.atRisk.uncovered)}</span><span title="Previsione dell'anno corrente su procedure da riprogrammare">In slittamento {formatEuro(k.atRisk.slipping)}</span></div>}
-        />
+        {r ? (
+          <>
+            <Kpi label="Gare aggiudicate" value={r.totals.awardedCount} sub={`su ${r.totals.count} nel tuo perimetro`} href={qs()} aria={`Gare aggiudicate: ${r.totals.awardedCount} su ${r.totals.count}`} />
+            <Kpi label="Ribasso medio" value={formatPercentIt(r.totals.ribasso)} sub={`ponderato su ${r.totals.competitiveAwardedCount} gare competitive aggiudicate`} href={qs()} aria={`Ribasso medio ${formatPercentIt(r.totals.ribasso)}`} />
+            <Kpi label="Spesa su gara competitiva" value={r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "—"} sub="negoziata, aperta, accordo quadro" href={qs()} aria={`Spesa su gara competitiva: ${r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "non disponibile"}`} />
+            <Kpi label="Giorni indizione → aggiudicazione" value={r.totals.averageAwardDurationDays !== null ? r.totals.averageAwardDurationDays : "—"} sub="media sulle gare con entrambe le date" href={qs()} aria={`Giorni indizione aggiudicazione: ${r.totals.averageAwardDurationDays ?? "non disponibile"}`} />
+          </>
+        ) : null}
       </section>
+
+      {fin && r ? (
+        <>
+          <h2 style={{ marginTop: 32 }}>KPI finanziari</h2>
+          <p className="page-meta">Stesso perimetro e filtri della sezione sopra; importi IVA inclusa salvo indicazione contraria.</p>
+          <section aria-label="KPI finanziari" className="grid kpi-grid">
+            <Kpi label="Programmato" value={formatEuroCompact(fin.totals.programmed)} sub={`${formatEuro(fin.totals.programmed)} · escluse le annullate`} href={qs({ sort: "programmed", dir: "desc" })} aria={`Programmato ${formatEuro(fin.totals.programmed)}`} />
+            <Kpi label="Base di gara" value={formatEuroCompact(r.totals.base)} sub={`${formatEuro(r.totals.base)} · IVA esclusa`} href={qs()} aria={`Base di gara ${formatEuro(r.totals.base)}`} />
+            <Kpi label="Contrattualizzato" value={formatEuroCompact(fin.totals.contracted)} sub={`${formatEuro(fin.totals.contracted)} · contratti stipulati`} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contrattualizzato ${formatEuro(fin.totals.contracted)}`} />
+            <Kpi label="Aggiudicato" value={formatEuroCompact(r.totals.awardedNet)} sub={`${formatEuro(r.totals.awardedNet)} · IVA esclusa`} href={qs()} aria={`Aggiudicato ${formatEuro(r.totals.awardedNet)}`} />
+            {module2 ? <Kpi label="Pagato" value={formatEuroCompact(fin.totals.paid)} sub={`residuo ${formatEuro(fin.totals.residual)}`} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Pagato ${formatEuro(fin.totals.paid)}`} /> : <Kpi label="Contratti stipulati" value={signedCount} sub="procedure con Modulo 1 completato" href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contratti stipulati: ${signedCount}`} />}
+            <Kpi
+              label="Importo a rischio"
+              value={formatEuroCompact(k.atRisk.total)}
+              sub={formatEuro(k.atRisk.total)}
+              href={qs({ sort: "risk", dir: "desc" })}
+              aria={`Importo a rischio ${formatEuro(k.atRisk.total)}: non coperto ${formatEuro(k.atRisk.uncovered)}, in slittamento ${formatEuro(k.atRisk.slipping)}`}
+              extra={<div className="kpi-split"><span title="Fabbisogno oltre la disponibilità sulla previsione approvata">Non coperto {formatEuro(k.atRisk.uncovered)}</span><span title="Previsione dell'anno corrente su procedure da riprogrammare">In slittamento {formatEuro(k.atRisk.slipping)}</span></div>}
+            />
+          </section>
+        </>
+      ) : (
+        <section aria-label="Indicatori finanziari" className="grid kpi-grid" style={{ marginTop: 16 }}>
+          <Kpi label="Programmato" value={formatEuroCompact(k.programmed)} sub={`${formatEuro(k.programmed)} · escluse le annullate`} href={qs({ sort: "programmed", dir: "desc" })} aria={`Programmato ${formatEuro(k.programmed)}`} />
+          <Kpi label="Contrattualizzato" value={formatEuroCompact(k.contracted)} sub={`${formatEuro(k.contracted)} · contratti stipulati`} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contrattualizzato ${formatEuro(k.contracted)}`} />
+          {module2 ? <Kpi label="Pagato" value={formatEuroCompact(k.paid)} sub={formatEuro(k.paid)} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Pagato ${formatEuro(k.paid)}`} /> : <Kpi label="Contratti stipulati" value={signedCount} sub="procedure con Modulo 1 completato" href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contratti stipulati: ${signedCount}`} />}
+          <Kpi
+            label="Importo a rischio"
+            value={formatEuroCompact(k.atRisk.total)}
+            sub={formatEuro(k.atRisk.total)}
+            href={qs({ sort: "risk", dir: "desc" })}
+            aria={`Importo a rischio ${formatEuro(k.atRisk.total)}: non coperto ${formatEuro(k.atRisk.uncovered)}, in slittamento ${formatEuro(k.atRisk.slipping)}`}
+            extra={<div className="kpi-split"><span title="Fabbisogno oltre la disponibilità sulla previsione approvata">Non coperto {formatEuro(k.atRisk.uncovered)}</span><span title="Previsione dell'anno corrente su procedure da riprogrammare">In slittamento {formatEuro(k.atRisk.slipping)}</span></div>}
+          />
+        </section>
+      )}
 
       <div className="grid dash-split">
         <section className="card" aria-labelledby="ann">
@@ -111,7 +169,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
                 <tr key={s.status}>
                   <td>
-                    <Link href={`/portafoglio?status=${s.status}`}>{STATUS_LABEL[s.status] ?? s.status}</Link>
+                    <Link href={qs({ status: s.status })}>{STATUS_LABEL[s.status] ?? s.status}</Link>
                   </td>
                   <td className="num">{s.n}</td>
                 </tr>
@@ -125,10 +183,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <div className="page-head" style={{ marginBottom: 8 }}>
           <h2 id="att">Richiede attenzione</h2>
           <div className="actions">
-            <Link className="btn btn-secondary btn-sm" href="/portafoglio?health=RED">
+            <Link className="btn btn-secondary btn-sm" href={qs({ health: "RED" })}>
               Vedi le rosse
             </Link>
-            <Link className="btn btn-secondary btn-sm" href="/portafoglio?health=AMBER">
+            <Link className="btn btn-secondary btn-sm" href={qs({ health: "AMBER" })}>
               Vedi le ambra
             </Link>
           </div>

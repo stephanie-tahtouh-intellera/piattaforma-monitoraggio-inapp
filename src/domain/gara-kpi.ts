@@ -133,5 +133,5 @@ export function awardDurationDays(indictionDate: IsoDate | null, awardDate: IsoD
 export function averageAwardDurationDays(durations: (number | null)[]): number | null {
   const valid = durations.filter((d): d is number => d !== null);
   if (!valid.length) return null;
-  return Math.round(valid.reduce((a, b) => a + b, 0) / valid.length);
+  return Number(divRoundHalfUp(BigInt(valid.reduce((a, b) => a + b, 0)), BigInt(valid.length)));
 }

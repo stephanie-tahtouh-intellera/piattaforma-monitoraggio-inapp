@@ -131,13 +131,17 @@ export async function listProcedures(db: Db, actor: Actor, f: PortfolioFilters) 
 }
 
 /** KPI direzionali (US-070, guida §8.6). */
-export async function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: string } = {}) {
+export async function dashboard(db: Db, actor: Actor, f: { structure?: string; year?: string; type?: string } = {}) {
   const scope = scopeSql(actor);
   const where = [scope.sql];
   const params: unknown[] = [...scope.params];
   if (f.structure) {
     where.push("p.structure_code = ?");
     params.push(f.structure);
+  }
+  if (f.type) {
+    where.push("p.procedure_type = ?");
+    params.push(f.type);
   }
   const w = where.join(" AND ");
   const k = (await db
@@ -179,7 +183,13 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
        JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} AND s.status <> 'CANCELLED' GROUP BY year ORDER BY year`,
     )
     .all(...params)) as { year: number; amount: number }[];
-  const attention = await listProcedures(db, actor, { ...(f.structure ? { structure: f.structure } : {}), health: "RED,AMBER", sort: "health", size: 10 });
+  const attention = await listProcedures(db, actor, {
+    ...(f.structure ? { structure: f.structure } : {}),
+    ...(f.type ? { type: f.type } : {}),
+    health: "RED,AMBER",
+    sort: "health",
+    size: 10,
+  });
   const byStatus = (await db
     .prepare(`SELECT s.status, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`)
     .all(...params)) as { status: string; n: number }[];
@@ -657,11 +667,11 @@ export async function garaKpiList(db: Db, actor: Actor, f: PortfolioFilters) {
  * procedure in ritardo e per salute, raggruppati per tipo di procedura. Stesso perimetro e filtri di `listProcedures`;
  * somme su interi (`*_cents`) in SQL, nessuna media né divisione sugli importi.
  */
-export async function financialKpiByType(db: Db, actor: Actor, f: Pick<PortfolioFilters, "status" | "type" | "project">) {
+export async function financialKpiByType(db: Db, actor: Actor, f: Pick<PortfolioFilters, "status" | "type" | "project" | "structure">) {
   const scope = scopeSql(actor);
   const where: string[] = [scope.sql];
   const params: unknown[] = [...scope.params];
-  for (const [key, col] of [["status", "s.status"], ["type", "p.procedure_type"], ["project", "p.project_code"]] as const) {
+  for (const [key, col] of [["status", "s.status"], ["type", "p.procedure_type"], ["project", "p.project_code"], ["structure", "p.structure_code"]] as const) {
     const v = f[key];
     if (v) {
       const vals = v.split(",").filter(Boolean);

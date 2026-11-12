@@ -3,7 +3,7 @@ import { hundredthsToString, ribassoHundredths } from "@/domain/gara-kpi";
 import { Money } from "@/domain/money";
 import type { Db } from "@/infrastructure/db/connection";
 import { login, type Actor } from "@/server/auth";
-import { financialKpiByType, garaKpiList, listProcedures } from "@/server/queries";
+import { dashboard, financialKpiByType, garaKpiList, listProcedures } from "@/server/queries";
 import { scenarioDb } from "../helpers/db";
 
 let db: Db;
@@ -75,5 +75,26 @@ describe("[DEC-120] KPI finanziari per tipo di gara", () => {
     const r = await financialKpiByType(db, dg, { type: "OPEN" });
     expect(r.byType.every((t) => t.type === "OPEN")).toBe(true);
     expect(r.totals.count).toBe(r.byType.find((t) => t.type === "OPEN")?.count ?? 0);
+  });
+
+  test("il filtro per struttura restringe la scheda come nel portafoglio", async () => {
+    const dg = await as("dirigente");
+    const all = await financialKpiByType(db, dg, {});
+    const { items } = await listProcedures(db, dg, { size: 1 });
+    const structureCode = (await db.prepare("SELECT structure_code FROM procedures WHERE code = ?").get(items[0]!.code)) as { structure_code: string };
+    const scoped = await financialKpiByType(db, dg, { structure: structureCode.structure_code });
+    expect(scoped.totals.count).toBeLessThanOrEqual(all.totals.count);
+    expect(scoped.totals.count).toBeGreaterThan(0);
+  });
+});
+
+describe("[DEC-120] la dashboard si ricalcola per tipo di gara", () => {
+  test("il filtro per tipo restringe gli indicatori della dashboard come il portafoglio", async () => {
+    const dg = await as("dirigente");
+    const all = await dashboard(db, dg, {});
+    const open = await dashboard(db, dg, { type: "OPEN" });
+    const expected = await listProcedures(db, dg, { type: "OPEN", size: 100 });
+    expect(open.kpi.proceduresTotal).toBe(expected.total);
+    expect(open.kpi.proceduresTotal).toBeLessThanOrEqual(all.kpi.proceduresTotal);
   });
 });
