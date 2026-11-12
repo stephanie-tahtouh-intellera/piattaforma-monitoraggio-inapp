@@ -154,34 +154,24 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </section>
       )}
 
-      <div className="grid dash-split">
-        <section className="card" aria-labelledby="ann">
-          <h2 id="ann">Fabbisogno per annualità</h2>
-          <AnnualChart rows={data.annual} />
-        </section>
-        <section className="card" aria-labelledby="fasi">
-          <h2 id="fasi">Procedure per fase</h2>
-          <table className="data">
-            <caption className="sr-only">Procedure per fase</caption>
-            <thead>
-              <tr>
-                <th scope="col">Fase</th>
-                <th scope="col" className="num">Procedure</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
-                <tr key={s.status}>
-                  <td>
-                    <Link href={qs({ status: s.status })}>{STATUS_LABEL[s.status] ?? s.status}</Link>
-                  </td>
-                  <td className="num">{s.n}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
+      <section className="card" aria-labelledby="ann" style={{ marginTop: 16 }}>
+        <h2 id="ann">Fabbisogno per annualità</h2>
+        <AnnualChart rows={data.annual} />
+      </section>
+
+      <h2 style={{ marginTop: 32 }}>Procedure per fase</h2>
+      <section aria-label="Procedure per fase" className="grid kpi-grid">
+        {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
+          <Kpi
+            key={s.status}
+            label={STATUS_LABEL[s.status] ?? s.status}
+            value={s.n}
+            sub="procedure in questa fase"
+            href={qs({ status: s.status })}
+            aria={`${STATUS_LABEL[s.status] ?? s.status}: ${s.n} procedure`}
+          />
+        ))}
+      </section>
 
       <section className="card" aria-labelledby="att" style={{ marginTop: 16 }}>
         <div className="page-head" style={{ marginBottom: 8 }}>
