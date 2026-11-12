@@ -89,7 +89,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                 ))}
               </AutoSubmitSelect>
             </div>
-            {filtered ? <Link href="/">Azzera filtri</Link> : null}
+            {filtered ? (
+              <Link className="btn btn-secondary btn-sm" href="/">
+                Azzera filtri
+              </Link>
+            ) : null}
           </form>
           {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? (
             <Link className="btn btn-primary" href="/procedure/nuova">

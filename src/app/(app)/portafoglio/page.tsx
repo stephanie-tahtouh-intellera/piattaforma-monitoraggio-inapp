@@ -36,6 +36,39 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
     return `/portafoglio?${u.toString()}`;
   };
   const active = (["health", "status", "structure", "type", "project", "year", "reschedule", "alerts", "q"] as const).filter((k) => f[k]);
+  const FILTER_KEY_LABEL: Record<(typeof active)[number], string> = {
+    q: "Ricerca",
+    health: "Health",
+    status: "Fase",
+    structure: "Struttura",
+    type: "Tipo",
+    project: "Progetto",
+    year: "Annualità",
+    reschedule: "Riprogrammazione",
+    alerts: "Alert",
+  };
+  const structureName = new Map(structures.map((s) => [s.code, s.name]));
+  const projectName = new Map(projects.map((p) => [p.code, p.name]));
+  const filterValueLabel = (k: (typeof active)[number], v: string) => {
+    switch (k) {
+      case "health":
+        return HEALTH_LABEL[v] ?? v;
+      case "status":
+        return STATUS_LABEL[v] ?? v;
+      case "type":
+        return TYPE_LABEL[v] ?? v;
+      case "structure":
+        return structureName.get(v) ?? v;
+      case "project":
+        return projectName.get(v) ?? v;
+      case "reschedule":
+        return "Richiesta";
+      case "alerts":
+        return v === "critical" ? "Con alert critici" : "Con alert aperti";
+      default:
+        return v;
+    }
+  };
   const from = r.total ? (r.page - 1) * r.size + 1 : 0;
   const to = Math.min(r.page * r.size, r.total);
   return (
@@ -133,13 +166,22 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
         <input type="hidden" name="sort" value={f.sort} />
         <input type="hidden" name="dir" value={f.dir} />
         <button className="btn btn-primary" type="submit">Applica filtri</button>
-        {active.length ? <Link href="/portafoglio">Azzera filtri</Link> : null}
+        {active.length ? (
+          <Link className="btn btn-secondary btn-sm" href="/portafoglio">
+            Azzera filtri
+          </Link>
+        ) : null}
       </form>
       {active.length ? (
         <div className="actions" style={{ marginBottom: 12 }}>
           {active.map((k) => (
-            <Link key={k} className="chip chip-filter" href={qs({ [k]: undefined, page: undefined })} aria-label={`Rimuovi filtro ${k}: ${f[k]}`}>
-              {k}: {String(f[k])} ×
+            <Link
+              key={k}
+              className="chip chip-filter"
+              href={qs({ [k]: undefined, page: undefined })}
+              aria-label={`Rimuovi filtro ${FILTER_KEY_LABEL[k]}: ${filterValueLabel(k, String(f[k]))}`}
+            >
+              {FILTER_KEY_LABEL[k]}: {filterValueLabel(k, String(f[k]))} ×
             </Link>
           ))}
         </div>
@@ -183,7 +225,14 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
               </tr>
             ))}
             {r.items.length === 0 ? (
-              <tr><td colSpan={8} className="muted">Nessuna procedura corrisponde ai filtri. <Link href="/portafoglio">Azzera filtri</Link></td></tr>
+              <tr>
+                <td colSpan={8} className="muted">
+                  Nessuna procedura corrisponde ai filtri.{" "}
+                  <Link className="btn btn-secondary btn-sm" href="/portafoglio">
+                    Azzera filtri
+                  </Link>
+                </td>
+              </tr>
             ) : null}
           </tbody>
         </table>
