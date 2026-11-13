@@ -109,13 +109,46 @@ main { padding: var(--space-6) var(--layout-page-padding-x) calc(var(--space-6) 
 @media (max-width: 640px) { .grid-4 { grid-template-columns: minmax(0, 1fr); } .proc-head { grid-template-columns: minmax(0, 1fr); } }
 
 /* Indicatori: quante colonne ci stanno, senza ingrandire le schede quando la finestra è stretta. */
-.kpi-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: var(--space-2); }
+.kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+@media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .kpi-grid { grid-template-columns: minmax(0, 1fr); } }
 .kpi-card { display: block; text-decoration: none; color: inherit; background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-2) var(--space-3); }
 a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-sm); }
 .kpi-label { color: var(--ds-color-text-muted); font-size: 13px; }
 .kpi-value { font-size: clamp(1.125rem, 1rem + 0.5vw, 1.5rem); line-height: 1.2; font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; margin: var(--space-1) 0; }
 .kpi-sub { color: var(--ds-color-text-muted); font-size: 12px; }
 .kpi-split { display: flex; gap: var(--space-3); font-size: 12px; margin-top: var(--space-1); }
+
+/* ---------- Descrizione dell'indicatore su hover e focus (DEC-123) ---------- */
+/* La card KPI e' gia' un link, quindi e' gia' focalizzabile: il pannello si apre
+   sull'hover e sul focus da tastiera della card stessa, senza elementi interattivi
+   annidati (che axe segnalerebbe) e senza JavaScript lato client. */
+.kpi-card { position: relative; }
+.kpi-label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.kpi-info { flex: none; color: var(--ds-color-text-muted); opacity: 0.65; }
+.kpi-card:hover .kpi-info, .kpi-card:focus-visible .kpi-info { color: var(--brand-blue); opacity: 1; }
+.kpi-tip, .info-chip .kpi-tip {
+  position: absolute; left: 0; top: calc(100% + 6px); z-index: 30;
+  min-width: 100%; width: max-content; max-width: 22rem;
+  background: var(--brand-navy); color: #fff;
+  font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left;
+  padding: var(--space-2) var(--space-3); border-radius: var(--ds-radius);
+  box-shadow: var(--ds-shadow-md);
+  opacity: 0; visibility: hidden; transition: opacity var(--duration-fast, 120ms) var(--easing-standard, ease);
+}
+.kpi-card:hover .kpi-tip, .kpi-card:focus-visible .kpi-tip,
+.info-chip:hover .kpi-tip, .info-chip:focus-visible .kpi-tip { opacity: 1; visibility: visible; }
+@media (prefers-reduced-motion: reduce) { .kpi-tip { transition: none; } }
+
+/* Pastiglia "i" accanto al titolo di un grafico */
+.card-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.card-head h3 { margin: 0; font-size: var(--ds-text-lg, 1.125rem); font-weight: 600; color: var(--brand-navy); }
+.info-chip {
+  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; flex: none; border-radius: 50%;
+  color: var(--ds-color-text-muted); background: var(--ds-color-bg-subtle); cursor: help;
+}
+.info-chip:hover, .info-chip:focus-visible { color: var(--brand-blue); }
 
 /* ---------- Badge ---------- */
 .badge { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 2px 8px; border-radius: var(--ds-radius); border: 1px solid; font-weight: 600; font-size: 13px; white-space: nowrap; }

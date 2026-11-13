@@ -207,7 +207,7 @@ const ROLE_TOURS: Tour[] = [
     cases: ["BZ-001 – bozza da consegnare", "CD-01 – memoria in scadenza il 07/10/2026", "CD-02, CD-07 – pratiche in corso presso Ufficio Gare e fornitore"],
     next: "PROCUREMENT_OFFICER",
     steps: [
-      { path: "/", target: "section[aria-label='Indicatori principali']", title: "La tua dashboard", body: "Vedi solo le procedure della tua struttura: indicatori e totali sono calcolati sul tuo perimetro. Ogni indicatore apre il portafoglio filtrato.", can: ["Leggere procedure monitorate, alert critici e importo a rischio"] },
+      { path: "/", target: "section[aria-labelledby='h-panoramica']", title: "La tua dashboard", body: "Vedi solo le procedure della tua struttura: indicatori e totali sono calcolati sul tuo perimetro. Ogni indicatore apre il portafoglio filtrato.", can: ["Leggere procedure monitorate, alert critici e importo a rischio"] },
       { path: "/portafoglio", target: ".table-wrap", title: "Le pratiche della struttura", body: "Quattro procedure in fasi diverse: BZ-001 (bozza), CD-01 (memoria da consegnare), CD-02 (presa in carico dell'Ufficio Gare), CD-07 (in attesa della controfirma del fornitore). La colonna Owner indica a chi tocca.", can: ["Filtrare, ordinare, esportare", "Creare una nuova procedura in bozza"] },
       { path: "/procedure/nuova", target: "main form", title: "Inserimento nel piano", body: "Fase 0 dello schema: oggetto, tipologia, quadro economico (base di gara, IVA e tassa gara), riparto per annualità e data obiettivo della memoria. Il riquadro a destra calcola l'importo a disposizione della struttura prima della memoria; il sistema sceglie il modello di procedura e calcola le date dei passi.", tryIt: "Crea «Servizi di hosting del portale», affidamento diretto MePA, base di gara 40.000,00 € e tassa gara pari a zero: il totale è 48.800,00 €, da ripartire sul 2027; memoria entro il 30/10/2026." },
       { path: "/procedure/CD-01?tab=iter", expect: "MEMORY_SUBMISSION", target: PASSO, title: "Memoria in scadenza", body: "CD-01 ha la memoria prevista per il 07/10/2026: mancano meno di 10 giorni, la procedura è gialla e hai ricevuto il reminder. Il passo è nella tua corsia.", tryIt: "Registra la consegna della memoria al 01/10/2026: il reminder si chiude e la pratica passa all'Ufficio Gare." },
@@ -224,7 +224,7 @@ const ROLE_TOURS: Tour[] = [
     cases: ["CD-02 – presa in carico da fare", "OP01-S5 – procedura reale con memoria scaduta da riprogrammare", "CD-05 – riprogrammazione con sforamento del bilancio da approvare con override", "OP04-S18 – fascicolo reale Stage4EU"],
     next: "FINANCE_OFFICER",
     steps: [
-      { path: "/", target: "section[aria-labelledby='att']", title: "Cosa richiede attenzione", body: "Procedure rosse e gialle del Piano PN Giovani, Donne e Lavoro (82 reali) e dei casi dimostrativi, con la prossima scadenza.", can: ["Aprire una procedura dall'elenco"] },
+      { path: "/?tab=attenzione", target: "section[aria-labelledby='h-attenzione']", title: "Cosa richiede attenzione", body: "Procedure rosse e gialle del Piano PN Giovani, Donne e Lavoro (82 reali) e dei casi dimostrativi, con la prossima scadenza.", can: ["Aprire una procedura dall'elenco"] },
       { path: "/procedure/CD-02?tab=iter", expect: "TAKEN_IN_CHARGE", target: PASSO, title: "Presa in carico", body: "La memoria di CD-02 è stata consegnata il 28/09/2026: tocca a te prendere in carico la pratica entro il 02/10/2026.", tryIt: "Registra il passo con nota «Funzionario assegnato: dott. Verdi»." },
       { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Portafoglio filtrato", body: "Qui sono le procedure rosse; per le gialle scegli un altro valore in Health. Il filtro è nell'indirizzo della pagina. La colonna Health spiega il motivo; «Riprogrammazione richiesta» segnala una data chiave scaduta.", can: ["Filtrare, ordinare, esportare"] },
       { path: "/procedure/OP01-S5?tab=iter", target: ".iter-board", title: "Una procedura reale nello schema", body: "OP01-S5 viene dal workbook: le date del Piano (V3 baseline, V4 corrente) sono mappate sulle date chiave; i passi intermedi sono dedotti. La memoria è scaduta e blocca il processo." },
@@ -242,7 +242,7 @@ const ROLE_TOURS: Tour[] = [
     cases: ["CD-03 – verifica importi e prenotazioni in scadenza oggi", "CD-08 – impegni da assumere dopo la determina di indizione"],
     next: "SUPPLIER",
     steps: [
-      { path: "/", target: "section[aria-labelledby='ann']", title: "Fabbisogno e disponibilità", body: "Per ogni anno il fabbisogno previsto è confrontato con la disponibilità di bilancio; l'importo a rischio somma il non coperto e la spesa in slittamento.", can: ["Leggere il dettaglio in tabella sotto il grafico"] },
+      { path: "/?tab=finanza", target: "section[aria-labelledby='h-finanza']", title: "Fabbisogno e disponibilità", body: "Per ogni anno il fabbisogno previsto è confrontato con la disponibilità di bilancio; l'importo a rischio somma il non coperto e la spesa in slittamento.", can: ["Leggere il dettaglio in tabella sotto il grafico"] },
       { path: "/procedure/CD-03?tab=iter", expect: "FUNDING_CHECK", target: PASSO, title: "Verifica importi e prenotazioni", body: "CD-03 (rilevazione CATI, 244.000,00 €) attende la tua verifica entro oggi. Le prenotazioni sono proposte dal fabbisogno per annualità; il sistema blocca totali superiori al programmato.", tryIt: "Prova a prenotare 300.000,00 € (bloccato), poi registra 244.000,00 € sul 2027." },
       { path: "/procedure/CD-08?tab=iter", expect: "COMMITMENTS", target: PASSO, title: "Assunzione degli impegni", body: "Per CD-08 la determina di indizione è del 25/09/2026: ora vanno assunti gli impegni, proposti uguali alle prenotazioni.", tryIt: "Registra gli impegni con nota «Impegno n. 1452/2026»." },
       { path: "/procedure/CD-08?tab=finance", target: "[data-tour='prenotazioni']", title: "Prenotazioni e impegni per annualità", body: "Il riepilogo confronta fabbisogno, prenotato e impegnato; sotto ci sono i movimenti in sola aggiunta.", can: ["Consultare annualità e movimenti"] },
@@ -270,7 +270,7 @@ const ROLE_TOURS: Tour[] = [
     cases: ["Portafoglio reale PN GDL: 82 procedure"],
     next: "ADMIN",
     steps: [
-      { path: "/", target: "section[aria-label='Indicatori principali']", title: "Dashboard direzionale", body: "Procedure monitorate per health, alert critici, programmato, contratti stipulati e importo a rischio, alla data di riferimento in alto.", can: ["Aprire l'elenco corrispondente a ogni indicatore"] },
+      { path: "/", target: "section[aria-labelledby='h-panoramica']", title: "Dashboard direzionale", body: "Procedure monitorate per health, alert critici, programmato, contratti stipulati e importo a rischio, alla data di riferimento in alto.", can: ["Aprire l'elenco corrispondente a ogni indicatore"] },
       { path: "/portafoglio?health=RED", target: ".table-wrap", title: "Le procedure in rosso", body: "Le date chiave scadute rendono rossa la procedura; la colonna «A rischio» mostra la spesa scoperta o in slittamento." },
       { path: "/alert?view=critical", target: "nav.tabs", title: "Alert critici", body: "Le date chiave superate arrivano a te in escalation: le monitori, la gestione resta all'Ufficio Gare.", can: ["Consultare gli alert in escalation"] },
       { path: "/audit", target: "form.filters", title: "Tracciabilità", body: "Filtra per azione, per esempio «Simulazione approvata in deroga» o «Passo: aggiudicazione»: ogni decisione ha autore, data, motivazione e valori prima/dopo." },
@@ -332,14 +332,14 @@ const STEP_ACTIONS: Partial<Record<Role, string[]>> = {
 const HELP: Record<string, PageHelp> = {
   dashboard: {
     title: "Dashboard",
-    summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento, filtrabile per tipo di procedura e per struttura.",
+    summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento, divisa in sezioni: i filtri in alto valgono per tutte. Passa sopra una card per la definizione dell'indicatore.",
     sections: [
-      ["Filtri", "Tipo di procedura (filtro principale) e struttura: tutti gli indicatori della pagina si ricalcolano sul perimetro filtrato."],
-      ["Indicatori principali", "Procedure monitorate (rosso/giallo/verde), in ritardo, da riprogrammare, alert critici, procedure aggiudicate, ribasso medio (solo gare competitive), spesa su gara competitiva, giorni indizione → aggiudicazione."],
-      ["KPI finanziari", "Programmato, base di gara, contrattualizzato, aggiudicato, pagato (o contratti stipulati), importo a rischio, sullo stesso perimetro filtrato."],
-      ["Fabbisogno per annualità", "Previsione di spesa confrontata con la disponibilità di bilancio, con tabella equivalente."],
-      ["Procedure per fase", "Quante procedure sono in ciascuna fase del processo."],
-      ["Richiede attenzione", "Procedure rosse e gialle con la prossima scadenza."],
+      ["Filtri", "Tipo di procedura e struttura, in alto: valgono per ogni sezione e restano attivi quando cambi sezione."],
+      ["Panoramica", "Stato del portafoglio: procedure monitorate (rosso/giallo/verde), in ritardo, da riprogrammare, alert critici, attive, da avviare, richieste di riprogrammazione e importo a rischio."],
+      ["Finanza", "Programmato, base di gara, contrattualizzato, aggiudicato, pagato (o contratti stipulati) e importo a rischio, con il fabbisogno per annualità confrontato con la disponibilità di bilancio."],
+      ["Affidamenti", "Procedure per tipologia, procedure aggiudicate, ribasso medio (solo gare competitive), spesa su gara competitiva e giorni indizione → aggiudicazione."],
+      ["Avanzamento", "Quante procedure sono in ciascuna fase del processo, dalla bozza alla chiusura."],
+      ["Attenzione", "Le procedure rosse e gialle con la scadenza più vicina."],
     ],
     actions: { ALL: ["Aprire il portafoglio filtrato dagli indicatori", "Aprire una procedura dall'elenco"] },
   },
