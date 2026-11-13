@@ -407,7 +407,7 @@ function Finance({ d, actor }: { d: Awaited<ReturnType<typeof procedureDetail>>;
       ) : null}
       {!d.supplierView ? (
         <>
-          <section className="card">
+          <section className="card" style={{ maxWidth: 600 }}>
             <h2>Annualità: fabbisogno e disponibilità</h2>
             <AnnualChart rows={ev.years} />
           </section>

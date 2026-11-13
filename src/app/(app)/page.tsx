@@ -110,7 +110,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Kpi label="Gare da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Gare da avviare: ${k.proceduresToStart}`} />
         <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} />
       </section>
-      <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16 }}>
+      <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16, maxWidth: 680 }}>
         <h2 id="bytype">Gare per tipo</h2>
         <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
       </section>
@@ -166,7 +166,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </section>
       )}
 
-      <section className="card" aria-labelledby="ann" style={{ marginTop: 16 }}>
+      <section className="card" aria-labelledby="ann" style={{ marginTop: 16, maxWidth: 600 }}>
         <h2 id="ann">Fabbisogno per annualità</h2>
         <AnnualChart rows={data.annual} />
       </section>
