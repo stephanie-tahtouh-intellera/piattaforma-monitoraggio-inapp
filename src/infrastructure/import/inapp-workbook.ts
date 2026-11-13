@@ -92,7 +92,7 @@ function classify(adopted: string, planned: string, net: Money): { type: Procedu
   if (/trattativa diretta/.test(a)) return { type: "DIRECT_AWARD_MEPA", criterion: "LOWEST_PRICE", instrument: "MEPA" };
   if (/\boda\b|ordine diretto/.test(a)) return { type: "MEPA_ORDER", criterion: null, instrument: "MEPA" };
   if (/accordo quadro/.test(a)) return { type: "FRAMEWORK_AGREEMENT", criterion: null, instrument: "OFF_MEPA" };
-  if (/rdo|negoziata/.test(a)) return { type: "NEGOTIATED", criterion: meat ? "MEAT" : "LOWEST_PRICE", instrument: "MEPA" };
+  if (/\brdo\b|negoziata/.test(a)) return { type: "NEGOTIATED", criterion: meat ? "MEAT" : "LOWEST_PRICE", instrument: "MEPA" };
   if (/aperta|ambito europeo/.test(a)) return { type: "OPEN", criterion: meat ? "MEAT" : "LOWEST_PRICE", instrument: "OFF_MEPA" };
   // Procedura non ancora adottata: dalle procedure previste e dalle soglie sul netto (DEC-036)
   const p = norm(planned);
