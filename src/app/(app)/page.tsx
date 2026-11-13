@@ -208,7 +208,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="card" style={{ marginTop: 16, maxWidth: 600 }}>
             <div className="card-head">
               <h3>Fabbisogno per annualità</h3>
-              <InfoChip text={KPI_HELP.annual!} />
+              <InfoChip text={KPI_HELP.annual} />
             </div>
             <AnnualChart rows={data.annual} />
           </div>
@@ -228,7 +228,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="card" style={{ marginTop: 16, maxWidth: 680 }}>
             <div className="card-head">
               <h3>Procedure per tipo</h3>
-              <InfoChip text={KPI_HELP.byType!} />
+              <InfoChip text={KPI_HELP.byType} />
             </div>
             <TypeChart rows={data.byType} linkFor={(t) => qs({ type: t })} selectedType={type} />
           </div>

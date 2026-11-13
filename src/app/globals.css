@@ -129,7 +129,10 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-
 .kpi-card:hover .kpi-info, .kpi-card:focus-visible .kpi-info { color: var(--brand-blue); opacity: 1; }
 .kpi-card[data-tip]::after, .info-chip[data-tip]::after {
   content: attr(data-tip);
-  position: absolute; left: 0; top: calc(100% + 6px); z-index: 30;
+  position: absolute; left: 0; top: 100%; z-index: 30;
+  /* Il distacco e' un bordo trasparente, non un margine: cosi' il puntatore puo'
+     passare dalla card al pannello senza perdere :hover (WCAG 1.4.13 Hoverable). */
+  border-top: 6px solid transparent; background-clip: padding-box;
   min-width: 100%; width: max-content; max-width: 22rem;
   background: var(--brand-navy); color: #fff;
   font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left;
@@ -140,6 +143,16 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-
 .kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
 .info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
 @media (prefers-reduced-motion: reduce) { .kpi-card[data-tip]::after, .info-chip[data-tip]::after { transition: none; } }
+/* L'ultima card di ogni riga ancora il pannello a destra, per non sbordare dalla pagina. */
+.kpi-grid > .kpi-card:nth-child(4n)[data-tip]::after { left: auto; right: 0; }
+@media (max-width: 1100px) {
+  .kpi-grid > .kpi-card:nth-child(4n)[data-tip]::after { left: 0; right: auto; }
+  .kpi-grid > .kpi-card:nth-child(2n)[data-tip]::after { left: auto; right: 0; }
+}
+@media (max-width: 640px) {
+  .kpi-grid > .kpi-card:nth-child(2n)[data-tip]::after { left: 0; right: auto; }
+  .kpi-card[data-tip]::after { max-width: calc(100vw - 2 * var(--layout-page-padding-x, 16px)); }
+}
 
 /* Pastiglia "i" accanto al titolo di un grafico */
 .card-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }

@@ -3,7 +3,7 @@
  * da tastiera sulla card (07 §6.6: l'etichetta porta sempre la definizione del KPI).
  * Va tenuta allineata con le descrizioni di sezione in `src/ui/tour/content.ts` (HELP.dashboard).
  */
-export const KPI_HELP: Record<string, string> = {
+export const KPI_HELP = {
   // Panoramica
   proceduresTotal: "Tutte le procedure visibili al tuo ruolo alla data di riferimento, con la ripartizione per health: rosso, giallo, verde.",
   proceduresLate: "Procedure con almeno un passo obbligatorio scaduto rispetto alla data prevista.",
@@ -35,4 +35,4 @@ export const KPI_HELP: Record<string, string> = {
   // Avanzamento e attenzione
   byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura.",
   attention: "Le procedure rosse e gialle con la scadenza più vicina: le prime dieci del perimetro, ordinate per severità.",
-};
+} satisfies Record<string, string>;

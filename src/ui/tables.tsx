@@ -7,7 +7,7 @@ import { ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE
 export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; showProcedure?: boolean }) {
   // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" invece di una colonna vuota.
   const showActions = canHandle || canSuspend;
-  const columns = (showProcedure ? 1 : 0) + 8 + (showActions ? 1 : 0);
+  const columns = (showProcedure ? 1 : 0) + 7 + (showActions ? 1 : 0);
   return (
     <div className="table-wrap">
       <table className="data alerts-table">
