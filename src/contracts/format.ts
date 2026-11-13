@@ -1,14 +1,24 @@
 /** Formattazione it-IT condivisa (DEC-081): importi da stringa, nessuna aritmetica. */
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", useGrouping: "always" } as Intl.NumberFormatOptions);
 const euroCompact = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", notation: "compact", maximumFractionDigits: 1 });
+const euroNoCents = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0, useGrouping: "always" } as Intl.NumberFormatOptions);
 
 export function formatEuro(amount: string | null | undefined): string {
   if (amount === null || amount === undefined || amount === "") return "n.d.";
   return euro.format(amount as unknown as number); // Intl accetta stringhe decimali esatte (NumberFormat v3)
 }
 
+/**
+ * Importo abbreviato per le card KPI. In it-IT la notazione compatta **non** abbrevia le
+ * migliaia (580850 → "580.850,0 €": nessuna sigla e un decimale spurio) e inizia ad aiutare
+ * solo dal milione ("29,1 Mln €"). Sotto il milione si mostra quindi l'importo intero senza
+ * centesimi, che la riga sotto la card riporta comunque per esteso.
+ * La soglia si legge dalle cifre della parte intera: nessuna aritmetica sugli importi.
+ */
 export function formatEuroCompact(amount: string | null | undefined): string {
   if (amount === null || amount === undefined || amount === "") return "n.d.";
+  const integerDigits = String(amount).split(".")[0]!.replace("-", "").length;
+  if (integerDigits <= 6) return euroNoCents.format(amount as unknown as number);
   return euroCompact.format(amount as unknown as number);
 }
 

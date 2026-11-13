@@ -20,7 +20,7 @@ const signed = (s: string | null | undefined) => (s && !s.startsWith("-") && toU
 
 /** Barra con l'estremità del dato arrotondata (4px) e il lato della baseline squadrato (dataviz §4). */
 function barPath(x: number, y: number, w: number, h: number, roundTop: boolean) {
-  const r = Math.min(4, h, w / 2);
+  const r = Math.min(2, h, w / 2);
   if (h <= 0) return "";
   if (roundTop) {
     return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
@@ -94,7 +94,9 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
     { key: "delta" as const, label: "Scostamento dalla baseline (previsione − baseline)" },
     { key: "margin" as const, label: "Margine sulla disponibilità (disponibilità − previsione)" },
   ];
-  const vals = rows.flatMap((r) => [toUnits(r.delta), toUnits(r.margin)]);
+  const withData = rows.filter((r) => toUnits(r.delta) !== 0 || toUnits(r.margin) !== 0);
+  const hidden = rows.length - withData.length;
+  const vals = withData.flatMap((r) => [toUnits(r.delta), toUnits(r.margin)]);
   const top = Math.max(0, ...vals);
   const bottom = Math.min(0, ...vals);
   const step = niceStep(top - bottom, 4);
@@ -103,9 +105,9 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
   const ticks: number[] = [];
   for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t * 100) / 100);
   const W = 560;
-  const H = 240;
+  const H = 200;
   const pad = { l: 56, r: 10, b: 28, t: 10 };
-  const gw = (W - pad.l - pad.r) / rows.length;
+  const gw = (W - pad.l - pad.r) / Math.max(withData.length, 1);
   const bw = Math.min(24, (gw - 16) / series.length);
   const span = Math.max(hi - lo, 1);
   const y = (v: number) => pad.t + ((hi - v) / span) * (H - pad.b - pad.t);
@@ -118,28 +120,52 @@ function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
       </p>
     );
   }
+  // Un solo anno con un valore: il numero È il grafico. Un asse di sei anni con una barra
+  // sola non dice nulla di più e occupa cinque volte lo spazio (skill dataviz, anti-pattern).
+  if (withData.length === 1) {
+    const only = withData[0]!;
+    const figures = series
+      .map((x) => ({ label: x.key === "delta" ? "Scostamento dalla baseline" : "Margine sulla disponibilità", raw: only[x.key], over: x.key === "margin" && toUnits(only[x.key]) < 0 }))
+      .filter((x) => toUnits(x.raw) !== 0);
+    return (
+      <div className="chart-stat" role="img" aria-label={aria}>
+        {figures.map((fig) => (
+          <div key={fig.label}>
+            <p className="chart-stat-label">
+              {fig.label} · {only.year}
+              {fig.over ? <span className="badge badge-RED" style={{ marginLeft: 6 }}>Oltre disponibilità</span> : null}
+            </p>
+            <p className="chart-stat-value">{signed(fig.raw)}</p>
+          </div>
+        ))}
+        <p className="muted chart-stat-note">
+          Nelle altre {rows.length - 1} annualità non ci sono scostamenti dalla baseline né margini da segnalare. Tutti i valori sono nella tabella qui sotto.
+        </p>
+      </div>
+    );
+  }
   return (
     <div>
       <div className="legend" aria-hidden>
-        <span><i style={{ background: "var(--chart-1)" }} />Scostamento dalla baseline (previsione − baseline)</span>
+        <span><i style={{ background: "var(--chart-1)" }} />Scostamento dalla baseline</span>
         {hasMargin ? (
           <>
-            <span><i style={{ background: "var(--chart-7)" }} />Margine sulla disponibilità (disponibilità − previsione)</span>
+            <span><i style={{ background: "var(--chart-7)" }} />Margine sulla disponibilità</span>
             <span><i style={{ background: "var(--chart-overflow)" }} />Oltre disponibilità</span>
           </>
         ) : null}
       </div>
-      <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €{flat ? " · nessuno scostamento dalla baseline in nessuna annualità" : ""}</p>
+      <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €{hidden > 0 ? ` · ${hidden} annualità senza scostamenti non mostrate` : ""}</p>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
         {ticks.map((t) => (
           <g key={t}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--chart-axis)" : "var(--chart-grid)"} />
-            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--chart-axis)">
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="12" fill="var(--chart-axis)">
               {thousands.format(t / 1000)}
             </text>
           </g>
         ))}
-        {rows.map((r, i) => {
+        {withData.map((r, i) => {
           const x0 = pad.l + i * gw + (gw - series.length * bw - 2) / 2;
           return (
             <g key={r.year}>
@@ -214,7 +240,7 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
         {ticks.map((t) => (
           <g key={t}>
             <line x1={pad.l} x2={W - 10} y1={y(t)} y2={y(t)} stroke="var(--chart-grid)" />
-            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="var(--chart-axis)">
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="12" fill="var(--chart-axis)">
               {thousands.format(t / 1000)}
             </text>
           </g>

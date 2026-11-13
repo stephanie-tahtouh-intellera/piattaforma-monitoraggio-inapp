@@ -116,10 +116,12 @@
   /* ---------- 6. Severità degli alert (LOW / MEDIUM / HIGH / CRITICAL) [P] ---------- */
   --severity-low-fg: #0b4f8a;       /* 7.36:1 su bg */
   --severity-low-bg: #e8f1fa;
+  --severity-low-border: #b9d3ee;
   --severity-medium-fg: #8a4600;    /* 6.50:1 su bg */
   --severity-medium-bg: #fff4db;
   --severity-high-fg: #9a3412;      /* 6.41:1 su bg */
   --severity-high-bg: #fdede4;
+  --severity-high-border: #f0b89e;
   --severity-critical-fg: #ffffff;  /* 6.54:1 su bg */
   --severity-critical-bg: #b3261e;  /* badge pieno: unico livello "invertito" */
 
@@ -133,6 +135,7 @@
   --feedback-error-text: #b3261e;   /* testo errore sotto i campi: 6.54:1 */
   --feedback-info-fg: var(--severity-low-fg);
   --feedback-info-bg: var(--severity-low-bg);
+  --feedback-info-border: var(--severity-low-border);
 
   /* ---------- 8. Grafici [P] (validati: CVD adiacenti ΔE ≥ 9.7, 3:1 su bianco) ---------- */
   --chart-surface: #ffffff;
@@ -154,6 +157,7 @@
 
   /* ---------- 9. Banner DEMO [P] ---------- */
   --demo-banner-bg: var(--brand-yellow);  /* 11.65:1 con testo neutral-900 */
+  --demo-banner-bg-alt: #ffcb45;          /* seconda riga della trama a 135 gradi (05 5.3) */
   --demo-banner-fg: var(--neutral-900);
   --demo-banner-border: #8a6100;          /* 5.54:1 */
 

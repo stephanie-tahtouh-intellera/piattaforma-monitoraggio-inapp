@@ -6,7 +6,7 @@ a { color: var(--ds-color-link); }
 a:hover { color: var(--ds-color-link-hover); }
 h1, h2, h3 { color: var(--brand-navy); margin: 0; }
 h1 { font-size: var(--ds-text-2xl); line-height: var(--ds-leading-2xl); font-weight: 700; }
-h2 { font-size: var(--ds-text-xl); line-height: var(--ds-leading-xl); font-weight: 700; }
+h2 { font-size: var(--ds-text-xl); line-height: var(--ds-leading-xl); font-weight: 600; }
 h3 { font-size: var(--ds-text-lg); line-height: var(--ds-leading-lg); font-weight: 600; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .mono { font-family: var(--ds-font-mono); font-size: 13px; }
@@ -23,7 +23,7 @@ body > header { position: sticky; top: 0; z-index: var(--z-header); }
 .demo-banner {
   height: var(--layout-demo-banner-h); padding: 0 var(--space-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: flex; align-items: center; justify-content: center; justify-content: safe center; gap: var(--space-2);
-  background: repeating-linear-gradient(135deg, var(--demo-banner-bg) 0 18px, #ffe08a 18px 36px);
+  background: repeating-linear-gradient(135deg, var(--demo-banner-bg) 0 12px, var(--demo-banner-bg-alt) 12px 24px);
   color: var(--demo-banner-fg); border-bottom: 1px solid var(--demo-banner-border); font-weight: 600; font-size: var(--ds-text-sm);
 }
 .app-header {
@@ -89,7 +89,10 @@ main { padding: var(--space-6) var(--layout-page-padding-x) calc(var(--space-6) 
 .breadcrumb a { color: var(--ds-color-link); }
 .page-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: var(--space-4); margin-bottom: var(--space-4); }
 .page-meta { color: var(--ds-color-text-muted); font-size: var(--ds-text-sm); margin-top: var(--space-1); }
-.head-actions { flex: 1 1 100%; justify-content: space-between; }
+/* I filtri stanno accanto al titolo, non a capo sotto: l intestazione passa da 156 a ~84px
+   e la tab guadagna quello spazio (DEC-124). */
+.head-actions { flex: 0 1 auto; justify-content: flex-end; align-items: flex-end; gap: var(--space-3); }
+.page-head .filters { margin-bottom: 0; }
 .actions { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
 
 /* ---------- Card, griglie ---------- */
@@ -110,14 +113,37 @@ main { padding: var(--space-6) var(--layout-page-padding-x) calc(var(--space-6) 
 
 /* Indicatori: quante colonne ci stanno, senza ingrandire le schede quando la finestra è stretta. */
 .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-3); }
+/* Due colonne: usata nelle sezioni dove le card affiancano un grafico (DEC-123). */
+.kpi-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.kpi-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Le righe tengono l altezza naturale: la colonna piu corta non si stira. */
+.dash-split > .kpi-grid { align-content: start; }
+/* Barra segmentata della ripartizione per health: le cifre stanno accanto, non dentro. */
+.seg { display: flex; height: 8px; gap: 2px; margin-top: var(--space-2); border-radius: var(--ds-radius-full); overflow: hidden; background: var(--chart-grid); }
+.seg i { display: block; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: var(--space-1); vertical-align: baseline; }
+.dot-red { background: var(--health-red-solid); }
+.dot-amber { background: var(--health-amber-solid); }
+.dot-green { background: var(--health-green-solid); }
+/* Quando una sola annualita porta un dato il numero sostituisce il grafico (DEC-124). */
+.chart-stat { display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) 0; }
+.chart-stat-label { margin: 0; font-size: var(--ds-text-sm); color: var(--ds-color-text-muted); }
+.chart-stat-value { margin: var(--space-1) 0 0; font-size: var(--ds-text-3xl); line-height: var(--ds-leading-3xl); font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; }
+.chart-stat-note { margin: 0; font-size: var(--ds-text-xs); line-height: var(--ds-leading-xs); }
+.kpi-health { margin-top: var(--space-1); }
+.kpi-health .kpi-split { margin-top: 2px; justify-content: space-between; gap: var(--space-2); }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .kpi-grid { grid-template-columns: minmax(0, 1fr); } }
-.kpi-card { display: block; text-decoration: none; color: inherit; background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-2) var(--space-3); }
-a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-sm); }
-.kpi-label { color: var(--ds-color-text-muted); font-size: 13px; }
-.kpi-value { font-size: clamp(1.125rem, 1rem + 0.5vw, 1.5rem); line-height: 1.2; font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; margin: var(--space-1) 0; }
-.kpi-sub { color: var(--ds-color-text-muted); font-size: 12px; }
-.kpi-split { display: flex; gap: var(--space-3); font-size: 12px; margin-top: var(--space-1); }
+.kpi-card { display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-4); min-height: 112px; }
+/* Anello interno invece di un ombra: 03 1 vuole superfici piatte con bordi sottili. */
+a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: inset 0 0 0 1px var(--brand-blue); }
+.kpi-label { color: var(--ds-color-text-muted); font-size: var(--ds-text-sm); }
+.kpi-value { font-size: var(--ds-text-3xl); line-height: var(--ds-leading-3xl); font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; margin: var(--space-1) 0 0; }
+.kpi-sub { color: var(--ds-color-text-muted); font-size: var(--ds-text-xs); line-height: var(--ds-leading-xs); margin-top: var(--space-1); }
+/* Ultima riga ancorata in basso: le card di una riga restano allineate otticamente
+   anche quando una ha una riga di contesto in piu (era il vuoto in "Contratti stipulati"). */
+.kpi-card > :last-child { margin-top: auto; }
+.kpi-split { display: flex; gap: var(--space-3); font-size: var(--ds-text-xs); margin-top: var(--space-2); }
 
 /* ---------- Descrizione dell'indicatore su hover e focus (DEC-123) ---------- */
 /* La card KPI e' gia' un link, quindi e' gia' focalizzabile: il pannello si apre
@@ -133,32 +159,25 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-
   /* Il distacco e' un bordo trasparente, non un margine: cosi' il puntatore puo'
      passare dalla card al pannello senza perdere :hover (WCAG 1.4.13 Hoverable). */
   border-top: 6px solid transparent; background-clip: padding-box;
-  min-width: 100%; width: max-content; max-width: 22rem;
+  min-width: 100%; width: max-content;
   background: var(--brand-navy); color: #fff;
   font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left;
   padding: var(--space-2) var(--space-3); border-radius: var(--ds-radius);
   box-shadow: var(--ds-shadow-md);
   opacity: 0; visibility: hidden; transition: opacity var(--duration-fast) var(--easing-standard);
 }
+/* La card limita il pannello alla propria larghezza (niente sbordo orizzontale della pagina);
+   la pastiglia dei grafici, larga 24px, ha bisogno di una larghezza propria. */
+.kpi-card[data-tip]::after { max-width: 100%; }
+.info-chip[data-tip]::after { max-width: 100%; }
 .kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
 .info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
 @media (prefers-reduced-motion: reduce) { .kpi-card[data-tip]::after, .info-chip[data-tip]::after { transition: none; } }
-/* L'ultima card di ogni riga ancora il pannello a destra, per non sbordare dalla pagina. */
-.kpi-grid > .kpi-card:nth-child(4n)[data-tip]::after { left: auto; right: 0; }
-@media (max-width: 1100px) {
-  .kpi-grid > .kpi-card:nth-child(4n)[data-tip]::after { left: 0; right: auto; }
-  .kpi-grid > .kpi-card:nth-child(2n)[data-tip]::after { left: auto; right: 0; }
-}
-@media (max-width: 640px) {
-  .kpi-grid > .kpi-card:nth-child(2n)[data-tip]::after { left: 0; right: auto; }
-  .kpi-card[data-tip]::after { max-width: calc(100vw - 2 * var(--layout-page-padding-x, 16px)); }
-}
-
 /* Pastiglia "i" accanto al titolo di un grafico */
-.card-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.card-head { position: relative; display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
 .card-head h3 { margin: 0; font-size: var(--ds-text-lg, 1.125rem); font-weight: 600; color: var(--brand-navy); }
 .info-chip {
-  position: relative; display: inline-flex; align-items: center; justify-content: center;
+  display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; flex: none; border-radius: 50%;
   color: var(--ds-color-text-muted); background: var(--ds-color-bg-subtle); cursor: help;
 }
@@ -171,9 +190,9 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-
 .badge-AMBER { color: var(--health-amber-fg); background: var(--health-amber-bg); border-color: var(--health-amber-border); }
 .badge-RED { color: var(--health-red-fg); background: var(--health-red-bg); border-color: var(--health-red-border); }
 .badge-NEUTRAL { color: var(--health-neutral-fg); background: var(--health-neutral-bg); border-color: var(--health-neutral-border); }
-.sev-LOW { color: var(--severity-low-fg); background: var(--severity-low-bg); border-color: #b9d3ee; }
+.sev-LOW { color: var(--severity-low-fg); background: var(--severity-low-bg); border-color: var(--severity-low-border); }
 .sev-MEDIUM { color: var(--severity-medium-fg); background: var(--severity-medium-bg); border-color: var(--health-amber-border); }
-.sev-HIGH { color: var(--severity-high-fg); background: var(--severity-high-bg); border-color: #f0b89e; }
+.sev-HIGH { color: var(--severity-high-fg); background: var(--severity-high-bg); border-color: var(--severity-high-border); }
 .sev-CRITICAL { color: var(--severity-critical-fg); background: var(--severity-critical-bg); border-color: var(--severity-critical-bg); }
 .chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 2px 8px; border-radius: var(--ds-radius); background: var(--ds-color-bg-muted); color: var(--neutral-800); font-size: 13px; white-space: nowrap; }
 .chip-filter { border-radius: var(--ds-radius-full); background: var(--ds-color-bg-selected); color: var(--brand-navy); }
@@ -184,11 +203,20 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: var(--ds-shadow-
 table.data { width: 100%; border-collapse: collapse; font-size: var(--ds-text-sm); }
 table.data caption { text-align: left; padding: var(--space-3) var(--space-4); font-weight: 600; color: var(--brand-navy); }
 table.data th { background: var(--ds-color-bg-muted); text-align: left; font-weight: 600; padding: 0 var(--space-3); height: var(--table-header-h); border-bottom: 1px solid var(--ds-color-border-strong); white-space: nowrap; }
-table.data td { padding: 6px var(--space-3); border-bottom: 1px solid var(--ds-color-border); vertical-align: top; }
+table.data td { padding: var(--space-2) var(--space-3); height: var(--table-row-h); border-bottom: 1px solid var(--ds-color-border); vertical-align: middle; }
+/* Solo le celle con una riga secondaria sotto restano allineate in alto. */
+table.data td.title, table.data td:has(.drivers), table.data td:has(.small) { vertical-align: top; }
+table.data.compact td { padding: var(--space-1) var(--space-3); height: var(--table-row-h-compact); }
+table.data tbody tr:nth-child(even) { background: var(--ds-color-bg-zebra); }
 table.data tbody tr:hover { background: var(--ds-color-bg-subtle); }
 table.data tfoot td { font-weight: 600; background: var(--neutral-25); }
 table.data th.num, table.data td.num { text-align: right; }
-table.data th a { color: inherit; text-decoration: none; }
+table.data th a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-1); }
+table.data th a::after { content: "95"; font-size: 11px; color: var(--ds-color-text-muted); opacity: 0.55; }
+table.data th[aria-sort="ascending"] a::after { content: "B2"; opacity: 1; color: var(--brand-blue); }
+table.data th[aria-sort="descending"] a::after { content: "BC"; opacity: 1; color: var(--brand-blue); }
+table.data th a:hover { color: var(--brand-blue); }
+table.data th a:hover::after { opacity: 1; }
 /* Colonna Oggetto: la più larga; la fase va a capo invece di rubarle spazio. */
 table.data .title { width: 40%; min-width: 18rem; max-width: 36rem; }
 /* Centro alert: larghezze fisse; Regola e Azioni (modulo di risoluzione) hanno più spazio, le colonne brevi meno. */
@@ -205,6 +233,7 @@ table.alerts-table .c-owner { width: 7%; }
 table.alerts-table .c-actions { width: 15%; min-width: 220px; }
 table.data td .chip { height: auto; min-height: 22px; white-space: normal; }
 .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.clamp1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .pager { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--ds-text-sm); }
 
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
@@ -221,7 +250,7 @@ table.data td .chip { height: auto; min-height: 22px; white-space: normal; }
 .hbar-dim a:hover, .hbar-dim a:focus-visible { background: var(--ds-color-bg-subtle); }
 
 /* ---------- Filtri e form ---------- */
-.filters { background: var(--ds-color-bg-subtle); border: 1px solid var(--brand-tint-border); border-radius: var(--ds-radius); padding: var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-bottom: var(--space-3); }
+.filters { background: var(--ds-color-bg-subtle); border: 1px solid var(--brand-tint-border); border-radius: var(--ds-radius); padding: var(--space-2) var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-bottom: var(--space-3); }
 /* Filtri compatti: controlli da 32 px e colonne strette, così stanno su meno righe. */
 .filters { padding: var(--space-2) var(--space-3); gap: var(--space-2) var(--space-3); }
 .filters .field { flex: 0 1 9.5rem; min-width: 7rem; gap: 2px; }
@@ -260,14 +289,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .btn-sm { height: var(--control-h-sm); padding: 0 var(--space-3); }
 .btn[disabled] { background: var(--neutral-100); color: var(--neutral-500); border-color: var(--neutral-200); cursor: not-allowed; }
 
-.alert-box { border-radius: var(--ds-radius); padding: var(--space-3) var(--space-4); border: 1px solid; font-size: var(--ds-text-sm); }
+.alert-box { display: flex; align-items: flex-start; gap: var(--space-2); border-radius: var(--ds-radius); padding: var(--space-3) var(--space-4); border: 1px solid; font-size: var(--ds-text-sm); }
+.alert-box > svg { flex: none; margin-top: 1px; }
 .alert-box.error { background: var(--feedback-error-bg); color: var(--feedback-error-fg); border-color: var(--health-red-border); }
 .alert-box.warning { background: var(--feedback-warning-bg); color: var(--feedback-warning-fg); border-color: var(--health-amber-border); }
 .alert-box.success { background: var(--feedback-success-bg); color: var(--feedback-success-fg); border-color: var(--health-green-border); }
-.alert-box.info { background: var(--feedback-info-bg); color: var(--feedback-info-fg); border-color: #b9d3ee; }
+.alert-box.info { background: var(--feedback-info-bg); color: var(--feedback-info-fg); border-color: var(--feedback-info-border); }
 
 /* ---------- Tab ---------- */
-.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--ds-color-border-strong); margin: var(--space-4) 0; overflow-x: auto; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--ds-color-border-strong); margin: var(--space-3) 0; overflow-x: auto; }
 .tabs a { padding: var(--space-2) var(--space-4); text-decoration: none; color: var(--ds-color-text-secondary); border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
 .tabs a[aria-current="page"] { color: var(--brand-navy); border-bottom-color: var(--brand-blue); }
 .proc-head { background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-4); display: grid; grid-template-columns: 1fr auto; gap: var(--space-4); }

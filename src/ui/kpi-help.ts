@@ -34,5 +34,5 @@ export const KPI_HELP = {
 
   // Avanzamento e attenzione
   byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura.",
-  attention: "Le procedure rosse e gialle con la scadenza più vicina: le prime dieci del perimetro, ordinate per severità.",
+  attention: "Le procedure rosse e gialle con la scadenza più vicina: le prime cinque del perimetro, ordinate per severità; l’elenco completo è nel portafoglio.",
 } satisfies Record<string, string>;

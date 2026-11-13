@@ -103,6 +103,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     return s ? `/?${s}` : "/";
   };
 
+  // Geometria della barra di ripartizione: conteggi, non importi (nessun vincolo DEC-033).
+  // I conteggi possono arrivare come stringhe da Postgres, quindi vanno convertiti.
+  const health = { RED: Number(k.health.RED), AMBER: Number(k.health.AMBER), GREEN: Number(k.health.GREEN) };
+  const healthTotal = health.RED + health.AMBER + health.GREEN;
+  const healthPct = (n: number) => (healthTotal > 0 ? (n / healthTotal) * 100 : 0);
+
   const riskKpi = (
     <Kpi
       label="Importo a rischio"
@@ -180,8 +186,23 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-panoramica">
           <h2 id="h-panoramica">Stato del portafoglio</h2>
           <p className="page-meta">Come stanno le procedure del perimetro filtrato alla data di riferimento. Passa sopra una card per la definizione dell&apos;indicatore.</p>
-          <div className="grid kpi-grid" style={{ marginTop: 12 }}>
-            <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href={qs()} aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} help={KPI_HELP.proceduresTotal} extra={<div className="kpi-split"><span>{HEALTH_LABEL.RED} {k.health.RED}</span><span>{HEALTH_LABEL.AMBER} {k.health.AMBER}</span><span>{HEALTH_LABEL.GREEN} {k.health.GREEN}</span></div>} />
+          <div className="grid kpi-grid" style={{ marginTop: 8 }}>
+            <Kpi label="Procedure monitorate" value={k.proceduresTotal} sub={`al ${ref}`} href={qs()} aria={`Procedure monitorate: ${k.proceduresTotal}. Apri il portafoglio`} help={KPI_HELP.proceduresTotal} extra={
+              <div className="kpi-health">
+                {healthTotal > 0 ? (
+                  <span className="seg" aria-hidden>
+                    <i style={{ width: `${healthPct(health.RED)}%`, background: "var(--health-red-solid)" }} />
+                    <i style={{ width: `${healthPct(health.AMBER)}%`, background: "var(--health-amber-solid)" }} />
+                    <i style={{ width: `${healthPct(health.GREEN)}%`, background: "var(--health-green-solid)" }} />
+                  </span>
+                ) : null}
+                <div className="kpi-split">
+                  <span><i className="dot dot-red" aria-hidden />{HEALTH_LABEL.RED} {health.RED}</span>
+                  <span><i className="dot dot-amber" aria-hidden />{HEALTH_LABEL.AMBER} {health.AMBER}</span>
+                  <span><i className="dot dot-green" aria-hidden />{HEALTH_LABEL.GREEN} {health.GREEN}</span>
+                </div>
+              </div>
+            } />
             <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href={qs({ health: "RED" })} aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} help={KPI_HELP.proceduresLate} />
             <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} help={KPI_HELP.toReschedule} />
             <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}`} help={KPI_HELP.criticalAlerts} extra={k.criticalAlerts ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico</div> : null} />
@@ -197,7 +218,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-finanza">
           <h2 id="h-finanza">Quadro finanziario</h2>
           <p className="page-meta">Importi IVA inclusa salvo indicazione contraria, sullo stesso perimetro filtrato.</p>
-          <div className="grid kpi-grid" style={{ marginTop: 12 }}>
+          <div className="grid dash-split">
+          <div className="grid kpi-grid kpi-grid-3">
             <Kpi label="Programmato" value={formatEuroCompact(fin ? fin.totals.programmed : k.programmed)} sub={`${formatEuro(fin ? fin.totals.programmed : k.programmed)} · escluse le annullate`} href={qs({ sort: "programmed", dir: "desc" })} aria={`Programmato ${formatEuro(fin ? fin.totals.programmed : k.programmed)}`} help={KPI_HELP.programmed} />
             {r ? <Kpi label="Base di gara" value={formatEuroCompact(r.totals.base)} sub={`${formatEuro(r.totals.base)} · IVA esclusa`} href={qs()} aria={`Base di gara ${formatEuro(r.totals.base)}`} help={KPI_HELP.base} /> : null}
             <Kpi label="Contrattualizzato" value={formatEuroCompact(fin ? fin.totals.contracted : k.contracted)} sub={`${formatEuro(fin ? fin.totals.contracted : k.contracted)} · contratti stipulati`} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contrattualizzato ${formatEuro(fin ? fin.totals.contracted : k.contracted)}`} help={KPI_HELP.contracted} />
@@ -205,12 +227,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {paidOrSignedKpi}
             {riskKpi}
           </div>
-          <div className="card" style={{ marginTop: 16, maxWidth: 600 }}>
+          <div className="card">
             <div className="card-head">
               <h3>Fabbisogno per annualità</h3>
               <InfoChip text={KPI_HELP.annual} />
             </div>
             <AnnualChart rows={data.annual} />
+          </div>
           </div>
         </section>
       ) : null}
@@ -219,18 +242,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-affidamenti">
           <h2 id="h-affidamenti">Tipologie e andamento degli affidamenti</h2>
           <p className="page-meta">Come si distribuiscono le procedure per tipologia e come vanno le gare competitive.</p>
-          <div className="grid kpi-grid" style={{ marginTop: 12 }}>
+          <div className="grid dash-split">
+          <div className="grid kpi-grid kpi-grid-2">
             <Kpi label="Procedure aggiudicate" value={r.totals.awardedCount} sub={`su ${r.totals.count} nel tuo perimetro`} href={qs()} aria={`Procedure aggiudicate: ${r.totals.awardedCount} su ${r.totals.count}`} help={KPI_HELP.awardedCount} />
             <Kpi label="Ribasso medio" value={formatPercentIt(r.totals.ribasso)} sub={`su ${r.totals.competitiveAwardedCount} gare competitive aggiudicate`} href={qs()} aria={`Ribasso medio ${formatPercentIt(r.totals.ribasso)}`} help={KPI_HELP.ribasso} />
             <Kpi label="Spesa su gara competitiva" value={r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "n.d."} sub="negoziata, aperta, accordo quadro" href={qs()} aria={`Spesa su gara competitiva: ${r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "non disponibile"}`} help={KPI_HELP.competitiveShare} />
             <Kpi label="Giorni indizione → aggiudicazione" value={r.totals.averageAwardDurationDays !== null ? r.totals.averageAwardDurationDays : "n.d."} sub="media sulle procedure con entrambe le date" href={qs()} aria={`Giorni indizione aggiudicazione: ${r.totals.averageAwardDurationDays ?? "non disponibile"}`} help={KPI_HELP.awardDuration} />
           </div>
-          <div className="card" style={{ marginTop: 16, maxWidth: 680 }}>
+          <div className="card">
             <div className="card-head">
               <h3>Procedure per tipo</h3>
               <InfoChip text={KPI_HELP.byType} />
             </div>
             <TypeChart rows={data.byType} linkFor={(t) => qs({ type: t })} selectedType={type} />
+          </div>
           </div>
         </section>
       ) : null}
@@ -239,7 +264,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-avanzamento">
           <h2 id="h-avanzamento">Avanzamento nel processo</h2>
           <p className="page-meta">Quante procedure si trovano in ciascuna fase, dalla bozza alla chiusura. Apri una fase per vederne l&apos;elenco.</p>
-          <div className="grid kpi-grid" style={{ marginTop: 12 }}>
+          <div className="grid kpi-grid" style={{ marginTop: 8 }}>
             {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
               <Kpi
                 key={s.status}
@@ -269,11 +294,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <Link className="btn btn-secondary btn-sm" href={qs({ health: "AMBER" })}>
                 Vedi le gialle
               </Link>
+              <Link className="btn btn-secondary btn-sm" href={qs({ health: "RED,AMBER", sort: "deadline" })}>
+                Vedi tutte
+              </Link>
             </div>
           </div>
           <div className="card">
             <div className="table-wrap">
-              <table className="data">
+              <table className="data compact">
                 <caption className="sr-only">Procedure rosse e gialle ordinate per severità</caption>
                 <thead>
                   <tr>
@@ -287,18 +315,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                   </tr>
                 </thead>
                 <tbody>
-                  {data.attention.map((p) => (
+                  {data.attention.slice(0, 5).map((p) => (
                     <tr key={p.code}>
                       <td className="mono">
                         <Link href={`/procedure/${p.code}`}>{p.code}</Link>
                       </td>
                       <td className="title">
-                        <span className="clamp2" title={p.title}>{p.title}</span>
-                        <ul className="drivers">{p.healthDrivers.slice(0, 2).map((d: { message: string }, i: number) => <li key={i}>{d.message}</li>)}</ul>
+                        <span className="clamp1" title={p.title}>{p.title}</span>
                       </td>
                       <td><StatusChip value={p.status} /></td>
                       <td><HealthBadge value={p.health} drivers={p.healthDrivers} /></td>
-                      <td><Deadline d={p.nextDeadline} /></td>
+                      <td><Deadline d={p.nextDeadline} compact /></td>
                       <td className="num"><Euro v={p.programmed} /></td>
                       <td className="num"><Euro v={p.atRisk} /></td>
                     </tr>

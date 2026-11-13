@@ -77,15 +77,16 @@ export function DateIt({ v }: { v: string | null | undefined }) {
   return <>{formatDateIt(v)}</>;
 }
 
-export function Deadline({ d }: { d: { date: string; label?: string | null; days: number | null } | null }) {
+export function Deadline({ d, compact = false }: { d: { date: string; label?: string | null; days: number | null } | null; compact?: boolean }) {
   if (!d) return <span className="muted">—</span>;
   const tone = d.days !== null && d.days < 0 ? "var(--health-red-fg)" : d.days !== null && d.days <= 10 ? "var(--health-amber-fg)" : undefined;
+  const detail = `${d.label ? `${d.label} · ` : ""}${daysText(d.days)}`;
   return (
     <span>
       <span>{formatDateIt(d.date)}</span>
-      <span className="small" style={{ display: "block", color: tone ?? "var(--ds-color-text-muted)" }}>
-        {d.label ? `${d.label} · ` : ""}
-        {daysText(d.days)}
+      {/* In forma compatta l etichetta del passo sta su una riga sola: per esteso resta nel title. */}
+      <span className={compact ? "small clamp1" : "small"} style={{ display: "block", color: tone ?? "var(--ds-color-text-muted)" }} title={compact ? detail : undefined}>
+        {compact ? daysText(d.days) : detail}
       </span>
     </span>
   );

@@ -205,7 +205,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
                 return (
                   <th key={key} scope="col" className={num ? "num" : undefined} aria-sort={sorted ? (f.dir === "asc" ? "ascending" : "descending") : "none"}>
                     <Link href={qs({ sort: key, dir: nextDir, page: undefined })}>
-                      {labelText} {sorted ? (f.dir === "asc" ? "▲" : "▼") : ""}
+                      {labelText}
                     </Link>
                   </th>
                 );
