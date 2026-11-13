@@ -37,7 +37,10 @@ type TabKey = (typeof TABS)[number][0];
 /** Card KPI: valore, unità/periodo e definizione al passaggio del mouse e al focus (07 §6.6). */
 function Kpi({ label, value, sub, href, extra, aria, help }: { label: string; value: string | number; sub: string; href: string; extra?: React.ReactNode; aria: string; help?: string }) {
   return (
-    <Link className="kpi-card" href={href} aria-label={help ? `${aria}. ${help}` : aria}>
+    // La definizione sta in `data-tip` e non nel DOM: il pannello e' generato in CSS, cosi' il
+    // testo d'aiuto non entra nel contenuto testuale della card (che i test e2e cercano per
+    // sottostringa) e non viene annunciato due volte, essendo gia' nell'aria-label.
+    <Link className="kpi-card" href={href} aria-label={help ? `${aria}. ${help}` : aria} data-tip={help}>
       <div className="kpi-label">
         {label}
         {help ? <Info className="kpi-info" size={13} aria-hidden /> : null}
@@ -45,7 +48,6 @@ function Kpi({ label, value, sub, href, extra, aria, help }: { label: string; va
       <div className="kpi-value">{value}</div>
       <div className="kpi-sub">{sub}</div>
       {extra}
-      {help ? <span className="kpi-tip" aria-hidden>{help}</span> : null}
     </Link>
   );
 }
@@ -53,9 +55,8 @@ function Kpi({ label, value, sub, href, extra, aria, help }: { label: string; va
 /** Pastiglia «i» accanto al titolo di un grafico, con la stessa descrizione su hover e focus. */
 function InfoChip({ text }: { text: string }) {
   return (
-    <span className="info-chip" tabIndex={0} role="note" aria-label={`Come si legge: ${text}`}>
+    <span className="info-chip" tabIndex={0} role="note" aria-label={`Come si legge: ${text}`} data-tip={text}>
       <Info size={14} aria-hidden />
-      <span className="kpi-tip" aria-hidden>{text}</span>
     </span>
   );
 }
