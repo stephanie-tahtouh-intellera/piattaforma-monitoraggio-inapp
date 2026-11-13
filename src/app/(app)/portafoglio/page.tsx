@@ -1,3 +1,4 @@
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { listProcedures, type PortfolioFilters } from "@/server/queries";
 import { can } from "@/server/authz";
@@ -231,7 +232,8 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
             ))}
             {r.items.length === 0 ? (
               <tr>
-                <td colSpan={8} className="muted">
+                <td colSpan={8} className="empty">
+                  <Inbox size={24} aria-hidden />
                   Nessuna procedura corrisponde ai filtri.{" "}
                   <Link className="btn btn-secondary btn-sm" href="/portafoglio">
                     Azzera filtri

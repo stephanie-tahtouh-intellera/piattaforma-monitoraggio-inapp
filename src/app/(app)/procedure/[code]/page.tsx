@@ -1,3 +1,4 @@
+import { UserCheck } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DomainError } from "@/application/errors";
@@ -140,34 +141,43 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       </nav>
       <section className="proc-head" aria-labelledby="ptitle">
         <div>
-          <div className="actions">
-            <span className="mono">{p.code}</span>
-            <StatusChip value={ev.status} />
-            <HealthBadge value={ev.health} drivers={ev.healthDrivers} />
-            {ev.rescheduleRequired ? <span className="badge badge-RED">Riprogrammazione richiesta</span> : null}
-          </div>
-          <h1 id="ptitle" style={{ marginTop: 8 }}>{p.title}</h1>
+          <span className="mono proc-code">{p.code}</span>
+          <h1 id="ptitle" style={{ marginTop: 4 }}>{p.title}</h1>
+          {turn && !p.cancelledAt ? (
+            <p className="proc-turn" data-tour="turno">
+              <UserCheck size={16} aria-hidden />
+              <span>
+                Tocca a <strong>{OWNER_LABEL[turn.owner] ?? turn.owner}</strong> · {turn.label}
+                {turn.canComplete ? <> · <Link href={`/procedure/${p.code}?tab=iter`}>registra il passo</Link></> : null}
+              </span>
+            </p>
+          ) : null}
           <dl className="meta-grid">
             <div><dt>Tipologia</dt><dd>{TYPE_LABEL[p.type] ?? p.type}</dd></div>
             <div><dt>Modello</dt><dd title={p.templateLabel}>{p.template}</dd></div>
             <div><dt>Progetto</dt><dd>{p.project ? <><span className="mono">{p.project.code}</span> · {p.project.name}</> : "—"}</dd></div>
             <div><dt>Struttura / linea</dt><dd>{p.operation ?? p.structure}</dd></div>
-            <div><dt>CIG</dt><dd className="mono">{p.cig || "n.d."}</dd></div>
-            <div><dt>Programmato</dt><dd><Euro v={ev.programmed} /></dd></div>
+            <div><dt>CIG</dt><dd className="mono">{p.cig ? <>{p.cig} <span className="chip chip-demo">demo</span></> : "n.d."}</dd></div>
             <div><dt>Contrattualizzato</dt><dd>{ev.contracted ? <Euro v={ev.contracted} /> : "—"}</dd></div>
             {module2 ? <div><dt>Pagato / residuo</dt><dd><Euro v={ev.paid} /> / <Euro v={ev.residual} /></dd></div> : null}
             <div><dt>Prossima scadenza</dt><dd><Deadline d={ev.nextDeadline ? { date: ev.nextDeadline.due, label: ev.nextDeadline.label, days: ev.nextDeadline.daysUntil } : null} /></dd></div>
-            {turn && !p.cancelledAt ? (
-              <div data-tour="turno"><dt>Tocca a</dt><dd><strong>{OWNER_LABEL[turn.owner] ?? turn.owner}</strong> · {turn.label}{turn.canComplete ? <> · <Link href={`/procedure/${p.code}?tab=iter`}>registra il passo</Link></> : null}</dd></div>
-            ) : null}
           </dl>
         </div>
-        <div className="actions" style={{ alignItems: "flex-start", flexDirection: "column" }}>
-          {can(actor, "simulation.create") && d.rescheduleSource && !p.cancelledAt && !p.closedAt ? (
-            <Link className="btn btn-primary" href={`/procedure/${p.code}/riprogrammazione`}>Avvia simulazione di riprogrammazione</Link>
-          ) : null}
-          {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? <Link className="btn btn-secondary" href="/procedure/nuova">Nuova procedura in bozza</Link> : null}
-          {can(actor, "export") ? <a className="btn btn-secondary" href={`/api/exports/procedures/${p.code}.pdf`}>Report PDF</a> : null}
+        <div className="proc-aside">
+          <div className="proc-badges">
+            <StatusChip value={ev.status} />
+            <HealthBadge value={ev.health} drivers={ev.healthDrivers} />
+            {ev.rescheduleRequired ? <span className="badge badge-RED">Riprogrammazione richiesta</span> : null}
+          </div>
+          <p className="proc-amount-label">Programmato</p>
+          <p className="proc-amount"><Euro v={ev.programmed} /></p>
+          <div className="proc-cta">
+            {can(actor, "simulation.create") && d.rescheduleSource && !p.cancelledAt && !p.closedAt ? (
+              <Link className="btn btn-primary" href={`/procedure/${p.code}/riprogrammazione`}>Avvia simulazione di riprogrammazione</Link>
+            ) : null}
+            {actor.role === "STRUCTURE_USER" || actor.role === "ADMIN" ? <Link className="btn btn-secondary" href="/procedure/nuova">Nuova procedura in bozza</Link> : null}
+            {can(actor, "export") ? <a className="btn btn-secondary" href={`/api/exports/procedures/${p.code}.pdf`}>Report PDF</a> : null}
+          </div>
         </div>
       </section>
 

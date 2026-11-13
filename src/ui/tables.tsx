@@ -1,3 +1,4 @@
+import { Inbox } from "lucide-react";
 import Link from "next/link";
 import { formatDateTimeIt } from "@/contracts/format";
 import { ActionForm } from "./action-form";
@@ -42,7 +43,7 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
               ) : null}
             </tr>
           ))}
-          {alerts.length === 0 ? <tr><td colSpan={columns} className="muted">Nessun alert o anomalia.</td></tr> : null}
+          {alerts.length === 0 ? <tr><td colSpan={columns} className="empty"><Inbox size={24} aria-hidden />Nessun alert o anomalia nel perimetro.</td></tr> : null}
         </tbody>
       </table>
     </div>
@@ -61,12 +62,16 @@ export function AuditTable({ rows }: { rows: any[] }) {
               <td>{r.actor}{r.impersonated_by ? <div className="small muted">imp. {r.impersonated_by}</div> : null}</td>
               <td title={r.action}>{AUDIT_ACTION_LABEL[r.action] ?? humanize(r.action)}</td>
               <td className="small">{ENTITY_LABEL[r.entity_type] ?? humanize(r.entity_type)} {r.entity_id}</td>
-              <td className="small" style={{ maxWidth: 360 }}>{r.before_json ? <div>prima: <code>{String(r.before_json).slice(0, 160)}</code></div> : null}{r.after_json ? <div>dopo: <code>{String(r.after_json).slice(0, 160)}</code></div> : null}</td>
+              <td className="small diff-cell">
+                {r.before_json ? <del title={String(r.before_json)}>{String(r.before_json).slice(0, 120)}</del> : null}
+                {r.after_json ? <ins title={String(r.after_json)}>{String(r.after_json).slice(0, 120)}</ins> : null}
+                {!r.before_json && !r.after_json ? <span className="muted">—</span> : null}
+              </td>
               <td>{r.reason ?? "—"}</td>
               <td className="mono small">{r.correlation_id}</td>
             </tr>
           ))}
-          {rows.length === 0 ? <tr><td colSpan={7} className="muted">Nessun evento.</td></tr> : null}
+          {rows.length === 0 ? <tr><td colSpan={7} className="empty"><Inbox size={24} aria-hidden />Nessun evento registrato.</td></tr> : null}
         </tbody>
       </table>
     </div>

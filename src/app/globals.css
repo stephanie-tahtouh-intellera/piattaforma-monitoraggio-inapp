@@ -220,20 +220,47 @@ table.data th a:hover::after { opacity: 1; }
 /* Colonna Oggetto: la più larga; la fase va a capo invece di rubarle spazio. */
 table.data .title { width: 40%; min-width: 18rem; max-width: 36rem; }
 /* Centro alert: larghezze fisse; Regola e Azioni (modulo di risoluzione) hanno più spazio, le colonne brevi meno. */
-table.alerts-table { table-layout: fixed; min-width: 1100px; }
+table.alerts-table { table-layout: fixed; min-width: 880px; }
+table.alerts-table:has(.c-actions) { min-width: 1100px; }
 table.alerts-table th { white-space: normal; }
-table.alerts-table .c-proc { width: 12%; }
+table.alerts-table .c-proc { width: 14%; }
 table.alerts-table .c-kind { width: 7%; }
-table.alerts-table .c-rule { width: 28%; }
+table.alerts-table .c-rule { width: 33%; }
 table.alerts-table .c-sev { width: 8%; }
 table.alerts-table .c-level { width: 6%; }
-table.alerts-table .c-due { width: 9%; }
-table.alerts-table .c-state { width: 8%; }
-table.alerts-table .c-owner { width: 7%; }
+table.alerts-table .c-due { width: 14%; }
+table.alerts-table .c-state { width: 9%; }
+table.alerts-table .c-owner { width: 9%; }
 table.alerts-table .c-actions { width: 15%; min-width: 220px; }
+/* Con la colonna Azioni presente si torna alle proporzioni strette. */
+table.alerts-table:has(.c-actions) .c-proc { width: 12%; }
+table.alerts-table:has(.c-actions) .c-rule { width: 28%; }
+table.alerts-table:has(.c-actions) .c-due { width: 9%; }
+table.alerts-table:has(.c-actions) .c-owner { width: 7%; }
 table.data td .chip { height: auto; min-height: 22px; white-space: normal; }
 .clamp2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .clamp1 { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+/* Stato vuoto delle tabelle: icona, respiro, testo centrato. */
+table.data td.empty { padding: var(--space-6) var(--space-4); text-align: center; color: var(--ds-color-text-muted); height: auto; }
+table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity: 0.5; }
+/* Confronto prima/dopo dell audit: del e ins portano la semantica, non il solo colore (08). */
+.diff-cell { max-width: 24rem; }
+.diff-cell del, .diff-cell ins { display: block; font-family: var(--ds-font-mono); font-size: var(--ds-text-xs); text-decoration: none; padding: 2px var(--space-2); border-radius: var(--ds-radius-sm); overflow-wrap: anywhere; }
+.diff-cell del { background: var(--health-red-bg); color: var(--health-red-fg); }
+.diff-cell ins { background: var(--health-green-bg); color: var(--health-green-fg); }
+
+/* ---------- Bacheca a corsie: progressione fatto -> in corso -> futuro (DEC-124) ---------- */
+/* La corsia di chi deve agire adesso e' marcata con testo e icona, non col solo colore. */
+.iter-board tbody tr.is-current th { background: var(--brand-navy); color: #fff; }
+.lane-now { display: flex; align-items: center; gap: var(--space-1); margin-top: var(--space-1); font-size: var(--ds-text-xs); font-weight: 400; }
+.iter-board tbody tr.is-current td { background: var(--brand-tint); }
+.step-meta { display: flex; align-items: center; gap: var(--space-1); flex-wrap: wrap; }
+.step.done .step-meta svg { color: var(--health-green-solid); }
+.step.active.overdue .step-meta svg { color: var(--health-red-solid); }
+.step-docs li { display: flex; align-items: center; gap: var(--space-1); }
+.key-mark { color: var(--brand-blue); flex: none; }
+/* I passi futuri non devono sembrare azionabili come quelli in corso. */
+.step:not(.done):not(.active) { border-style: dashed; color: var(--ds-color-text-muted); }
 .pager { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--ds-text-sm); }
 
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
@@ -300,9 +327,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--ds-color-border-strong); margin: var(--space-3) 0; overflow-x: auto; }
 .tabs a { padding: var(--space-2) var(--space-4); text-decoration: none; color: var(--ds-color-text-secondary); border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
 .tabs a[aria-current="page"] { color: var(--brand-navy); border-bottom-color: var(--brand-blue); }
-.proc-head { background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-4); display: grid; grid-template-columns: 1fr auto; gap: var(--space-4); }
-.meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: var(--space-3) var(--space-4); margin-top: var(--space-3); }
-.meta-grid dt { font-size: 12px; color: var(--ds-color-text-muted); }
+.proc-head { background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-5); display: grid; grid-template-columns: 1fr auto; gap: var(--space-6); }
+/* Testata della scheda procedura (07 6.15): identita' a sinistra, stato e cifra a destra. */
+.proc-code { color: var(--ds-color-text-muted); }
+.proc-aside { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); text-align: right; }
+.proc-badges { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
+.proc-amount-label { margin: var(--space-2) 0 0; font-size: var(--ds-text-sm); color: var(--ds-color-text-muted); }
+.proc-amount { margin: 0; font-size: var(--ds-text-3xl); line-height: var(--ds-leading-3xl); font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; }
+.proc-cta { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-3); align-items: stretch; }
+/* "A chi tocca" e' la domanda piu' frequente in demo: fascia dedicata, non una cella fra dieci. */
+.proc-turn { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-3) 0 0; padding: var(--space-2) var(--space-3); background: var(--brand-tint); border-left: 3px solid var(--brand-blue); border-radius: var(--ds-radius); font-size: var(--ds-text-sm); }
+.proc-turn strong { color: var(--brand-navy); }
+.chip-demo { background: var(--demo-banner-bg); color: var(--neutral-900); font-size: var(--ds-text-xs); height: 18px; }
+@media (max-width: 640px) { .proc-aside { align-items: flex-start; text-align: left; } .proc-badges { justify-content: flex-start; } }
+.meta-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2) var(--space-5); margin-top: var(--space-4); padding-top: var(--space-3); border-top: 1px solid var(--ds-color-border); }
+.meta-grid dt { font-size: var(--ds-text-xs); color: var(--ds-color-text-muted); }
 .meta-grid dd { margin: 0; font-weight: 600; }
 
 /* ---------- Gantt ---------- */
@@ -330,15 +369,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 /* ---------- Login ---------- */
 .login-page { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; background: var(--brand-navy); }
 .login-wrap { display: grid; place-items: center; padding: var(--space-8); }
-.login-card { background: #fff; border-radius: var(--ds-radius-lg); width: 100%; max-width: 920px; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; box-shadow: var(--ds-shadow-lg); }
-.login-side { background: var(--brand-blue); color: #fff; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); }
+.login-card { background: var(--neutral-0); border-radius: var(--ds-radius-lg); width: 100%; max-width: 1000px; display: grid; grid-template-columns: 0.85fr 1.15fr; overflow: hidden; box-shadow: var(--ds-shadow-lg); }
+/* Sfumatura navy -> blu, entrambi di marca: il pannello non resta una campitura piatta. */
+.login-side { background: linear-gradient(160deg, var(--brand-navy), var(--brand-blue)); color: #fff; padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); }
 .login-side img { width: 150px; }
-.login-side h1 { color: #fff; font-size: 26px; line-height: 1.25; }
+.login-brandline { margin: 0; color: #fff; font-size: var(--ds-text-2xl); line-height: var(--ds-leading-2xl); font-weight: 600; }
+.login-lede { margin: 0 0 var(--space-2); color: var(--ds-color-text-secondary); font-size: var(--ds-text-sm); }
 .login-form { padding: var(--space-8); display: flex; flex-direction: column; gap: var(--space-4); }
 .demo-users { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }
+/* Il profilo scelto e la vera leva di questa pagina: va mostrato quale e attivo. */
+.demo-users button[aria-pressed="true"] { border-color: var(--brand-blue); background: var(--ds-color-bg-selected); box-shadow: inset 3px 0 0 var(--brand-blue); }
+.demo-users button:focus-visible { outline: 3px solid var(--ds-color-focus); outline-offset: 2px; }
 .demo-users button { text-align: left; border: 1px solid var(--ds-color-border); background: var(--neutral-25); border-radius: var(--ds-radius); padding: var(--space-2); cursor: pointer; font: inherit; }
 .demo-users button:hover { border-color: var(--brand-blue); background: var(--ds-color-bg-subtle); }
-.demo-users strong { display: block; color: var(--brand-navy); font-size: 13px; }
+.demo-users button { min-height: 44px; }
+.demo-users strong { display: block; color: var(--brand-navy); font-size: var(--ds-text-sm); }
 .demo-users span { font-size: 12px; color: var(--ds-color-text-muted); }
 
 /* ---------- Grafico a barre semplice ---------- */

@@ -1,4 +1,5 @@
 "use client";
+import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { requestTourStart } from "@/ui/tour/state";
 
@@ -34,10 +35,12 @@ export function LoginForm({ initialLogin, startTour = false }: { initialLogin?: 
 
   return (
     <form className="login-form" onSubmit={submit} aria-describedby={error ? "login-error" : undefined}>
-      <h2>Accesso demo</h2>
+      <h1>Accedi all’ambiente dimostrativo</h1>
+      <p className="login-lede">Scegli un profilo demo: i dati sono fittizi.</p>
       {error ? (
         <div id="login-error" className="alert-box error" role="alert">
-          {error}
+          <CircleAlert size={16} aria-hidden />
+          <span>{error}</span>
         </div>
       ) : null}
       <div className="field">
@@ -59,7 +62,7 @@ export function LoginForm({ initialLogin, startTour = false }: { initialLogin?: 
         <p className="label" style={{ margin: "0 0 8px" }}>Account dimostrativi (un clic seleziona l'utente)</p>
         <div className="demo-users">
           {USERS.map(([l, role, what]) => (
-            <button type="button" key={l} onClick={() => { setLogin(l); setPassword("Demo2026!"); }} aria-label={`Seleziona ${role}`}>
+            <button type="button" key={l} onClick={() => { setLogin(l); setPassword("Demo2026!"); }} aria-label={`Seleziona ${role}`} aria-pressed={login === l}>
               <strong>{role}</strong>
               <span>{l} · {what}</span>
             </button>

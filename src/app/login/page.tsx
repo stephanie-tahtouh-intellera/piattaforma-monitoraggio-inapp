@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <div className="login-card">
           <div className="login-side">
             <img src="/brand/inapp-logo-white.svg" alt="INAPP — Istituto nazionale per l'analisi delle politiche pubbliche" />
-            <h1>Monitoraggio Gare e Contratti</h1>
+            <p className="login-brandline">Monitoraggio Gare e Contratti</p>
             <p>Programmazione, scadenze, riprogrammazione e controllo finanziario delle procedure di acquisto del PN Giovani, Donne e Lavoro.</p>
             <p style={{ marginTop: "auto", fontSize: 13, opacity: 0.9 }}>Prototipo dimostrativo. Calcoli deterministici; nessuna decisione automatica.</p>
           </div>

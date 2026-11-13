@@ -1,4 +1,4 @@
-import { Info, OctagonAlert, Plus } from "lucide-react";
+import { Inbox, Info, OctagonAlert, Plus } from "lucide-react";
 import Link from "next/link";
 import { executionModuleEnabled } from "@/application/modules";
 import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact, formatPercentIt } from "@/contracts/format";
@@ -331,7 +331,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     </tr>
                   ))}
                   {data.attention.length === 0 ? (
-                    <tr><td colSpan={7} className="muted">Nessuna procedura richiede attenzione.</td></tr>
+                    <tr><td colSpan={7} className="empty"><Inbox size={24} aria-hidden />Nessuna procedura richiede attenzione.</td></tr>
                   ) : null}
                 </tbody>
               </table>

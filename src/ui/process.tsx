@@ -1,3 +1,4 @@
+import { ArrowRight, CalendarDays, CalendarX, Circle, CircleCheck, Clock, Diamond } from "lucide-react";
 import Link from "next/link";
 import { formatEuro } from "@/contracts/format";
 import type { procedureDetail } from "@/server/queries";
@@ -55,23 +56,29 @@ function StepCard({ s, docTypes, href }: { s: Step; docTypes: Set<string>; href?
     <StepLink href={href} label={s.label}>
     <div className={cls}>
       <div className="step-title">
-        {s.key ? <span className="key-mark" title="Data chiave" aria-label="Data chiave">◆</span> : null}
+        {s.key ? <><Diamond size={11} className="key-mark" aria-hidden /><span className="sr-only">Data chiave: </span></> : null}
         {s.label}
       </div>
       <div className="step-meta">
         {s.actual ? (
-          <>Fatto il <DateIt v={s.actual} /></>
+          <><CircleCheck size={14} aria-hidden />Fatto il <DateIt v={s.actual} /></>
         ) : s.active ? (
-          <>{s.state === "OVERDUE" ? "Scaduto il" : "In corso · entro il"} <DateIt v={s.forecast} /></>
+          s.state === "OVERDUE" ? (
+            <><CalendarX size={14} aria-hidden />Scaduto il <DateIt v={s.forecast} /></>
+          ) : (
+            <><Clock size={14} aria-hidden />In corso · entro il <DateIt v={s.forecast} /></>
+          )
         ) : (
-          <>Previsto il <DateIt v={s.forecast} /></>
+          <><CalendarDays size={14} aria-hidden />Previsto il <DateIt v={s.forecast} /></>
         )}
       </div>
       {s.expectedDocuments.length ? (
         <ul className="step-docs">
           {s.expectedDocuments.map((d) => (
             <li key={d.type}>
-              {docTypes.has(d.type) ? "✓" : "○"} {DOC_TYPE_LABEL[d.type] ?? humanize(d.type)}
+              {docTypes.has(d.type) ? <CircleCheck size={13} aria-hidden /> : <Circle size={13} aria-hidden />}
+              <span className="sr-only">{docTypes.has(d.type) ? "presente: " : "mancante: "}</span>
+              {DOC_TYPE_LABEL[d.type] ?? humanize(d.type)}
             </li>
           ))}
         </ul>
@@ -90,6 +97,7 @@ function stepHref(s: Step, draft: boolean, canSubmitMemory: boolean) {
 
 /** Vista a corsie della singola procedura (schema di processo INAPP, Modulo 1). */
 export function IterBoard({ d, canSubmitMemory = false, canUpload = false }: { d: Detail; canSubmitMemory?: boolean; canUpload?: boolean }) {
+  const activeLane = d.timeline.find((t) => t.active)?.owner;
   const module2 = d.process.module2;
   const stages = STAGES.filter((s) => s.module === 1 || module2);
   const docTypes = new Set((d.documents as { doc_type: string | null }[]).map((x) => x.doc_type ?? ""));
@@ -117,8 +125,11 @@ export function IterBoard({ d, canSubmitMemory = false, canUpload = false }: { d
           </thead>
           <tbody>
             {LANES.map((lane) => (
-              <tr key={lane.owner}>
-                <th scope="row">{lane.label}</th>
+              <tr key={lane.owner} className={lane.owner === activeLane ? "is-current" : undefined}>
+                <th scope="row">
+                  {lane.label}
+                  {lane.owner === activeLane ? <span className="lane-now"><ArrowRight size={13} aria-hidden /> tocca a questa corsia</span> : null}
+                </th>
                 {stages.map((st) => {
                   const steps = d.timeline.filter((t) => t.owner === lane.owner && t.stage === st.n);
                   const plan = st.n === 0 && lane.owner === "STRUCTURE";

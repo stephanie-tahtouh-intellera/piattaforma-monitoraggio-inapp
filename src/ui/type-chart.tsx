@@ -19,7 +19,10 @@ export function TypeChart({ rows, linkFor, selectedType }: { rows: Row[]; linkFo
   const top = data[0]!;
   const aria = `Procedure per tipo. Il tipo più diffuso è ${TYPE_LABEL[top.type] ?? top.type} con ${top.n} procedure. ${data.map((r) => `${TYPE_LABEL[r.type] ?? r.type}: ${r.n}`).join(", ")}.${selectedType ? ` Filtro attivo su ${TYPE_LABEL[selectedType] ?? selectedType}.` : ""}`;
   return (
-    <ul className="hbar-chart" role="img" aria-label={aria}>
+    // Niente role="img" sulla lista: azzererebbe la semantica dei <li> e vieterebbe elementi
+    // focalizzabili al suo interno (axe: listitem + nested-interactive). La lista porta il
+    // proprio nome accessibile con aria-label, e ogni riga ha la sua etichetta sul link.
+    <ul className="hbar-chart" aria-label={aria}>
       {data.map((r) => {
         const label = TYPE_LABEL[r.type] ?? r.type;
         const isSelected = r.type === selectedType;
