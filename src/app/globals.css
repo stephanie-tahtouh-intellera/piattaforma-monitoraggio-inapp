@@ -169,7 +169,7 @@ table.data td .chip { height: auto; min-height: 22px; white-space: normal; }
 .hbar-track { height: 20px; background: var(--chart-grid); border-radius: var(--ds-radius-sm); overflow: hidden; }
 .hbar-fill { display: block; height: 100%; background: var(--chart-1); border-radius: var(--ds-radius-sm); }
 .hbar-value { font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-color-text); text-align: right; }
-.hbar-dim .hbar-fill { background: var(--chart-grid); }
+.hbar-dim .hbar-fill { background: var(--primary-300); }
 .hbar-dim .hbar-label, .hbar-dim .hbar-value { color: var(--ds-color-text-muted); font-weight: 400; }
 .hbar-dim a:hover, .hbar-dim a:focus-visible { background: var(--ds-color-bg-subtle); }
 
