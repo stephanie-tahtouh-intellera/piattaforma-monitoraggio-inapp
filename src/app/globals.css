@@ -212,9 +212,9 @@ table.data tbody tr:hover { background: var(--ds-color-bg-subtle); }
 table.data tfoot td { font-weight: 600; background: var(--neutral-25); }
 table.data th.num, table.data td.num { text-align: right; }
 table.data th a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: var(--space-1); }
-table.data th a::after { content: "95"; font-size: 11px; color: var(--ds-color-text-muted); opacity: 0.55; }
-table.data th[aria-sort="ascending"] a::after { content: "B2"; opacity: 1; color: var(--brand-blue); }
-table.data th[aria-sort="descending"] a::after { content: "BC"; opacity: 1; color: var(--brand-blue); }
+table.data th a::after { content: "↕"; font-size: 11px; color: var(--ds-color-text-muted); opacity: 0.55; }
+table.data th[aria-sort="ascending"] a::after { content: "▲"; opacity: 1; color: var(--brand-blue); }
+table.data th[aria-sort="descending"] a::after { content: "▼"; opacity: 1; color: var(--brand-blue); }
 table.data th a:hover { color: var(--brand-blue); }
 table.data th a:hover::after { opacity: 1; }
 /* Colonna Oggetto: la più larga; la fase va a capo invece di rubarle spazio. */
