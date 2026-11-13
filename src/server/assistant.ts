@@ -54,7 +54,7 @@ const STATUS_IT: Record<string, string> = {
   CANCELLED: "annullata",
 };
 const OWNER_IT: Record<string, string> = { STRUCTURE: "Struttura richiedente", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore" };
-const HEALTH_IT: Record<string, string> = { GREEN: "verde", AMBER: "ambra", RED: "rosso", NEUTRAL: "neutro" };
+const HEALTH_IT: Record<string, string> = { GREEN: "verde", AMBER: "giallo", RED: "rosso", NEUTRAL: "neutro" };
 
 /**
  * Assistente deterministico (US-090/091/092, DEC-082): parser a regole, stessi use case

@@ -111,7 +111,7 @@ describe("[DEC-111] capitolato insieme alla memoria", () => {
 });
 
 describe("[US-101] soglie configurabili", () => {
-  test("finestra di attenzione a 15 giorni rende ambra P-012 (scadenza fra 11 giorni)", async () => {
+  test("finestra di attenzione a 15 giorni rende giallo P-012 (scadenza fra 11 giorni)", async () => {
     await expect(updateEngineSettings(db, await as("gare"), { attentionWindowDays: 15 }, undefined)).rejects.toThrow(/non consentita/);
     await updateEngineSettings(db, await as("admin"), { attentionWindowDays: 15 }, ["2026-06-29"]);
     expect((await procedureDetail(db, await as("dirigente"), "P-012")).evaluation.health).toBe("AMBER");

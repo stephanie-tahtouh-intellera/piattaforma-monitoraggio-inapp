@@ -55,6 +55,8 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   const p = d.procedure;
   const ev = d.evaluation;
   const module2 = d.process.module2;
+  // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" se non c'è nulla da fare.
+  const canDecideOrCreateSim = can(actor, "simulation.decide") || can(actor, "simulation.create");
   const assistantOn = (await memoryAssistantProvider(await db())) !== "disabled";
   const hasDoc = (t: string) => (d.documents as { doc_type: string | null }[]).some((x) => x.doc_type === t);
   // La scheda mostra solo Iter, Documenti e Audit. Le altre sezioni restano nel codice e raggiungibili da `?tab=`
@@ -247,7 +249,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
           </div>
           <div className="table-wrap" data-tour="simulazioni">
             <table className="data">
-              <thead><tr><th>Codice</th><th>Alternativa</th><th>Milestone → data</th><th className="num">Date cambiate</th><th className="num">Spostato</th><th>Criticità</th><th>Stato</th><th>Autore</th><th>Azioni</th></tr></thead>
+              <thead><tr><th>Codice</th><th>Alternativa</th><th>Milestone → data</th><th className="num">Date cambiate</th><th className="num">Spostato</th><th>Criticità</th><th>Stato</th><th>Autore</th>{canDecideOrCreateSim ? <th>Azioni</th> : null}</tr></thead>
               <tbody>
                 {(d.simulations as any[]).map((s) => (
                   <tr key={s.code}>
@@ -259,6 +261,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                     <td>{s.result.criticalities.length ? s.result.criticalities.map((c: any, i: number) => <div key={i} className={`badge ${c.severity === "BLOCKING" ? "badge-RED" : "badge-AMBER"}`}>{CRITICALITY_LABEL[c.code] ?? humanize(c.code)} {c.year ?? ""} {c.amount ? formatEuro(c.amount) : ""}</div>) : <span className="muted">nessuna</span>}</td>
                     <td><span className="chip">{SIM_STATUS_LABEL[s.status] ?? s.status}</span>{s.decision_reason ? <div className="small muted">«{s.decision_reason}» – {s.decided_by}</div> : null}</td>
                     <td>{s.created_by}</td>
+                    {canDecideOrCreateSim ? (
                     <td>
                       {["DRAFT", "SUBMITTED"].includes(s.status) && can(actor, "simulation.decide") ? (
                         <div className="stack">
@@ -273,9 +276,10 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                         <ActionForm endpoint={`/api/reschedules/${s.code}/submit`} submitLabel="Invia ad approvazione" inline />
                       ) : null}
                     </td>
+                    ) : null}
                   </tr>
                 ))}
-                {d.simulations.length === 0 ? <tr><td colSpan={9} className="muted">Nessuna simulazione.</td></tr> : null}
+                {d.simulations.length === 0 ? <tr><td colSpan={canDecideOrCreateSim ? 9 : 8} className="muted">Nessuna simulazione.</td></tr> : null}
               </tbody>
             </table>
           </div>

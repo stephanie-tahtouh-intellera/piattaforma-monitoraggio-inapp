@@ -240,12 +240,12 @@ Neutri freddi (tinta ~210°) coerenti con il blu INAPP: `--neutral-0 #FFFFFF`, `
 | Health (codice) | Etichetta UI | Icona (lucide-react) | `fg` testo/icona | `bg` | `border` | `solid` (grafici, Gantt, pallini) |
 |---|---|---|---|---|---|---|
 | `GREEN` | **Verde** | `CircleCheck` | `#12663A` | `#E7F5EC` | `#9FD3B0` | `#1E7B45` |
-| `AMBER` | **Ambra** | `TriangleAlert` | `#8A4600` | `#FFF4DB` | `#F2C27A` | `#C27C00` |
+| `AMBER` | **Giallo** | `TriangleAlert` | `#8A4600` | `#FFF4DB` | `#F2C27A` | `#C27C00` |
 | `RED` | **Rosso** | `OctagonAlert` | `#9B1C1C` | `#FDECEC` | `#E8A3A3` | `#9B1C1C` |
 | `NEUTRAL` | **Neutro** | `CircleMinus` | `#4A5560` | `#EEF1F4` | `#C4CCD5` | `#6E7A87` |
 
 - Le icone hanno **forme diverse** (cerchio, triangolo, ottagono, cerchio con trattino): distinguono lo stato anche in scala di grigi e in modalità a contrasto elevato.
-- Validazione daltonismo (simulazione Machado 2009, OKLab, script `validate_palette.js` della skill dataviz): i `solid` verde/ambra/rosso hanno ΔE minimo **6.7** (deuteranopia, verde↔rosso), nella fascia 6–8 ammessa **solo** con codifica secondaria; distanza in visione normale ≥ 21.4. Per questo testo + icona sono obbligatori.
+- Validazione daltonismo (simulazione Machado 2009, OKLab, script `validate_palette.js` della skill dataviz): i `solid` verde/giallo/rosso hanno ΔE minimo **6.7** (deuteranopia, verde↔rosso), nella fascia 6–8 ammessa **solo** con codifica secondaria; distanza in visione normale ≥ 21.4. Per questo testo + icona sono obbligatori.
 - Lo stato neutro ha croma volutamente bassa (significa "non valutato").
 
 ### 4.4 Severità degli alert [P]
@@ -295,7 +295,7 @@ Regole: oltre 8 serie si raggruppa in "Altre"; nei grafici a dispersione o con c
 
 ### 4.7 Banner DEMO [P]
 
-`--demo-banner-bg #FFD361`, testo `#1A1F24` (11.65:1), bordo inferiore `#8A6100` (5.54:1). Il giallo con trama a righe (vedi §6.1) non si confonde con il badge Ambra (`#FFF4DB`, senza righe).
+`--demo-banner-bg #FFD361`, testo `#1A1F24` (11.65:1), bordo inferiore `#8A6100` (5.54:1). Il giallo con trama a righe (vedi §6.1) non si confonde con il badge Giallo (`#FFF4DB`, senza righe).
 
 ### 4.8 Ombre, bordi, raggi
 
@@ -350,9 +350,9 @@ Calcolo con la formula WCAG 2.1 della luminanza relativa (script Python, appendi
 | **Verde** testo su fondo badge | `#12663A` | `#E7F5EC` | 6.25:1 | 4.5:1 | AA ✔ |
 | Verde testo su bianco | `#12663A` | `#FFFFFF` | 7.03:1 | 4.5:1 | AA ✔ |
 | Verde solid su bianco | `#1E7B45` | `#FFFFFF` | 5.28:1 | 3:1 | AA ✔ |
-| **Ambra** testo su fondo badge | `#8A4600` | `#FFF4DB` | 6.50:1 | 4.5:1 | AA ✔ |
-| Ambra testo su bianco | `#8A4600` | `#FFFFFF` | 7.10:1 | 4.5:1 | AA ✔ |
-| Ambra solid su bianco | `#C27C00` | `#FFFFFF` | 3.40:1 | 3:1 | AA ✔ |
+| **Giallo** testo su fondo badge | `#8A4600` | `#FFF4DB` | 6.50:1 | 4.5:1 | AA ✔ |
+| Giallo testo su bianco | `#8A4600` | `#FFFFFF` | 7.10:1 | 4.5:1 | AA ✔ |
+| Giallo solid su bianco | `#C27C00` | `#FFFFFF` | 3.40:1 | 3:1 | AA ✔ |
 | **Rosso** testo su fondo badge | `#9B1C1C` | `#FDECEC` | 7.14:1 | 4.5:1 | AA ✔ |
 | Rosso testo/solid su bianco | `#9B1C1C` | `#FFFFFF` | 8.15:1 | 4.5:1 | AA ✔ |
 | **Neutro** testo su fondo badge | `#4A5560` | `#EEF1F4` | 6.71:1 | 4.5:1 | AA ✔ |
@@ -693,8 +693,8 @@ Anatomia: `inline-flex`, altezza 22px (20px compatto), padding 2px 8px, raggio 4
 |---|---|---|---|
 | `NOT_STARTED` | Non avviata | neutro | `Circle` |
 | `UPCOMING` | Prevista | neutro | `CalendarDays` |
-| `DUE_SOON` | In scadenza | ambra | `CalendarClock` |
-| `DUE_TODAY` | Scade oggi | ambra (600) | `Clock` |
+| `DUE_SOON` | In scadenza | giallo | `CalendarClock` |
+| `DUE_TODAY` | Scade oggi | giallo (600) | `Clock` |
 | `OVERDUE` | Scaduta | rosso | `CalendarX` |
 | `COMPLETED` | Completata | verde | `CircleCheck` |
 | `SUSPENDED` | Sospesa | neutro | `CirclePause` |
@@ -704,7 +704,7 @@ Anatomia: `inline-flex`, altezza 22px (20px compatto), padding 2px 8px, raggio 4
 
 **SAL** (guida §5.3): Pianificato, Presentato, In verifica, Accettato, Fatturato, Liquidato, Pagato parzialmente, Pagato (verde), Respinto (rosso), Sospeso (neutro); flag `overdue` → badge aggiuntivo "Scaduto" rosso. **Pagamenti:** Bozza, Programmato, Eseguito, Riconciliato (verde), Stornato (neutro con icona `Undo2`).
 
-**Alert:** severità §4.4; stato Aperto (`CircleDot`), Preso in carico (`UserCheck`), Risolto (`CircleCheck`), Sospeso (`CirclePause`), Chiuso automaticamente (`CircleCheckBig`, neutro). **Simulazione:** Bozza, Inviata, Approvata (verde), Respinta (rosso), Superata (neutro), Non aggiornata (ambra, `RefreshCcw`). **Criticità:** Bloccante (rosso, `OctagonAlert`), Avvertenza (ambra). **Validazione dato:** Proposto, Validato (verde), In conflitto (ambra), Mancante (rosso, mostra "n.d.").
+**Alert:** severità §4.4; stato Aperto (`CircleDot`), Preso in carico (`UserCheck`), Risolto (`CircleCheck`), Sospeso (`CirclePause`), Chiuso automaticamente (`CircleCheckBig`, neutro). **Simulazione:** Bozza, Inviata, Approvata (verde), Respinta (rosso), Superata (neutro), Non aggiornata (giallo, `RefreshCcw`). **Criticità:** Bloccante (rosso, `OctagonAlert`), Avvertenza (giallo). **Validazione dato:** Proposto, Validato (verde), In conflitto (giallo), Mancante (rosso, mostra "n.d.").
 
 ### 6.6 KPI card
 
@@ -753,7 +753,7 @@ Anatomia: `inline-flex`, altezza 22px (20px compatto), padding 2px 8px, raggio 4
 - Si torna ai passi completati cliccando; ai passi futuri solo con "Avanti" (che valida il passo).
 - **Barra azioni sticky** in basso: a sinistra "Indietro" (ghost), "Salva bozza" (secondario); a destra "Avanti" (primario); al passo 5 "Invia ad approvazione" oppure, per chi approva, "Approva" / "Rifiuta" (danger) con motivazione obbligatoria. Il riepilogo del passo 5 mostra le differenze baseline/forecast/simulazione, le criticità (Bloccante/Avvertenza) e l'eventuale override (solo Dirigente, con motivazione).
 - Su 1366×768 lo stepper occupa una riga di 56px; il contenuto del passo è a due colonne (form a sinistra 60%, anteprima dell'impatto a destra 40%).
-- Se la simulazione diventa `STALE` (409 `STALE_SIMULATION`): avviso ambra in testa "La procedura è cambiata dopo la creazione di questa simulazione. Ricalcola prima di inviarla." + bottone "Ricalcola".
+- Se la simulazione diventa `STALE` (409 `STALE_SIMULATION`): avviso giallo in testa "La procedura è cambiata dopo la creazione di questa simulazione. Ricalcola prima di inviarla." + bottone "Ricalcola".
 
 ### 6.10 Form ed errori
 
@@ -789,7 +789,7 @@ Anatomia: `inline-flex`, altezza 22px (20px compatto), padding 2px 8px, raggio 4
 | Aggiornamento | Contenuto precedente visibile + barra di avanzamento sottile in alto; nessuno spostamento del layout | "Aggiornamento in corso" (sr-only) |
 | Vuoto (nessun dato) | Icona 32px muted + titolo + spiegazione + azione | "Nessun alert da gestire. Quando una scadenza si avvicina, la trovi qui." |
 | Vuoto (filtri) | Come sopra, con azione "Azzera filtri" | "Nessuna procedura corrisponde ai filtri selezionati." |
-| Parziale | Banner ambra sopra la sezione + dati disponibili + "n.d." dove manca | "Alcuni dati finanziari non sono disponibili: il calcolo del residuo è parziale." |
+| Parziale | Banner giallo sopra la sezione + dati disponibili + "n.d." dove manca | "Alcuni dati finanziari non sono disponibili: il calcolo del residuo è parziale." |
 | Errore | Box errore con cosa è successo, cosa fare, bottone "Riprova" e correlation ID copiabile (mono) | "Non è stato possibile caricare il portafoglio. Riprova tra qualche istante. Codice di supporto: 7f3a…" |
 | Permesso negato (403) | Pagina/sezione con icona `Lock` | "Non hai i permessi per vedere questa procedura. Contatta l'amministratore se pensi che sia un errore." |
 | Non trovato (404) | Pagina con link alla dashboard | "La procedura P-099 non esiste o è stata rimossa." |
@@ -799,12 +799,12 @@ Anatomia: `inline-flex`, altezza 22px (20px compatto), padding 2px 8px, raggio 4
 - **Vista divisa:** elenco del fascicolo (sinistra 280px: nome, classificazione, stato di elaborazione, data) · anteprima (centro) · pannello **campi estratti** (destra 360px).
 - **Anteprima:** pagine renderizzate (PDF.js o immagini generate dal backend con PyMuPDF), barra con pagina "3 di 12", zoom (adatta larghezza / 100% / +/−), scaricamento del file originale; scorciatoie `PgSu`/`PgGiù`.
 - **Campi estratti:** per ogni campo etichetta, valore proposto, stato di validazione (badge), **fonte** ("Pagina 3, estratto: '…importo complessivo di € 480.000,00…'") con link "Mostra nel documento" che porta alla pagina ed evidenzia la porzione (riquadro 2px `--primary-600` + fondo `--primary-100` al 40%). Azioni: "Conferma", "Correggi", "Rifiuta".
-- **Stati di elaborazione:** In coda (neutro, `Clock`), In elaborazione (`Loader`, con `aria-live`), Completata (verde), Errore OCR (rosso, con "Riprova elaborazione"), Testo non leggibile (ambra).
+- **Stati di elaborazione:** In coda (neutro, `Clock`), In elaborazione (`Loader`, con `aria-live`), Completata (verde), Errore OCR (rosso, con "Riprova elaborazione"), Testo non leggibile (giallo).
 - **Accessibilità:** sempre disponibile la vista "Testo estratto" come alternativa all'immagine della pagina; i comandi del viewer sono bottoni con nome accessibile; il documento non si apre in automatico in una nuova scheda.
 
 ### 6.15 Scheda procedura e tab
 
-- **Testata** (card fissa sopra le tab): codice demo (mono) + oggetto (h1), riga di metadati (CIG/CUP demo con badge "demo", struttura, owner, tipologia), a destra **badge di fase e health** e importo programmato grande; sotto, "Prossima scadenza: Memoria — 06/10/2026 (tra 5 giorni)" e "Perché è Ambra" se ci sono driver.
+- **Testata** (card fissa sopra le tab): codice demo (mono) + oggetto (h1), riga di metadati (CIG/CUP demo con badge "demo", struttura, owner, tipologia), a destra **badge di fase e health** e importo programmato grande; sotto, "Prossima scadenza: Memoria — 06/10/2026 (tra 5 giorni)" e "Perché è Giallo" se ci sono driver.
 - **Tab** (Radix Tabs, `role="tablist"`, frecce per spostarsi): Panoramica · Cronoprogramma · Documenti · Finanza · Alert (contatore) · Simulazioni · Audit. La tab attiva è nell'URL (`?tab=finanza`). Contatori con testo accessibile ("Alert, 2 aperti").
 - **Panoramica:** tre colonne baseline / previsione / effettivo per date e importi; "Problemi aperti" con severità; "Azioni consentite" in base al ruolo (le azioni non consentite non compaiono; se utile, spiegazione "Per approvare serve il ruolo Dirigente o Validatore").
 - **Audit:** tabella con data e ora, autore, evento, prima → dopo (diff con `del`/`ins`, non solo colore), motivazione, correlation ID (mono, copiabile).

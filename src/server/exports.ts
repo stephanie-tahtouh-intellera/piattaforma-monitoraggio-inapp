@@ -13,7 +13,7 @@ const STATUS_IT: Record<string, string> = {
   MEMORY_EXPECTED: "Memoria attesa", PRELIMINARY_REVIEW: "Istruttoria", TENDERING: "In gara", AWARDED: "Aggiudicata", CONTRACTING: "In stipula",
   EXECUTION: "In esecuzione", CLOSING: "Chiusura", CLOSED: "Chiusa", CANCELLED: "Annullata", DRAFT: "Bozza",
 };
-const HEALTH_IT: Record<string, string> = { GREEN: "Verde", AMBER: "Ambra", RED: "Rosso", NEUTRAL: "Neutro" };
+const HEALTH_IT: Record<string, string> = { GREEN: "Verde", AMBER: "Giallo", RED: "Rosso", NEUTRAL: "Neutro" };
 
 async function record(db: Db, actor: Actor, kind: string, filters: unknown, buf: Buffer): Promise<string> {
   const sha = createHash("sha256").update(buf).digest("hex");

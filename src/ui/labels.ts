@@ -11,7 +11,7 @@ export const STATUS_LABEL: Record<string, string> = {
   CLOSED: "Chiusa",
   CANCELLED: "Annullata",
 };
-export const HEALTH_LABEL: Record<string, string> = { GREEN: "Verde", AMBER: "Ambra", RED: "Rosso", NEUTRAL: "Neutro" };
+export const HEALTH_LABEL: Record<string, string> = { GREEN: "Verde", AMBER: "Giallo", RED: "Rosso", NEUTRAL: "Neutro" };
 export const SEVERITY_LABEL: Record<string, string> = { LOW: "Bassa", MEDIUM: "Media", HIGH: "Alta", CRITICAL: "Critica" };
 export const TYPE_LABEL: Record<string, string> = {
   DIRECT_AWARD: "Affidamento diretto",

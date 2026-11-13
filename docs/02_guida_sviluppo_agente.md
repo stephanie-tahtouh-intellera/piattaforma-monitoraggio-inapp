@@ -287,7 +287,7 @@ Per il controllo incrociato all'import, `Status procedura` del workbook corrispo
 - `award_criterion`: `LOWEST_PRICE` (minor prezzo) | `MEAT` (OEPV);
 - `instrument`: `MEPA` | `OFF_MEPA` | `CONSIP_AQ`;
 - `rup_user_id`, `activity_start`, `activity_end`, `source_key` (Operazione-Codice incarico del workbook).
-**Health:** `GREEN` (Verde), `AMBER` (Ambra), `RED` (Rosso), `NEUTRAL` (Neutro). In UI sempre con testo e icona, mai solo colore.
+**Health:** `GREEN` (Verde), `AMBER` (Giallo), `RED` (Rosso), `NEUTRAL` (Neutro). In UI sempre con testo e icona, mai solo colore.
 
 ### 5.2 Milestone
 Calcolati: `NOT_STARTED`, `UPCOMING`, `DUE_SOON`, `DUE_TODAY`, `OVERDUE`. Persistiti da azione umana: `COMPLETED`, `SUSPENDED`, `NOT_APPLICABLE`, `CANCELLED`. Il flag `blocked` (con `blocker_reason`) è ortogonale. Corrispondenza con US-031: prevista = `NOT_STARTED`/`UPCOMING`; in scadenza = `DUE_SOON`/`DUE_TODAY`; scaduta = `OVERDUE`.

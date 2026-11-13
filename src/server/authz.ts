@@ -40,7 +40,7 @@ const M: Record<Action, Role[]> = {
   "finance.record": ["FINANCE_OFFICER"],
   "budget.edit": ["FINANCE_OFFICER"],
   "alert.handle": ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER"],
-  "alert.suspend": ["PROCUREMENT_OFFICER", "EXECUTIVE"],
+  "alert.suspend": ["PROCUREMENT_OFFICER"],
   "document.classify": ["PROCUREMENT_OFFICER", "ADMIN"],
   "documents.import": ["PROCUREMENT_OFFICER", "ADMIN"],
   export: ["STRUCTURE_USER", "PROCUREMENT_OFFICER", "FINANCE_OFFICER", "EXECUTIVE", "ADMIN"],

@@ -5,14 +5,17 @@ import { DateIt, SeverityBadge } from "./badges";
 import { ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE_LABEL, humanize } from "./labels";
 
 export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; showProcedure?: boolean }) {
+  // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" invece di una colonna vuota.
+  const showActions = canHandle || canSuspend;
+  const columns = (showProcedure ? 1 : 0) + 8 + (showActions ? 1 : 0);
   return (
     <div className="table-wrap">
       <table className="data alerts-table">
         <colgroup>
           {showProcedure ? <col className="c-proc" /> : null}
-          <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-level" /><col className="c-due" /><col className="c-state" /><col className="c-owner" /><col className="c-actions" />
+          <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-level" /><col className="c-due" /><col className="c-state" /><col className="c-owner" />{showActions ? <col className="c-actions" /> : null}
         </colgroup>
-        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Livello</th><th>Scadenza</th><th>Stato</th><th>Owner</th><th>Azioni</th></tr></thead>
+        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Livello</th><th>Scadenza</th><th>Stato</th><th>Owner</th>{showActions ? <th>Azioni</th> : null}</tr></thead>
         <tbody>
           {alerts.map((a) => (
             <tr key={a.id}>
@@ -24,6 +27,7 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
               <td><DateIt v={a.due_date} /></td>
               <td>{ALERT_STATUS_LABEL[a.status] ?? a.status}{a.acknowledged_by ? <div className="small muted">in carico a {a.acknowledged_by}</div> : null}{a.resolution_note ? <div className="small muted">«{a.resolution_note}»</div> : null}</td>
               <td>{OWNER_LABEL[a.owner] ?? a.owner ?? "—"}</td>
+              {showActions ? (
               <td>
                 {["OPEN", "ACKNOWLEDGED", "SUSPENDED"].includes(a.status) && canHandle ? (
                   <div className="stack">
@@ -35,9 +39,10 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
                   <ActionForm endpoint={`/api/alerts/${a.id}/suspend`} submitLabel="Sospendi escalation" variant="ghost" fields={[{ name: "note", label: "Motivo", type: "textarea", required: true }, { name: "until", label: "Nuovo controllo il", type: "date", required: true }]} />
                 ) : null}
               </td>
+              ) : null}
             </tr>
           ))}
-          {alerts.length === 0 ? <tr><td colSpan={9} className="muted">Nessun alert o anomalia.</td></tr> : null}
+          {alerts.length === 0 ? <tr><td colSpan={columns} className="muted">Nessun alert o anomalia.</td></tr> : null}
         </tbody>
       </table>
     </div>

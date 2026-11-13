@@ -193,13 +193,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               Vedi le rosse
             </Link>
             <Link className="btn btn-secondary btn-sm" href={qs({ health: "AMBER" })}>
-              Vedi le ambra
+              Vedi le gialle
             </Link>
           </div>
         </div>
         <div className="table-wrap">
           <table className="data">
-            <caption className="sr-only">Procedure rosse e ambra ordinate per severità</caption>
+            <caption className="sr-only">Procedure rosse e gialle ordinate per severità</caption>
             <thead>
               <tr>
                 <th scope="col">Codice</th>
