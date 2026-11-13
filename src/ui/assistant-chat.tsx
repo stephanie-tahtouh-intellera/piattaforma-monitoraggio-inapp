@@ -38,7 +38,7 @@ export function AssistantChat({ examples }: { examples: string[] }) {
         <div className="chat" aria-live="polite">
           {msgs.length === 0 ? <p className="muted">Fai una domanda, ad esempio: «{examples[0]}»</p> : null}
           {msgs.map((m, i) => (
-            <div key={i} className="chat">
+            <div key={i} className="chat-turn">
               <div className="msg user">{m.q}</div>
               <div className="msg bot">
                 {m.err ? <span className="field-error">{m.err}</span> : !m.a ? "Sto cercando…" : (
@@ -66,6 +66,7 @@ export function AssistantChat({ examples }: { examples: string[] }) {
           <input id="ask" type="text" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Scrivi una domanda…" style={{ flex: 1 }} maxLength={500} />
           <button className="btn btn-primary" disabled={busy}>Chiedi</button>
         </form>
+        <p className="help" style={{ marginTop: 8 }}>Le risposte sono generate automaticamente: verifica sempre le fonti indicate.</p>
       </section>
       <aside className="card">
         <h2>Domande d'esempio</h2>
