@@ -104,14 +104,14 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <h2>Panoramica gare</h2>
-      <section aria-label="Panoramica gare" className="grid kpi-grid">
-        <Kpi label="Gare attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Gare attive: ${k.proceduresActive}`} />
-        <Kpi label="Gare da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Gare da avviare: ${k.proceduresToStart}`} />
+      <h2>Panoramica procedure</h2>
+      <section aria-label="Panoramica procedure" className="grid kpi-grid">
+        <Kpi label="Procedure attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Procedure attive: ${k.proceduresActive}`} />
+        <Kpi label="Procedure da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Procedure da avviare: ${k.proceduresToStart}`} />
         <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} />
       </section>
       <section className="card" aria-labelledby="bytype" style={{ marginTop: 16, marginBottom: 16, maxWidth: 680 }}>
-        <h2 id="bytype">Gare per tipo</h2>
+        <h2 id="bytype">Procedure per tipo</h2>
         <TypeChart rows={data.byType} linkFor={(type) => qs({ type })} />
       </section>
 
@@ -122,10 +122,10 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}`} extra={k.criticalAlerts ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico</div> : null} />
         {r ? (
           <>
-            <Kpi label="Gare aggiudicate" value={r.totals.awardedCount} sub={`su ${r.totals.count} nel tuo perimetro`} href={qs()} aria={`Gare aggiudicate: ${r.totals.awardedCount} su ${r.totals.count}`} />
+            <Kpi label="Procedure aggiudicate" value={r.totals.awardedCount} sub={`su ${r.totals.count} nel tuo perimetro`} href={qs()} aria={`Procedure aggiudicate: ${r.totals.awardedCount} su ${r.totals.count}`} />
             <Kpi label="Ribasso medio" value={formatPercentIt(r.totals.ribasso)} sub={`ponderato su ${r.totals.competitiveAwardedCount} gare competitive aggiudicate`} href={qs()} aria={`Ribasso medio ${formatPercentIt(r.totals.ribasso)}`} />
             <Kpi label="Spesa su gara competitiva" value={r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "—"} sub="negoziata, aperta, accordo quadro" href={qs()} aria={`Spesa su gara competitiva: ${r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "non disponibile"}`} />
-            <Kpi label="Giorni indizione → aggiudicazione" value={r.totals.averageAwardDurationDays !== null ? r.totals.averageAwardDurationDays : "—"} sub="media sulle gare con entrambe le date" href={qs()} aria={`Giorni indizione aggiudicazione: ${r.totals.averageAwardDurationDays ?? "non disponibile"}`} />
+            <Kpi label="Giorni indizione → aggiudicazione" value={r.totals.averageAwardDurationDays !== null ? r.totals.averageAwardDurationDays : "—"} sub="media sulle procedure con entrambe le date" href={qs()} aria={`Giorni indizione aggiudicazione: ${r.totals.averageAwardDurationDays ?? "non disponibile"}`} />
           </>
         ) : null}
       </section>

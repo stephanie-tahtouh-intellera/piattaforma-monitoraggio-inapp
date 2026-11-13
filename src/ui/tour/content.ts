@@ -332,10 +332,10 @@ const STEP_ACTIONS: Partial<Record<Role, string[]>> = {
 const HELP: Record<string, PageHelp> = {
   dashboard: {
     title: "Dashboard",
-    summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento, filtrabile per tipo di gara e per struttura.",
+    summary: "Sintesi del portafoglio visibile al tuo ruolo alla data di riferimento, filtrabile per tipo di procedura e per struttura.",
     sections: [
-      ["Filtri", "Tipo di gara (filtro principale) e struttura: tutti gli indicatori della pagina si ricalcolano sul perimetro filtrato."],
-      ["Indicatori principali", "Procedure monitorate (rosso/ambra/verde), in ritardo, da riprogrammare, alert critici, gare aggiudicate, ribasso medio (solo gare competitive), spesa su gara competitiva, giorni indizione → aggiudicazione."],
+      ["Filtri", "Tipo di procedura (filtro principale) e struttura: tutti gli indicatori della pagina si ricalcolano sul perimetro filtrato."],
+      ["Indicatori principali", "Procedure monitorate (rosso/ambra/verde), in ritardo, da riprogrammare, alert critici, procedure aggiudicate, ribasso medio (solo gare competitive), spesa su gara competitiva, giorni indizione → aggiudicazione."],
       ["KPI finanziari", "Programmato, base di gara, contrattualizzato, aggiudicato, pagato (o contratti stipulati), importo a rischio, sullo stesso perimetro filtrato."],
       ["Fabbisogno per annualità", "Previsione di spesa confrontata con la disponibilità di bilancio, con tabella equivalente."],
       ["Procedure per fase", "Quante procedure sono in ciascuna fase del processo."],
