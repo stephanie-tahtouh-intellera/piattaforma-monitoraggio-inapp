@@ -195,9 +195,18 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
   const byStatus = (await db
     .prepare(`SELECT s.status, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`)
     .all(...params)) as { status: string; n: number }[];
+  // L'istogramma "Procedure per tipo" mostra sempre tutte le tipologie (perimetro = solo struttura),
+  // cosi' il filtro per tipo evidenzia una barra invece di far sparire le altre.
+  const whereNoType = [scope.sql];
+  const paramsNoType: unknown[] = [...scope.params];
+  if (f.structure) {
+    whereNoType.push("p.structure_code = ?");
+    paramsNoType.push(f.structure);
+  }
+  const wNoType = whereNoType.join(" AND ");
   const byTypeRows = (await db
-    .prepare(`SELECT p.procedure_type AS type, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY p.procedure_type`)
-    .all(...params)) as { type: string; n: number }[];
+    .prepare(`SELECT p.procedure_type AS type, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${wNoType} GROUP BY p.procedure_type`)
+    .all(...paramsNoType)) as { type: string; n: number }[];
   const byType = byTypeRows.sort((a, b) => PROCEDURE_TYPE_ORDER.indexOf(a.type) - PROCEDURE_TYPE_ORDER.indexOf(b.type));
   // Ogni versione oltre la baseline è una richiesta di riprogrammazione approvata (DEC-003): nessuna cancellazione, solo nuove versioni.
   const reprogramRequests = (

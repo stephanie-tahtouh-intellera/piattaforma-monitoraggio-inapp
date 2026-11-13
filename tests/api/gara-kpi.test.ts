@@ -118,4 +118,15 @@ describe("[DEC-121] panoramica gare: attive, da avviare, richieste di riprogramm
     const filtered = await dashboard(db, dg, { type: "OPEN" });
     expect(filtered.kpi.reprogramRequests).toBeLessThanOrEqual(d.kpi.reprogramRequests);
   });
+
+  test("con un filtro per tipo attivo l'istogramma 'per tipo' mostra ancora tutte le tipologie, non solo quella selezionata", async () => {
+    const dg = await as("dirigente");
+    const all = await dashboard(db, dg, {});
+    const filtered = await dashboard(db, dg, { type: "OPEN" });
+    expect(filtered.byType.length).toBe(all.byType.length);
+    expect(filtered.byType.map((t) => t.type).sort()).toEqual(all.byType.map((t) => t.type).sort());
+    const byTypeSum = filtered.byType.reduce((n, t) => n + t.n, 0);
+    expect(byTypeSum).toBe(all.kpi.proceduresTotal);
+    expect(filtered.kpi.proceduresTotal).toBeLessThanOrEqual(byTypeSum);
+  });
 });
