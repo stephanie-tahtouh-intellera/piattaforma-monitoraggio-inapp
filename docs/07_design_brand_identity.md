@@ -235,7 +235,7 @@ Neutri freddi (tinta ~210°) coerenti con il blu INAPP: `--neutral-0 #FFFFFF`, `
 | `--ds-color-focus` / `-inverse` | `#0059B3` / `#FCC200` | Anello di focus su chiaro / su navy |
 | `--ds-color-action-danger` | `#B3261E` (hover `#8E1E18`) | Azioni distruttive |
 
-### 4.3 Health: VERDE / AMBRA / ROSSO / NEUTRO [P]
+### 4.3 Health: VERDE / GIALLO / ROSSO / NEUTRO [P]
 
 | Health (codice) | Etichetta UI | Icona (lucide-react) | `fg` testo/icona | `bg` | `border` | `solid` (grafici, Gantt, pallini) |
 |---|---|---|---|---|---|---|

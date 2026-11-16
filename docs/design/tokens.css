@@ -90,7 +90,7 @@
   --ds-color-action-danger-hover: #8e1e18;
   --ds-color-action-danger-fg: var(--neutral-0);
 
-  /* ---------- 5. Health (VERDE / AMBRA / ROSSO / NEUTRO) [P] ----------
+  /* ---------- 5. Health (VERDE / GIALLO / ROSSO / NEUTRO) [P] ----------
      fg = testo e icona del badge; bg = fondo del badge; border = bordo;
      solid = marcatori di grafici, Gantt, pallini (>= 3:1 su bianco).        */
   --health-green-fg: #12663a;       /* 6.25:1 su bg */
