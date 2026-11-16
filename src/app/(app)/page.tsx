@@ -218,8 +218,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-finanza">
           <h2 id="h-finanza">Quadro finanziario</h2>
           <p className="page-meta">Importi IVA inclusa salvo indicazione contraria, sullo stesso perimetro filtrato.</p>
-          <div className="grid dash-split">
-          <div className="grid kpi-grid kpi-grid-3">
+          <div className="grid kpi-grid kpi-grid-3" style={{ marginTop: 8 }}>
             <Kpi label="Programmato" value={formatEuroCompact(fin ? fin.totals.programmed : k.programmed)} sub={`${formatEuro(fin ? fin.totals.programmed : k.programmed)} · escluse le annullate`} href={qs({ sort: "programmed", dir: "desc" })} aria={`Programmato ${formatEuro(fin ? fin.totals.programmed : k.programmed)}`} help={KPI_HELP.programmed} />
             {r ? <Kpi label="Base di gara" value={formatEuroCompact(r.totals.base)} sub={`${formatEuro(r.totals.base)} · IVA esclusa`} href={qs()} aria={`Base di gara ${formatEuro(r.totals.base)}`} help={KPI_HELP.base} /> : null}
             <Kpi label="Contrattualizzato" value={formatEuroCompact(fin ? fin.totals.contracted : k.contracted)} sub={`${formatEuro(fin ? fin.totals.contracted : k.contracted)} · contratti stipulati`} href={qs({ status: "EXECUTION,CLOSING,CLOSED" })} aria={`Contrattualizzato ${formatEuro(fin ? fin.totals.contracted : k.contracted)}`} help={KPI_HELP.contracted} />
@@ -227,13 +226,12 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {paidOrSignedKpi}
             {riskKpi}
           </div>
-          <div className="card">
+          <div className="card dash-below">
             <div className="card-head">
               <h3>Fabbisogno per annualità</h3>
               <InfoChip text={KPI_HELP.annual} />
             </div>
             <AnnualChart rows={data.annual} />
-          </div>
           </div>
         </section>
       ) : null}
@@ -242,20 +240,18 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-affidamenti">
           <h2 id="h-affidamenti">Tipologie e andamento degli affidamenti</h2>
           <p className="page-meta">Come si distribuiscono le procedure per tipologia e come vanno le gare competitive.</p>
-          <div className="grid dash-split">
-          <div className="grid kpi-grid kpi-grid-2">
+          <div className="grid kpi-grid" style={{ marginTop: 8 }}>
             <Kpi label="Procedure aggiudicate" value={r.totals.awardedCount} sub={`su ${r.totals.count} nel tuo perimetro`} href={qs()} aria={`Procedure aggiudicate: ${r.totals.awardedCount} su ${r.totals.count}`} help={KPI_HELP.awardedCount} />
             <Kpi label="Ribasso medio" value={formatPercentIt(r.totals.ribasso)} sub={`su ${r.totals.competitiveAwardedCount} gare competitive aggiudicate`} href={qs()} aria={`Ribasso medio ${formatPercentIt(r.totals.ribasso)}`} help={KPI_HELP.ribasso} />
             <Kpi label="Spesa su gara competitiva" value={r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "n.d."} sub="negoziata, aperta, accordo quadro" href={qs()} aria={`Spesa su gara competitiva: ${r.totals.competitiveProgrammedShare !== null ? formatPercentIt(r.totals.competitiveProgrammedShare) : "non disponibile"}`} help={KPI_HELP.competitiveShare} />
             <Kpi label="Giorni indizione → aggiudicazione" value={r.totals.averageAwardDurationDays !== null ? r.totals.averageAwardDurationDays : "n.d."} sub="media sulle procedure con entrambe le date" href={qs()} aria={`Giorni indizione aggiudicazione: ${r.totals.averageAwardDurationDays ?? "non disponibile"}`} help={KPI_HELP.awardDuration} />
           </div>
-          <div className="card">
+          <div className="card dash-below">
             <div className="card-head">
               <h3>Procedure per tipo</h3>
               <InfoChip text={KPI_HELP.byType} />
             </div>
             <TypeChart rows={data.byType} linkFor={(t) => qs({ type: t })} selectedType={type} />
-          </div>
           </div>
         </section>
       ) : null}

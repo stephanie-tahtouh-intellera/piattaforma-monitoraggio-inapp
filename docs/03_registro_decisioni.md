@@ -351,3 +351,12 @@ Formato:
 - Nota sulla stima: l'analisi preliminare sul workbook prevedeva 8 procedure interessate, ne sono risultate 6. La stima approssimava il netto con l'importo programmato (IVA inclusa), quindi due righe sopra i 216.000 € risultavano già negoziate per via della regola di soglia.
 - Si è perso, come atteso, quanto fatto cliccando dentro l'app durante le prove: passi registrati, documenti caricati a mano, simulazioni create. Il portafoglio e i casi dimostrativi sono tornati identici.
 - Stato: attiva.
+
+### DEC-126 — Grafici sotto la fascia di indicatori, non a fianco
+- Data: 2026-11-16 · Autore: agente, su richiesta del cliente («sistema l'impaginazione, sposta sotto la tabella e il grafico»)
+- Problema: il DEC-124 aveva messo Finanza e Affidamenti su due colonne (`dash-split`) per far stare la tab in una schermata a 1366x768. Su schermi piu grandi la scelta si rovesciava: le schede restavano strette, il riquadro «Importo a rischio» mandava a capo la riga «Non coperto / In slittamento», e sotto la colonna piu corta restava una fascia vuota alta quanto mezza pagina.
+- Decisione: le schede occupano tutta la larghezza sopra (Finanza tre colonne per due righe, Affidamenti quattro in riga) e il grafico sta in una scheda a tutta larghezza sotto (`dash-below`). Rimosse `dash-split`, `kpi-grid-2` e la regola `align-content` che le serviva.
+- Perche la cifra del fabbisogno non e piu incolonnata: a tutta larghezza la nota sta accanto al numero invece che sotto (`.chart-stat` in riga, a capo sotto i 1100px). Senza questo la tab sforava di 110px invece di 54.
+- Larghezza delle barre orizzontali da 640 a 1100px: a tutta larghezza il vecchio limite lasciava mezza scheda vuota.
+- Misure a schermo, non stimate: Affidamenti sta in 768px; Finanza sta in 864 e 1080, e a 1366x768 sfora di 54px. Lo sforamento e accettato: le sei schede di Finanza su due righe piu il grafico non stanno in 768px senza comprimere il grafico a una riga, e il DEC-123 («niente scorrimento») cede qui alla richiesta esplicita del cliente. Nessuno sforamento in larghezza a nessuna delle tre risoluzioni.
+- Stato: attiva. Modifica il DEC-123 e il DEC-124 limitatamente all'impaginazione di queste due tab.
