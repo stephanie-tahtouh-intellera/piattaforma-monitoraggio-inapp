@@ -1,5 +1,7 @@
 /* Stili applicativi sui token INAPP (docs/design/tokens.css, DEC-081). */
-* { box-sizing: border-box; }
+/* Anche gli pseudo-elementi: il selettore `*` da solo non li raggiunge, e un pannello
+   con bordo e `min-width: 100%` finiva per sporgere di 1px dalla pagina. */
+*, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body { min-height: 100vh; background: var(--ds-color-bg-page); }
 a { color: var(--ds-color-link); }
@@ -154,26 +156,42 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: inset 0 0 0 1px 
 .kpi-label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .kpi-info { flex: none; color: var(--ds-color-text-muted); opacity: 0.65; }
 .kpi-card:hover .kpi-info, .kpi-card:focus-visible .kpi-info { color: var(--brand-blue); opacity: 1; }
+/* Ponte invisibile fra la card e il pannello: senza, il puntatore perde :hover nello
+   stacco e il pannello sparisce mentre ci si sta andando (WCAG 1.4.13 Hoverable).
+   Alto 8px, meno dello spazio fra le card, quindi non ruba l'hover a quella sotto. */
+.kpi-card[data-tip]::before, .info-chip[data-tip]::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; z-index: 39;
+}
 .kpi-card[data-tip]::after, .info-chip[data-tip]::after {
   content: attr(data-tip);
-  position: absolute; left: 0; top: 100%; z-index: 30;
-  /* Il distacco e' un bordo trasparente, non un margine: cosi' il puntatore puo'
-     passare dalla card al pannello senza perdere :hover (WCAG 1.4.13 Hoverable). */
-  border-top: 6px solid transparent; background-clip: padding-box;
+  position: absolute; left: 0; top: calc(100% + 8px); z-index: 40;
   min-width: 100%; width: max-content;
-  background: var(--brand-navy); color: #fff;
-  font-size: 12px; font-weight: 400; line-height: 1.45; text-align: left;
+  /* Popover chiaro con bordo sottile e ombra media, come prescrive il documento di
+     design per dropdown, popover e toast: il blocco navy pieno copriva la card sotto
+     e pesava piu' del contenuto che spiega. */
+  background: var(--ds-color-bg-surface); color: var(--ds-color-text-secondary);
+  border: 1px solid var(--ds-color-border); box-shadow: var(--ds-shadow-md);
+  font-size: 13px; font-weight: 400; line-height: 1.45; text-align: left;
   padding: var(--space-2) var(--space-3); border-radius: var(--ds-radius);
-  box-shadow: var(--ds-shadow-md);
-  opacity: 0; visibility: hidden; transition: opacity var(--duration-fast) var(--easing-standard);
+  opacity: 0; visibility: hidden;
+  transition: opacity var(--duration-base) var(--easing-standard), visibility 0s linear var(--duration-base);
 }
-/* La card limita il pannello alla propria larghezza (niente sbordo orizzontale della pagina);
-   la pastiglia dei grafici, larga 24px, ha bisogno di una larghezza propria. */
+/* La card limita il pannello alla propria larghezza, cosi' non sborda dalla pagina. */
 .kpi-card[data-tip]::after { max-width: 100%; }
-.info-chip[data-tip]::after { max-width: 100%; }
+/* La pastiglia dei grafici e' ancorata all'intestazione della scheda, larga quanto la scheda:
+   senza un limite proprio il pannello diventava una riga unica lunga tutta la pagina. */
+.info-chip[data-tip]::after { min-width: 0; max-width: min(46ch, 100%); }
+/* Ritardo in apertura: passando sopra le card in diagonale non si apre un pannello a ogni card. */
 .kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
-.info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
-@media (prefers-reduced-motion: reduce) { .kpi-card[data-tip]::after, .info-chip[data-tip]::after { transition: none; } }
+.info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after {
+  opacity: 1; visibility: visible;
+  transition-delay: 220ms, 220ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card[data-tip]::after, .info-chip[data-tip]::after { transition: none; }
+  .kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
+  .info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after { transition-delay: 0s; }
+}
 /* Pastiglia "i" accanto al titolo di un grafico */
 .card-head { position: relative; display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
 .card-head h3 { margin: 0; font-size: var(--ds-text-lg, 1.125rem); font-weight: 600; color: var(--brand-navy); }
@@ -267,7 +285,7 @@ table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
 .hbar-chart { list-style: none; margin: 0; padding: 0; max-width: 1100px; }
 .hbar-chart li + li { margin-top: var(--space-2); }
-.hbar-chart a { display: grid; grid-template-columns: minmax(9rem, 16rem) 1fr 2.5rem; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; color: inherit; text-decoration: none; border-radius: var(--ds-radius-sm); }
+.hbar-chart a, .hbar-chart .hbar-row { display: grid; grid-template-columns: minmax(9rem, 16rem) 1fr 2.5rem; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; color: inherit; text-decoration: none; border-radius: var(--ds-radius-sm); }
 .hbar-chart a:hover, .hbar-chart a:focus-visible { background: var(--ds-color-bg-subtle); }
 .hbar-label { font-size: var(--ds-text-sm); color: var(--ds-color-text); }
 .hbar-track { height: 20px; background: var(--chart-grid); border-radius: var(--ds-radius-sm); overflow: hidden; }
@@ -326,6 +344,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 
 /* ---------- Tab ---------- */
 .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--ds-color-border-strong); margin: var(--space-3) 0; overflow-x: auto; }
+/* Tab centrate: solo sulla dashboard, dove sono la navigazione della pagina intera.
+   Nella scheda procedura restano a sinistra, allineate alla testata del record. */
+.tabs-center { justify-content: center; }
 .tabs a { padding: var(--space-2) var(--space-4); text-decoration: none; color: var(--ds-color-text-secondary); border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
 .tabs a[aria-current="page"] { color: var(--brand-navy); border-bottom-color: var(--brand-blue); }
 .proc-head { background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-5); display: grid; grid-template-columns: 1fr auto; gap: var(--space-6); }

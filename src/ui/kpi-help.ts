@@ -33,6 +33,7 @@ export const KPI_HELP = {
   annual: "Previsione di spesa per annualità confrontata con la baseline e con la disponibilità di bilancio. Le barre mostrano lo scostamento dalla baseline e il margine sulla disponibilità; sotto, gli stessi dati in tabella.",
 
   // Avanzamento e attenzione
-  byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura.",
+  byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura. Le fasi restano in ordine di processo, non per quantità: così si vede dove si accumulano le procedure.",
+  alertsByOwner: "Alert ancora aperti divisi per la corsia che deve prenderli in carico. Apri una barra per vedere l'elenco nel centro alert.",
   attention: "Le procedure rosse e gialle con la scadenza più vicina: le prime cinque del perimetro, ordinate per severità; l’elenco completo è nel portafoglio.",
 } satisfies Record<string, string>;

@@ -208,6 +208,17 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
     .prepare(`SELECT p.procedure_type AS type, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${wNoType} GROUP BY p.procedure_type`)
     .all(...paramsNoType)) as { type: string; n: number }[];
   const byType = byTypeRows.sort((a, b) => PROCEDURE_TYPE_ORDER.indexOf(a.type) - PROCEDURE_TYPE_ORDER.indexOf(b.type));
+  // Chi deve agire sugli alert aperti (DEC-127): `alerts.owner` è il destinatario logico
+  // risolto dalla policy (guida §8.3), cioè la corsia che deve prendere in carico.
+  const alertsByOwner = (await db
+    .prepare(
+      `SELECT COALESCE(a.owner, '') AS owner, COUNT(*) AS n,
+         SUM(CASE WHEN a.severity = 'CRITICAL' THEN 1 ELSE 0 END) AS critical
+       FROM alerts a JOIN procedures p ON p.id = a.procedure_id JOIN procedure_snapshot s ON s.procedure_id = p.id
+       WHERE ${w} AND a.kind = 'ALERT' AND a.status IN ('OPEN','ACKNOWLEDGED')
+       GROUP BY a.owner`,
+    )
+    .all(...params)) as { owner: string; n: number; critical: number }[];
   // Ogni versione oltre la baseline è una richiesta di riprogrammazione approvata (DEC-003): nessuna cancellazione, solo nuove versioni.
   const reprogramRequests = (
     (await db
@@ -233,6 +244,9 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
       health: { GREEN: k.green ?? 0, AMBER: k.amber ?? 0, RED: k.red ?? 0, NEUTRAL: k.neutral ?? 0 },
     },
     byType,
+    alertsByOwner: alertsByOwner
+      .map((r) => ({ owner: r.owner, n: Number(r.n), critical: Number(r.critical) }))
+      .sort((a, b) => b.n - a.n),
     annual: years.map((y) => {
       const need = money(y.need);
       const available = money(y.available);
@@ -485,7 +499,7 @@ export async function previewAlternatives(db: Db, actor: Actor, code: string, so
   return alternatives(agg, source, ref, await calendarFromDb(db), manual);
 }
 
-export async function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: string; severity?: string; status?: string; procedure?: string; rule?: string }) {
+export async function alertsList(db: Db, actor: Actor, f: { view?: string; kind?: string; severity?: string; status?: string; procedure?: string; rule?: string; owner?: string }) {
   const scope = scopeSql(actor);
   const where = [scope.sql];
   const params: unknown[] = [...scope.params];
@@ -507,6 +521,11 @@ export async function alertsList(db: Db, actor: Actor, f: { view?: string; kind?
   if (f.rule) {
     where.push("a.rule = ?");
     params.push(f.rule);
+  }
+  // Destinatario logico: la corsia che deve prendere in carico l'alert (DEC-127).
+  if (f.owner) {
+    where.push("a.owner = ?");
+    params.push(f.owner);
   }
   if (f.view === "critical") where.push("a.severity = 'CRITICAL'");
   if (f.view === "reschedule") where.push("a.rule = 'RESCHEDULE_REQUIRED'");

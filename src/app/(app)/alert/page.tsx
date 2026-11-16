@@ -2,6 +2,7 @@ import Link from "next/link";
 import { can } from "@/server/authz";
 import { alertsList } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
+import { OWNER_LABEL } from "@/ui/labels";
 import { AlertTable } from "@/ui/tables";
 import { ActionForm } from "@/ui/action-form";
 
@@ -14,9 +15,12 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
   const view = sp(q.view) ?? "";
   const kind = sp(q.kind);
   const status = sp(q.status);
-  const r = await alertsList(await db(), actor, { view, ...(kind ? { kind } : {}), ...(status ? { status } : {}) });
+  // Destinatario logico: la corsia che deve prendere in carico (DEC-127). Arriva dal grafico
+  // "Alert aperti per chi deve agire" della dashboard.
+  const owner = sp(q.owner);
+  const r = await alertsList(await db(), actor, { view, ...(kind ? { kind } : {}), ...(status ? { status } : {}), ...(owner ? { owner } : {}) });
   const link = (patch: Record<string, string>) => {
-    const u = new URLSearchParams({ ...(view ? { view } : {}), ...(kind ? { kind } : {}), ...(status ? { status } : {}), ...patch });
+    const u = new URLSearchParams({ ...(view ? { view } : {}), ...(kind ? { kind } : {}), ...(status ? { status } : {}), ...(owner ? { owner } : {}), ...patch });
     for (const [k, v] of [...u.entries()]) if (!v) u.delete(k);
     return `/alert?${u.toString()}`;
   };
@@ -47,6 +51,14 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         <span className="label" style={{ marginLeft: 16 }}>Stato:</span>
         <Link className={`chip ${!status ? "chip-filter" : ""}`} href={link({ status: "" })}>Da gestire</Link>
         <Link className={`chip ${status === "RESOLVED,AUTO_CLOSED" ? "chip-filter" : ""}`} href={link({ status: "RESOLVED,AUTO_CLOSED" })}>Chiusi</Link>
+        {owner ? (
+          <>
+            <span className="label" style={{ marginLeft: 16 }}>Chi deve agire:</span>
+            <Link className="chip chip-filter" href={link({ owner: "" })} aria-label={`Togli il filtro: ${OWNER_LABEL[owner] ?? owner}`}>
+              {OWNER_LABEL[owner] ?? owner} ×
+            </Link>
+          </>
+        ) : null}
       </div>
       <p className="muted" aria-live="polite">{r.items.length} elementi</p>
       <AlertTable alerts={r.items as any[]} canHandle={can(actor, "alert.handle")} canSuspend={can(actor, "alert.suspend")} showProcedure />

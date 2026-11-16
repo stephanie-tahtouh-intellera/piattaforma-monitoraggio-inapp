@@ -8,7 +8,8 @@ import { AnnualChart } from "@/ui/annual-chart";
 import { AutoSubmitSelect } from "@/ui/auto-submit";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { KPI_HELP } from "@/ui/kpi-help";
-import { HEALTH_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
+import { HEALTH_LABEL, OWNER_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
+import { BarList } from "@/ui/bar-list";
 import { TypeChart } from "@/ui/type-chart";
 
 export const metadata = { title: "Dashboard" };
@@ -108,6 +109,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const health = { RED: Number(k.health.RED), AMBER: Number(k.health.AMBER), GREEN: Number(k.health.GREEN) };
   const healthTotal = health.RED + health.AMBER + health.GREEN;
   const healthPct = (n: number) => (healthTotal > 0 ? (n / healthTotal) * 100 : 0);
+  // Chi deve prendere in carico gli alert critici (DEC-127): la scheda diceva «da prendere in
+  // carico» senza soggetto, mentre il dato il soggetto ce l'ha.
+  const criticalOwners = data.alertsByOwner
+    .filter((a) => a.critical > 0)
+    // Ordinate per numero di critici, non per totale degli alert: qui si sta dicendo
+    // chi ha piu' urgenze, non chi ha la coda piu' lunga.
+    .sort((a, b) => b.critical - a.critical)
+    .map((a) => `${OWNER_LABEL[a.owner] ?? a.owner} ${a.critical}`)
+    .join(" · ");
+  const topOwner = data.alertsByOwner[0];
+  const alertsOwnerAria = topOwner
+    ? `Alert aperti per chi deve agire. Il carico maggiore è su ${OWNER_LABEL[topOwner.owner] ?? topOwner.owner} con ${topOwner.n} alert. ${data.alertsByOwner.map((a) => `${OWNER_LABEL[a.owner] ?? a.owner}: ${a.n}${a.critical ? ` di cui ${a.critical} critici` : ""}`).join(", ")}.`
+    : "Alert aperti per chi deve agire.";
+  const byStatusOrdered = [...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status));
+  const statusAria = `Procedure per fase, in ordine di processo. ${byStatusOrdered.map((x) => `${STATUS_LABEL[x.status] ?? x.status}: ${x.n}`).join(", ")}.`;
 
   const riskKpi = (
     <Kpi
@@ -174,7 +190,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <nav className="tabs" aria-label="Sezioni della dashboard">
+      <nav className="tabs tabs-center" aria-label="Sezioni della dashboard">
         {visibleTabs.map(([key, label]) => (
           <Link key={key} href={tabHref(key)} aria-current={tab === key ? "page" : undefined}>
             {label}
@@ -205,11 +221,30 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             } />
             <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href={qs({ health: "RED" })} aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} help={KPI_HELP.proceduresLate} />
             <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} help={KPI_HELP.toReschedule} />
-            <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}`} help={KPI_HELP.criticalAlerts} extra={k.criticalAlerts ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico</div> : null} />
+            <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}${criticalOwners ? `, da prendere in carico: ${criticalOwners}` : ""}`} help={KPI_HELP.criticalAlerts} extra={criticalOwners ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> {criticalOwners}</div> : null} />
             <Kpi label="Procedure attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Procedure attive: ${k.proceduresActive}`} help={KPI_HELP.proceduresActive} />
             <Kpi label="Procedure da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Procedure da avviare: ${k.proceduresToStart}`} help={KPI_HELP.proceduresToStart} />
             <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} help={KPI_HELP.reprogramRequests} />
             {riskKpi}
+          </div>
+          <div className="card dash-below">
+            <div className="card-head">
+              <h3>Alert aperti per chi deve agire</h3>
+              <InfoChip text={KPI_HELP.alertsByOwner} />
+            </div>
+            <BarList
+              aria={alertsOwnerAria}
+              emptyText="Nessun alert aperto nel perimetro filtrato."
+              rows={data.alertsByOwner.map((a) => ({
+                key: a.owner,
+                label: OWNER_LABEL[a.owner] ?? a.owner,
+                value: a.n,
+                // Stesso perimetro del conteggio: solo alert (non anomalie) e solo quelli
+                // aperti o presi in carico, altrimenti la barra dice 17 e l'elenco ne apre 48.
+                href: `/alert?owner=${encodeURIComponent(a.owner)}&kind=ALERT&status=OPEN%2CACKNOWLEDGED`,
+                aria: `${OWNER_LABEL[a.owner] ?? a.owner}: ${a.n} alert aperti${a.critical ? `, di cui ${a.critical} critici` : ""}. Apri il centro alert filtrato`,
+              }))}
+            />
           </div>
         </section>
       ) : null}
@@ -260,18 +295,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <section aria-labelledby="h-avanzamento">
           <h2 id="h-avanzamento">Avanzamento nel processo</h2>
           <p className="page-meta">Quante procedure si trovano in ciascuna fase, dalla bozza alla chiusura. Apri una fase per vederne l&apos;elenco.</p>
-          <div className="grid kpi-grid" style={{ marginTop: 8 }}>
-            {[...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status)).map((s) => (
-              <Kpi
-                key={s.status}
-                label={STATUS_LABEL[s.status] ?? s.status}
-                value={s.n}
-                sub="procedure in questa fase"
-                href={qs({ status: s.status })}
-                aria={`${STATUS_LABEL[s.status] ?? s.status}: ${s.n} procedure`}
-                help={KPI_HELP.byStatus}
-              />
-            ))}
+          <div className="card" style={{ marginTop: 8 }}>
+            <div className="card-head">
+              <h3>Procedure per fase</h3>
+              <InfoChip text={KPI_HELP.byStatus} />
+            </div>
+            {/* Ordine di processo, non per quantità: le fasi sono una sequenza e riordinarle
+                per numero nasconderebbe proprio dove si accumulano le procedure. */}
+            <BarList
+              keepOrder
+              aria={statusAria}
+              emptyText="Nessuna procedura nel perimetro filtrato."
+              rows={byStatusOrdered.map((x) => ({
+                key: x.status,
+                label: STATUS_LABEL[x.status] ?? x.status,
+                value: x.n,
+                href: qs({ status: x.status }),
+                aria: `${STATUS_LABEL[x.status] ?? x.status}: ${x.n} procedure. Apri il portafoglio filtrato`,
+              }))}
+            />
           </div>
         </section>
       ) : null}
