@@ -447,3 +447,12 @@ Formato:
 - **Rilevato e non corretto**: per i ruoli che possono agire (Ufficio Gare, Amministrazione, Struttura) ogni riga della tabella mostra i moduli di risoluzione gia' aperti, con due aree di testo e un campo data, e una riga occupa mezzo schermo. E' comportamento preesistente di `ActionForm`, non una conseguenza di questa modifica; raccoglierli dietro un'azione tocca le scritture e i test end-to-end, quindi va deciso a parte.
 - Controlli: typecheck, guards, 67 test unitari, `axe` su 14 pagine senza violazioni serie o critiche.
 - Stato: attiva.
+
+### DEC-135 — La scadenza in giorni, e la posta della campanella non e' un tab
+- Data: 2026-11-17 · Autore: agente, su riscontro del cliente («perche' c'e' un tab notificati a me?»; «la colonna Quando e' scattato non va bene, voglio numeri di giorni di ritardo in rosso oppure quanti giorni mancano in verde/blu»)
+- **Il livello di escalation non ha piu' una colonna.** Dire «scadenza superata» era piu' chiaro di «T+1» ma non diceva *quanto*: trentacinque alert su quarantadue portavano la stessa frase, da quattordici a trecentosessantacinque giorni di ritardo. La colonna «Scadenza» porta ora la data e sotto i giorni: «365 giorni di ritardo» in rosso, «scade oggi» in ambra, «fra 5 giorni» in blu. Il livello resta nel `title` del contrassegno. I giorni si contano dalla data di riferimento del `Clock` (`daysBetween`), mai dall'orologio di sistema.
+- **Due colonne diventano una**, e lo spazio liberato va a «Regola» e a «Chi deve agire». La tabella resta senza scorrimento orizzontale a 1366px anche con la colonna «Azioni» (1124px occupati).
+- **«Notificati a me» non e' piu' un tab.** Non e' un modo di leggere la coda: e' la posta in arrivo della campanella. Per i ruoli senza notifiche era un tab sempre vuoto, e nel dataset reale solo quattro utenti ne hanno. Resta raggiungibile dalla campanella come filtro removibile, accanto a «Chi deve agire», con il pulsante «Segna notifiche come lette»; i tab scendono da cinque a quattro. Allineati tour e guida.
+- **Correzione a DEC-134**: gli alert notificati al Direttore Generale sono sei, non dodici (il conteggio corretto e' `COUNT(DISTINCT alert_id)` su `alert_notifications` per quell'utente).
+- Controlli: typecheck, guards, 67 test unitari, `axe` su 14 pagine senza violazioni serie o critiche.
+- Stato: attiva.

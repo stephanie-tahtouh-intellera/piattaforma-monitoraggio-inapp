@@ -614,7 +614,7 @@ export async function alertsList(db: Db, actor: Actor, f: { view?: string; kind?
        ORDER BY CASE a.severity WHEN 'CRITICAL' THEN 0 WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 ELSE 3 END, a.due_date ASC NULLS LAST, a.id LIMIT 500`,
     )
     .all(...params);
-  return { items: rows };
+  return { items: rows, referenceDate: await configuredReferenceDate(db) };
 }
 
 export async function notificationsFor(db: Db, actor: Actor) {

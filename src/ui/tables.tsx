@@ -3,20 +3,41 @@ import Link from "next/link";
 import { formatDateTimeIt } from "@/contracts/format";
 import { ActionForm } from "./action-form";
 import { DateIt, SeverityBadge } from "./badges";
+import { isoDate, daysBetween } from "@/domain/dates";
 import { ALERT_LEVEL_LABEL, ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE_LABEL, humanize } from "./labels";
 
-export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; showProcedure?: boolean }) {
+/**
+ * Scadenza di un alert in giorni (DEC-135): il ritardo in rosso, l'attesa in blu, la
+ * scadenza di oggi in ambra. Il numero di giorni dice da solo quanto la cosa e' urgente,
+ * cosa che il livello di escalation («T+1») non faceva. Il livello resta nel `title`.
+ * I giorni si contano dalla data di riferimento del Clock, mai dall'orologio di sistema.
+ */
+function DueDays({ due, level, referenceDate }: { due: string | null; level: string | null; referenceDate: string }) {
+  if (!due) return <span className="muted">—</span>;
+  const d = daysBetween(isoDate(referenceDate), isoDate(due));
+  const tone = d < 0 ? "late" : d === 0 ? "today" : "soon";
+  const text = d < 0 ? `${-d} ${-d === 1 ? "giorno" : "giorni"} di ritardo` : d === 0 ? "scade oggi" : `fra ${d} ${d === 1 ? "giorno" : "giorni"}`;
+  const title = level ? `Escalation ${level}: ${ALERT_LEVEL_LABEL[level] ?? level}` : undefined;
+  return (
+    <span>
+      <DateIt v={due} />
+      <span className={`daychip day-${tone}`} title={title}>{text}</span>
+    </span>
+  );
+}
+
+export function AlertTable({ alerts, canHandle, canSuspend, referenceDate, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; referenceDate: string; showProcedure?: boolean }) {
   // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" invece di una colonna vuota.
   const showActions = canHandle || canSuspend;
-  const columns = (showProcedure ? 1 : 0) + 7 + (showActions ? 1 : 0);
+  const columns = (showProcedure ? 1 : 0) + 6 + (showActions ? 1 : 0);
   return (
     <div className="table-wrap">
       <table className="data alerts-table">
         <colgroup>
           {showProcedure ? <col className="c-proc" /> : null}
-          <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-level" /><col className="c-due" /><col className="c-state" /><col className="c-owner" />{showActions ? <col className="c-actions" /> : null}
+          <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-due" /><col className="c-state" /><col className="c-owner" />{showActions ? <col className="c-actions" /> : null}
         </colgroup>
-        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Quando è scattato</th><th>Scadenza</th><th>Stato</th><th>Chi deve agire</th>{showActions ? <th>Azioni</th> : null}</tr></thead>
+        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Scadenza</th><th>Stato</th><th>Chi deve agire</th>{showActions ? <th>Azioni</th> : null}</tr></thead>
         <tbody>
           {alerts.map((a) => (
             <tr key={a.id}>
@@ -24,10 +45,7 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
               <td>{a.kind === "ANOMALY" ? "Anomalia" : "Alert"}</td>
               <td>{RULE_LABEL[a.rule] ?? humanize(a.rule)}<div className="small muted">{a.title}{a.message && a.message !== a.title ? ` — ${a.message}` : ""}</div></td>
               <td><SeverityBadge value={a.severity} /></td>
-              {/* Il codice resta nel `title`: chi conosce la policy lo cerca, agli altri
-                  «T+1» non diceva niente. */}
-              <td title={a.current_level ?? undefined}>{a.current_level ? (ALERT_LEVEL_LABEL[a.current_level] ?? a.current_level) : "—"}</td>
-              <td><DateIt v={a.due_date} /></td>
+              <td><DueDays due={a.due_date ?? null} level={a.current_level ?? null} referenceDate={referenceDate} /></td>
               <td>{ALERT_STATUS_LABEL[a.status] ?? a.status}{a.acknowledged_by ? <div className="small muted">in carico a {a.acknowledged_by}</div> : null}{a.resolution_note ? <div className="small muted">«{a.resolution_note}»</div> : null}</td>
               <td>{OWNER_LABEL[a.owner] ?? a.owner ?? "—"}</td>
               {showActions ? (

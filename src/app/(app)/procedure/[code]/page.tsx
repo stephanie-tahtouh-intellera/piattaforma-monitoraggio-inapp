@@ -248,7 +248,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       {tab === "alerts" ? (
         <section className="card">
           <h2>Alert e anomalie</h2>
-          <AlertTable alerts={d.alerts as any[]} canHandle={can(actor, "alert.handle")} canSuspend={can(actor, "alert.suspend")} />
+          <AlertTable alerts={d.alerts as any[]} referenceDate={d.referenceDate} canHandle={can(actor, "alert.handle")} canSuspend={can(actor, "alert.suspend")} />
         </section>
       ) : null}
 

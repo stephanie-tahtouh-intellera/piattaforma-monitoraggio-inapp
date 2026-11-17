@@ -7,14 +7,16 @@ import { AlertTable } from "@/ui/tables";
 import { ActionForm } from "@/ui/action-form";
 
 export const metadata = { title: "Centro alert" };
-// «Notificati a me» e non «Miei»: la vista filtra gli alert per cui questo utente ha
-// ricevuto una notifica, non quelli di cui e' responsabile (quello e' «Chi deve agire»).
-const VIEWS = [["", "Tutti"], ["mine", "Notificati a me"], ["critical", "Critici"], ["reschedule", "Da riprogrammare"], ["finance", "Finanziari"]] as const;
+// «Notificati a me» non è più un tab (DEC-135): non è un modo di leggere la coda ma la
+// posta in arrivo della campanella, e per i ruoli senza notifiche era un tab sempre vuoto.
+// Resta raggiungibile da lì come filtro removibile, accanto a «Chi deve agire».
+const VIEWS = [["", "Tutti"], ["critical", "Critici"], ["reschedule", "Da riprogrammare"], ["finance", "Finanziari"]] as const;
 
 export default async function AlertsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await pageActor();
   const q = await searchParams;
   const view = sp(q.view) ?? "";
+  const mine = view === "mine";
   const kind = sp(q.kind);
   const status = sp(q.status);
   // Destinatario logico: la corsia che deve prendere in carico (DEC-127). Arriva dal grafico
@@ -31,16 +33,16 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
       <div className="page-head">
         <div>
           <h1>Centro alert</h1>
-          <div className="page-meta">Coda unica di alert temporali e anomalie di dato. Le anomalie non correggono mai i dati. «Quando è scattato» dice a che punto dell&apos;escalation si trova l&apos;alert rispetto alla scadenza; «Chi deve agire» la corsia che deve prenderlo in carico.</div>
+          <div className="page-meta">Coda unica di alert temporali e anomalie di dato. Le anomalie non correggono mai i dati. «Scadenza» dice quanti giorni mancano, o di quanti si è in ritardo, rispetto alla data di riferimento; «Chi deve agire» la corsia che deve prenderlo in carico.</div>
         </div>
         <div className="actions">
-          {view === "mine" ? <ActionForm endpoint="/api/notifications/read" submitLabel="Segna notifiche come lette" inline variant="secondary" /> : null}
+          {mine ? <ActionForm endpoint="/api/notifications/read" submitLabel="Segna notifiche come lette" inline variant="secondary" /> : null}
           <a className="btn btn-secondary" href="/api/exports/alerts.csv">Esporta CSV</a>
         </div>
       </div>
       <nav className="tabs" aria-label="Viste">
         {VIEWS.map(([k, l]) => (
-          <Link key={k} href={link({ view: k })} aria-current={view === k ? "page" : undefined}>
+          <Link key={k} href={link({ view: k })} aria-current={view === k || (mine && k === "") ? "page" : undefined}>
             {l}
           </Link>
         ))}
@@ -53,6 +55,14 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         <span className="label" style={{ marginLeft: 16 }}>Stato:</span>
         <Link className={`chip ${!status ? "chip-filter" : ""}`} href={link({ status: "" })}>Da gestire</Link>
         <Link className={`chip ${status === "RESOLVED,AUTO_CLOSED" ? "chip-filter" : ""}`} href={link({ status: "RESOLVED,AUTO_CLOSED" })}>Chiusi</Link>
+        {mine ? (
+          <>
+            <span className="label" style={{ marginLeft: 16 }}>Dalla campanella:</span>
+            <Link className="chip chip-filter" href={link({ view: "" })} aria-label="Togli il filtro: notificati a me">
+              notificati a me ×
+            </Link>
+          </>
+        ) : null}
         {owner ? (
           <>
             <span className="label" style={{ marginLeft: 16 }}>Chi deve agire:</span>
@@ -63,7 +73,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
         ) : null}
       </div>
       <p className="muted" aria-live="polite">{r.items.length} elementi</p>
-      <AlertTable alerts={r.items as any[]} canHandle={can(actor, "alert.handle")} canSuspend={can(actor, "alert.suspend")} showProcedure />
+      <AlertTable alerts={r.items as any[]} referenceDate={r.referenceDate} canHandle={can(actor, "alert.handle")} canSuspend={can(actor, "alert.suspend")} showProcedure />
     </>
   );
 }
