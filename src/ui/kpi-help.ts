@@ -35,6 +35,7 @@ export const KPI_HELP = {
   // Avanzamento e attenzione
   byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura. Le fasi restano in ordine di processo, non per quantità: così si vede dove si accumulano le procedure.",
   alertsByOwner: "Alert ancora aperti divisi per la corsia che deve prenderli in carico. Apri una barra per vedere l'elenco nel centro alert.",
+  moneyByPhase: "Come si divide il programmato fra le fasi del processo: quanto è già arrivato alla stipula, quanto è in gara e quanto è ancora a monte. È il programmato delle procedure di ciascuna fase, non il valore dei contratti: quello è più basso, perché tiene conto dei ribassi. Apri una voce per vedere le procedure di quella fase.",
   lateByPhase: "Per ogni fase con almeno una procedura fuori tempo: quante sono, di quanti giorni in media e qual è quella più indietro. Il ritardo si misura sulla prima scadenza obbligatoria non rispettata.",
   attention: "Le procedure rosse e gialle con la scadenza più vicina: le prime cinque del perimetro, ordinate per severità; l’elenco completo è nel portafoglio.",
 } satisfies Record<string, string>;

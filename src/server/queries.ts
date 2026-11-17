@@ -198,13 +198,29 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
   const byStatus = (await db
     .prepare(
       `SELECT s.status, COUNT(*) AS n,
+         SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END) AS programmed,
+         -- Quota sul programmato del perimetro. La divisione sta qui e non nella UI: serve
+         -- solo per la geometria della barra, l'importo viaggia come stringa in centesimi.
+         CASE WHEN SUM(SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END)) OVER () > 0
+           THEN SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END)::float8
+                / SUM(SUM(CASE WHEN s.status <> 'CANCELLED' THEN s.programmed_cents ELSE 0 END)) OVER () * 100
+           ELSE 0 END AS programmed_share,
          SUM(CASE WHEN s.late = 1 THEN 1 ELSE 0 END) AS late,
          ROUND(AVG(CASE WHEN s.late = 1 THEN -s.days_until END)) AS late_avg_days,
          (ARRAY_AGG(p.code ORDER BY s.days_until ASC) FILTER (WHERE s.late = 1))[1] AS worst_code,
          MAX(CASE WHEN s.late = 1 THEN -s.days_until END) AS worst_days
        FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`,
     )
-    .all(...params)) as { status: string; n: number; late: number; late_avg_days: number | null; worst_code: string | null; worst_days: number | null }[];
+    .all(...params)) as {
+    status: string;
+    n: number;
+    programmed: number | string | null;
+    programmed_share: number | null;
+    late: number;
+    late_avg_days: number | null;
+    worst_code: string | null;
+    worst_days: number | null;
+  }[];
   // L'istogramma "Procedure per tipo" mostra sempre tutte le tipologie (perimetro = solo struttura),
   // cosi' il filtro per tipo evidenzia una barra invece di far sparire le altre.
   const whereNoType = [scope.sql];
@@ -267,6 +283,8 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
     byStatus: byStatus.map((r) => ({
       status: r.status,
       n: Number(r.n),
+      programmed: money(r.programmed === null ? 0 : BigInt(r.programmed)),
+      programmedShare: Number(r.programmed_share ?? 0),
       late: Number(r.late ?? 0),
       lateAvgDays: r.late_avg_days === null ? null : Number(r.late_avg_days),
       worstCode: r.worst_code,

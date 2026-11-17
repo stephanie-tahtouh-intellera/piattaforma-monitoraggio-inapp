@@ -11,6 +11,7 @@ import { KPI_HELP } from "@/ui/kpi-help";
 import { HEALTH_LABEL, OWNER_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 import { BarChart } from "@/ui/bar-chart";
 import { PhaseChart } from "@/ui/phase-chart";
+import { StackedBar } from "@/ui/stacked-bar";
 import { TypeChart } from "@/ui/type-chart";
 
 export const metadata = { title: "Dashboard" };
@@ -138,6 +139,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   // Le annullate escono dall'asse del tempo: non sono una fase del percorso, e metterle in
   // fondo direbbe che vengono dopo la stipula. Si contano a parte, sotto il grafico.
   const phaseRows = byStatusOrdered.filter((x) => x.status !== "CANCELLED");
+  // «A che punto sono i soldi» (DEC-130): il programmato diviso per la fase raggiunta.
+  // Scala sequenziale di blu, dal chiaro al scuro seguendo l'avanzamento: le fasi hanno
+  // un ordine, quindi la tinta puo' portarlo senza inventare otto colori diversi.
+  const PHASE_RAMP = ["--primary-200", "--primary-300", "--primary-400", "--primary-500", "--primary-600", "--primary-700", "--primary-800"];
+  const moneyByPhase = phaseRows
+    .filter((x) => x.programmedShare > 0)
+    .map((x, i) => ({
+      key: x.status,
+      label: STATUS_LABEL[x.status] ?? x.status,
+      amount: x.programmed,
+      share: x.programmedShare,
+      href: qs({ status: x.status }),
+      color: `var(${PHASE_RAMP[Math.min(i, PHASE_RAMP.length - 1)]})`,
+    }));
+  const moneyAria = `Programmato per fase raggiunta. ${moneyByPhase.map((x) => `${x.label}: ${formatEuro(x.amount)}`).join(", ")}.`;
   const cancelled = byStatusOrdered.find((x) => x.status === "CANCELLED")?.n ?? 0;
 
   const riskKpi = (
@@ -275,6 +291,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             {r ? <Kpi label="Aggiudicato" value={formatEuroCompact(r.totals.awardedNet)} sub={`${formatEuro(r.totals.awardedNet)} · IVA esclusa`} href={qs()} aria={`Aggiudicato ${formatEuro(r.totals.awardedNet)}`} help={KPI_HELP.awardedNet} /> : null}
             {paidOrSignedKpi}
             {riskKpi}
+          </div>
+          <div className="card dash-below">
+            <div className="card-head">
+              <h3>A che punto sono i soldi</h3>
+              <InfoChip text={KPI_HELP.moneyByPhase} />
+            </div>
+            <StackedBar rows={moneyByPhase} aria={moneyAria} totalLabel="Programmato nel perimetro" total={fin ? fin.totals.programmed : k.programmed} />
           </div>
           <div className="card dash-below">
             <div className="card-head">

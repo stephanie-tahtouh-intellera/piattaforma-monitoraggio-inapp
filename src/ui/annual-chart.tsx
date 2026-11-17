@@ -131,10 +131,12 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
             {s.label}
           </span>
         ))}
-        <span>
-          <i style={{ background: "transparent", borderTop: "2px dashed var(--chart-availability)", height: 0, width: 16 }} />
-          Disponibilità
-        </span>
+        {rows.some((r) => r.available && toUnits(r.available) !== toUnits(r.need)) ? (
+          <span>
+            <i style={{ background: "transparent", borderTop: "2px dashed var(--chart-availability)", height: 0, width: 16 }} />
+            Disponibilità, dove differisce
+          </span>
+        ) : null}
       </div>
       <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €</p>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
@@ -170,7 +172,10 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
                   </path>
                 );
               })}
-              {r.available ? (
+              {/* Niente linea dove disponibilita' e previsione coincidono (DEC-130): una riga
+                  tratteggiata appoggiata sulla cima della barra in ogni anno faceva leggere
+                  al grafico un'unica informazione, «sono uguali», che sta gia' nella nota. */}
+              {r.available && toUnits(r.available) !== toUnits(r.need) ? (
                 <line x1={x0 - 4} x2={x0 + series.length * (bw + 2) + 2} y1={y(toUnits(r.available))} y2={y(toUnits(r.available))} stroke={overflowYears.includes(r.year) ? "var(--chart-overflow)" : "var(--chart-availability)"} strokeWidth="2" strokeDasharray="5 3">
                   <title>{`${r.year} — Disponibilità ${formatEuro(r.available)}`}</title>
                 </line>
