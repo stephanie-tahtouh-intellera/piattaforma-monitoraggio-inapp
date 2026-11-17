@@ -36,11 +36,28 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
   const overflowYears = rows.filter((r) => r.available && toUnits(r.need) > toUnits(r.available)).map((r) => r.year);
   const moved = rows.filter((r) => r.delta && toUnits(r.delta) !== 0).map((r) => r.year);
   const aria = `${title}. ${overflowYears.length ? `Previsione oltre la disponibilità nel ${overflowYears.join(", ")}.` : "Nessuna annualità oltre la disponibilità."} ${moved.length ? `Scostamento dalla baseline nel ${moved.join(", ")}.` : "Nessuno scostamento dalla baseline."} Dati in tabella sotto il grafico.`;
+  // Quello che il grafico non riesce a mostrare perche' troppo piccolo in scala, detto a
+  // parole: scostamenti dalla baseline e annualita' oltre la disponibilita'.
+  const movedParts = rows
+    .filter((r) => r.delta && toUnits(r.delta) !== 0)
+    .map((r) => `${r.year} ${signed(r.delta)}`);
+  const marginParts = rows
+    .filter((r) => r.margin && toUnits(r.margin) !== 0)
+    .map((r) => `${r.year} ${signed(r.margin)}`);
+  const note = [
+    movedParts.length ? `Scostamento dalla baseline: ${movedParts.join(", ")}.` : "Nessuno scostamento dalla baseline.",
+    overflowYears.length
+      ? `Oltre la disponibilità nel ${overflowYears.join(", ")}.`
+      : marginParts.length
+        ? `Margine sulla disponibilità: ${marginParts.join(", ")}.`
+        : "Nessuna annualità oltre la disponibilità.",
+  ].join(" ");
   return (
     <div>
       {/* Sempre i livelli, anche senza simulazione (DEC-128): il grafico degli scostamenti
           restava vuoto quando non c'erano scostamenti, e il cliente a schermo vedeva un
-          numero al posto di un grafico. Lo scostamento resta nella tabella qui sotto. */}
+          numero al posto di un grafico. */}
+      <p className="chart-note muted">{note}</p>
       <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} />
       <details>
         <summary>Tabella dei dati</summary>
@@ -88,15 +105,12 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
     { key: "need", label: "Previsione approvata", color: "var(--chart-1)" },
     { key: "simulated", label: "Simulazione", color: "var(--chart-2)" },
   ] as const;
-  // Si tengono solo le serie che dicono qualcosa: la "Simulazione" e' vuota se non ce n'e'
-  // una in corso, e la "Baseline" coincide con la previsione finche' nessuno ha
-  // riprogrammato — due barre identiche affiancate per ogni anno non aggiungono nulla.
-  const series = ALL_SERIES.filter((x) => {
-    const values = rows.map((r) => toUnits(r[x.key as keyof Row] as string | null));
-    if (values.every((v) => v === 0)) return false;
-    if (x.key === "baseline") return rows.some((r) => toUnits(r.baseline) !== toUnits(r.need));
-    return true;
-  });
+  // La baseline non si disegna (DEC-129): sul portafoglio reale differisce dalla previsione
+  // di frazioni di punto percentuale, quindi affiancava a ogni anno una barra gemella che
+  // occupava spazio per dire «non e' cambiato niente». La differenza, dove c'e', si legge in
+  // euro nella tabella qui sotto e in una riga di testo sopra il grafico. La simulazione
+  // resta, ma solo quando ce n'e' davvero una in corso.
+  const series = ALL_SERIES.filter((x) => x.key !== "baseline" && rows.some((r) => toUnits(r[x.key as keyof Row] as string | null) !== 0));
   const maxRaw = Math.max(1, ...rows.flatMap((r) => [toUnits(r.need), toUnits(r.available), toUnits(r.baseline), toUnits(r.simulated)]));
   const step = niceStep(maxRaw, 4);
   const max = Math.ceil(maxRaw / step) * step;

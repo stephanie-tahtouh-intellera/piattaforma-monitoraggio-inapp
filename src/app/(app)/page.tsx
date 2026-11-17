@@ -10,6 +10,7 @@ import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { KPI_HELP } from "@/ui/kpi-help";
 import { HEALTH_LABEL, OWNER_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
 import { BarChart } from "@/ui/bar-chart";
+import { PhaseChart } from "@/ui/phase-chart";
 import { TypeChart } from "@/ui/type-chart";
 
 export const metadata = { title: "Dashboard" };
@@ -131,7 +132,13 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     ? `Alert aperti per chi deve agire. Il carico maggiore è su ${OWNER_LABEL[topOwner.owner] ?? topOwner.owner} con ${topOwner.n} alert. ${data.alertsByOwner.map((a) => `${OWNER_LABEL[a.owner] ?? a.owner}: ${a.n}${a.critical ? ` di cui ${a.critical} critici` : ""}`).join(", ")}.`
     : "Alert aperti per chi deve agire.";
   const byStatusOrdered = [...data.byStatus].sort((a, b) => statusOrder(a.status) - statusOrder(b.status));
-  const statusAria = `Procedure per fase, in ordine di processo. ${byStatusOrdered.map((x) => `${STATUS_LABEL[x.status] ?? x.status}: ${x.n}`).join(", ")}.`;
+  const statusAria = `Procedure per fase, in ordine di avanzamento nel tempo. ${byStatusOrdered.filter((x) => x.status !== "CANCELLED").map((x) => `${STATUS_LABEL[x.status] ?? x.status}: ${x.n}${x.late ? ` di cui ${x.late} in ritardo` : ""}`).join(", ")}.`;
+  // La tabella parla solo delle fasi dove un ritardo c'e' davvero: altrove sarebbero righe di trattini.
+  const lateByPhase = byStatusOrdered.filter((x) => x.late > 0);
+  // Le annullate escono dall'asse del tempo: non sono una fase del percorso, e metterle in
+  // fondo direbbe che vengono dopo la stipula. Si contano a parte, sotto il grafico.
+  const phaseRows = byStatusOrdered.filter((x) => x.status !== "CANCELLED");
+  const cancelled = byStatusOrdered.find((x) => x.status === "CANCELLED")?.n ?? 0;
 
   const riskKpi = (
     <Kpi
@@ -308,21 +315,59 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <h3>Procedure per fase</h3>
               <InfoChip text={KPI_HELP.byStatus} />
             </div>
-            {/* Ordine di processo, non per quantità: le fasi sono una sequenza e riordinarle
-                per numero nasconderebbe proprio dove si accumulano le procedure. */}
-            <BarChart
-              keepOrder
-              aria={statusAria}
-              emptyText="Nessuna procedura nel perimetro filtrato."
-              rows={byStatusOrdered.map((x) => ({
-                key: x.status,
-                label: STATUS_LABEL[x.status] ?? x.status,
-                value: x.n,
-                href: qs({ status: x.status }),
-                aria: `${STATUS_LABEL[x.status] ?? x.status}: ${x.n} procedure. Apri il portafoglio filtrato`,
-              }))}
-            />
+            <div className="legend" aria-hidden>
+              <span><i style={{ background: "var(--chart-1)" }} />In questa fase</span>
+              <span><i style={{ background: "var(--health-red-solid)" }} />di cui in ritardo</span>
+            </div>
+            <PhaseChart aria={statusAria} rows={phaseRows.map((x) => ({ status: x.status, label: STATUS_LABEL[x.status] ?? x.status, n: x.n, late: x.late, href: qs({ status: x.status }) }))} />
+            {cancelled > 0 ? (
+              <p className="chart-note muted">
+                Fuori dal percorso: <Link href={qs({ status: "CANCELLED" })}>{cancelled} procedure annullate</Link>.
+              </p>
+            ) : null}
           </div>
+          {lateByPhase.length > 0 ? (
+            <div className="card dash-below">
+              <div className="card-head">
+                <h3>Dove si accumula il ritardo</h3>
+                <InfoChip text={KPI_HELP.lateByPhase} />
+              </div>
+              <div className="table-wrap">
+                <table className="data compact">
+                  <caption className="sr-only">Ritardo per fase del processo</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Fase</th>
+                      <th scope="col" className="num">Procedure</th>
+                      <th scope="col" className="num">In ritardo</th>
+                      <th scope="col" className="num">Ritardo medio</th>
+                      <th scope="col">Più indietro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {lateByPhase.map((x) => (
+                      <tr key={x.status}>
+                        <th scope="row">{STATUS_LABEL[x.status] ?? x.status}</th>
+                        <td className="num">{x.n}</td>
+                        <td className="num">{x.late}</td>
+                        <td className="num">{x.lateAvgDays === null ? "—" : `${x.lateAvgDays} gg`}</td>
+                        <td>
+                          {x.worstCode ? (
+                            <>
+                              <Link href={`/procedure/${x.worstCode}`} className="mono">{x.worstCode}</Link>
+                              {x.worstDays === null ? null : <span className="muted"> · {x.worstDays} gg</span>}
+                            </>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 

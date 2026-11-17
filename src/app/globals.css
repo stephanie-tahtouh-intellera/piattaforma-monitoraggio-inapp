@@ -294,6 +294,27 @@ table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity
 .pager { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--ds-text-sm); }
 
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
+/* Riga di testo sopra un grafico: dice cio' che in scala sarebbe invisibile (DEC-129). */
+.chart-note { margin: 0 0 var(--space-2); font-size: var(--ds-text-sm); }
+.card > .chart-note:last-child { margin: var(--space-2) 0 0; }
+
+/* ---------- Avanzamento nel processo: colonne nel tempo (07 6.7, DEC-129) ---------- */
+.phase-chart { display: block; max-width: 1100px; }
+.phase-chart .ph-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.phase-chart .ph-axis { stroke: var(--ds-color-border-strong); stroke-width: 1; }
+.phase-chart .ph-tick { font-size: 12px; fill: var(--ds-color-text-muted); }
+.phase-chart .ph-label { font-size: 12px; fill: var(--ds-color-text-secondary); }
+.phase-chart .ph-value { font-size: 14px; font-weight: 600; fill: var(--ds-color-text); }
+.phase-chart .ph-fill { fill: var(--chart-1); }
+.phase-chart .ph-late { fill: var(--health-red-solid); }
+.phase-chart .ph-hit { fill: transparent; }
+.phase-chart a { cursor: pointer; }
+.phase-chart a:hover .ph-hit, .phase-chart a:focus-visible .ph-hit { fill: var(--ds-color-bg-subtle); }
+.phase-chart a:focus-visible { outline: 2px solid var(--ds-color-focus); outline-offset: -2px; }
+.phase-chart .ph-arrow { stroke: var(--ds-color-text-muted); stroke-width: 1; }
+.phase-chart .ph-arrowhead { fill: var(--ds-color-text-muted); }
+.phase-chart .ph-arrow-label { font-size: 11px; fill: var(--ds-color-text-muted); }
+
 /* ---------- Grafico a barre orizzontali (07 6.7) ---------- */
 /* Orizzontale e non a colonne: le etichette sono frasi italiane lunghe, che sotto una
    colonna andrebbero ruotate. Un solo colore, griglia e assi in secondo piano. */

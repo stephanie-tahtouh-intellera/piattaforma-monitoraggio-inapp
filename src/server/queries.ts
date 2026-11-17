@@ -192,9 +192,19 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
     sort: "health",
     size: 10,
   });
+  // Per ogni fase: quante procedure ci sono, quante sono in ritardo, di quanti giorni in
+  // media e qual e' quella piu' indietro (DEC-129). `days_until` e' negativo quando la
+  // scadenza e' passata, quindi il ritardo in giorni e' il suo opposto.
   const byStatus = (await db
-    .prepare(`SELECT s.status, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`)
-    .all(...params)) as { status: string; n: number }[];
+    .prepare(
+      `SELECT s.status, COUNT(*) AS n,
+         SUM(CASE WHEN s.late = 1 THEN 1 ELSE 0 END) AS late,
+         ROUND(AVG(CASE WHEN s.late = 1 THEN -s.days_until END)) AS late_avg_days,
+         (ARRAY_AGG(p.code ORDER BY s.days_until ASC) FILTER (WHERE s.late = 1))[1] AS worst_code,
+         MAX(CASE WHEN s.late = 1 THEN -s.days_until END) AS worst_days
+       FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w} GROUP BY s.status`,
+    )
+    .all(...params)) as { status: string; n: number; late: number; late_avg_days: number | null; worst_code: string | null; worst_days: number | null }[];
   // L'istogramma "Procedure per tipo" mostra sempre tutte le tipologie (perimetro = solo struttura),
   // cosi' il filtro per tipo evidenzia una barra invece di far sparire le altre.
   const whereNoType = [scope.sql];
@@ -254,7 +264,14 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
       const comparable = money(needBaselined.find((b) => b.year === y.year)?.need ?? 0);
       return { year: y.year, need, available, baseline, ...yearGaps(need, baseline, available), delta: yearGaps(comparable, baseline, null).delta };
     }),
-    byStatus,
+    byStatus: byStatus.map((r) => ({
+      status: r.status,
+      n: Number(r.n),
+      late: Number(r.late ?? 0),
+      lateAvgDays: r.late_avg_days === null ? null : Number(r.late_avg_days),
+      worstCode: r.worst_code,
+      worstDays: r.worst_days === null ? null : Number(r.worst_days),
+    })),
     attention: attention.items,
   };
 }
