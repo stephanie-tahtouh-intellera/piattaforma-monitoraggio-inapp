@@ -1,4 +1,5 @@
 import { formatEuro } from "@/contracts/format";
+import { niceStep } from "@/ui/chart-scale";
 
 interface Row {
   year: number;
@@ -28,17 +29,6 @@ function barPath(x: number, y: number, w: number, h: number, roundTop: boolean) 
   return `M${x},${y} H${x + w} V${y + h - r} Q${x + w},${y + h} ${x + w - r},${y + h} H${x + r} Q${x},${y + h} ${x},${y + h - r} Z`;
 }
 
-/** Passo "tondo" (1, 2, 2,5, 5 × 10^k) per un asse con circa `n` intervalli. */
-function niceStep(range: number, n: number) {
-  const raw = Math.max(range, 1) / n;
-  const pow = 10 ** Math.floor(Math.log10(raw));
-  const f = raw / pow;
-  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * pow;
-}
-
-/** Nessuno scostamento e nessun margine da mostrare: il grafico si riduce a una frase. */
-const noBars = (rows: Row[]) => rows.every((r) => toUnits(r.delta) === 0 && toUnits(r.margin) === 0);
-
 /** Scostamento dalla baseline e margine sulla disponibilità, per annualità (07 §6.7). */
 export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { rows: Row[]; title?: string }) {
   if (rows.length === 0) return <p className="muted">Dati non disponibili.</p>;
@@ -48,8 +38,11 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
   const aria = `${title}. ${overflowYears.length ? `Previsione oltre la disponibilità nel ${overflowYears.join(", ")}.` : "Nessuna annualità oltre la disponibilità."} ${moved.length ? `Scostamento dalla baseline nel ${moved.join(", ")}.` : "Nessuno scostamento dalla baseline."} Dati in tabella sotto il grafico.`;
   return (
     <div>
-      {hasSimulation ? <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} /> : <GapsChart rows={rows} aria={aria} />}
-      <details open={!hasSimulation && noBars(rows)}>
+      {/* Sempre i livelli, anche senza simulazione (DEC-128): il grafico degli scostamenti
+          restava vuoto quando non c'erano scostamenti, e il cliente a schermo vedeva un
+          numero al posto di un grafico. Lo scostamento resta nella tabella qui sotto. */}
+      <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} />
+      <details>
         <summary>Tabella dei dati</summary>
         <div className="table-wrap" style={{ marginTop: "var(--space-2)" }}>
         <table className="data">
@@ -88,130 +81,30 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
   );
 }
 
-/** Barre divergenti attorno allo zero: scostamento dalla baseline e margine sulla disponibilità. */
-function GapsChart({ rows, aria }: { rows: Row[]; aria: string }) {
-  const series = [
-    { key: "delta" as const, label: "Scostamento dalla baseline (previsione − baseline)" },
-    { key: "margin" as const, label: "Margine sulla disponibilità (disponibilità − previsione)" },
-  ];
-  const withData = rows.filter((r) => toUnits(r.delta) !== 0 || toUnits(r.margin) !== 0);
-  const hidden = rows.length - withData.length;
-  const vals = withData.flatMap((r) => [toUnits(r.delta), toUnits(r.margin)]);
-  const top = Math.max(0, ...vals);
-  const bottom = Math.min(0, ...vals);
-  const step = niceStep(top - bottom, 4);
-  const hi = Math.ceil(top / step) * step;
-  const lo = Math.floor(bottom / step) * step;
-  const ticks: number[] = [];
-  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t * 100) / 100);
-  const W = 560;
-  const H = 200;
-  const pad = { l: 56, r: 10, b: 28, t: 10 };
-  const gw = (W - pad.l - pad.r) / Math.max(withData.length, 1);
-  const bw = Math.min(24, (gw - 16) / series.length);
-  const span = Math.max(hi - lo, 1);
-  const y = (v: number) => pad.t + ((hi - v) / span) * (H - pad.b - pad.t);
-  const flat = rows.every((r) => toUnits(r.delta) === 0);
-  const hasMargin = rows.some((r) => r.margin !== null && r.margin !== undefined);
-  if (noBars(rows)) {
-    return (
-      <p className="muted" role="img" aria-label={aria}>
-        Nessuno scostamento dalla baseline{hasMargin ? " e nessuna annualità oltre la disponibilità" : ""} nel {rows.map((r) => r.year).join(", ")}.
-      </p>
-    );
-  }
-  // Un solo anno con un valore: il numero È il grafico. Un asse di sei anni con una barra
-  // sola non dice nulla di più e occupa cinque volte lo spazio (skill dataviz, anti-pattern).
-  if (withData.length === 1) {
-    const only = withData[0]!;
-    const figures = series
-      .map((x) => ({ label: x.key === "delta" ? "Scostamento dalla baseline" : "Margine sulla disponibilità", raw: only[x.key], over: x.key === "margin" && toUnits(only[x.key]) < 0 }))
-      .filter((x) => toUnits(x.raw) !== 0);
-    return (
-      <div className="chart-stat" role="img" aria-label={aria}>
-        {figures.map((fig) => (
-          <div key={fig.label}>
-            <p className="chart-stat-label">
-              {fig.label} · {only.year}
-              {fig.over ? <span className="badge badge-RED" style={{ marginLeft: 6 }}>Oltre disponibilità</span> : null}
-            </p>
-            <p className="chart-stat-value">{signed(fig.raw)}</p>
-          </div>
-        ))}
-        <p className="muted chart-stat-note">
-          Nelle altre {rows.length - 1} annualità non ci sono scostamenti dalla baseline né margini da segnalare. Tutti i valori sono nella tabella qui sotto.
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <div className="legend" aria-hidden>
-        <span><i style={{ background: "var(--chart-1)" }} />Scostamento dalla baseline</span>
-        {hasMargin ? (
-          <>
-            <span><i style={{ background: "var(--chart-7)" }} />Margine sulla disponibilità</span>
-            <span><i style={{ background: "var(--chart-overflow)" }} />Oltre disponibilità</span>
-          </>
-        ) : null}
-      </div>
-      <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in migliaia di €{hidden > 0 ? ` · ${hidden} annualità senza scostamenti non mostrate` : ""}</p>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
-        {ticks.map((t) => (
-          <g key={t}>
-            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--chart-axis)" : "var(--chart-grid)"} />
-            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="12" fill="var(--chart-axis)">
-              {thousands.format(t / 1000)}
-            </text>
-          </g>
-        ))}
-        {withData.map((r, i) => {
-          const x0 = pad.l + i * gw + (gw - series.length * bw - 2) / 2;
-          return (
-            <g key={r.year}>
-              {series.map((s, j) => {
-                const raw = r[s.key];
-                const v = toUnits(raw);
-                const over = s.key === "margin" && v < 0;
-                const fill = over ? "var(--chart-overflow)" : s.key === "delta" ? "var(--chart-1)" : "var(--chart-7)";
-                const bx = x0 + j * (bw + 2);
-                const by = Math.min(y(v), y(0));
-                const bh = Math.max(Math.abs(y(v) - y(0)), v === 0 ? 0 : 1);
-                return (
-                  <path key={s.key} d={barPath(bx, by, bw, bh, v >= 0)} fill={fill}>
-                    <title>{`${r.year} — ${s.key === "delta" ? "Scostamento" : "Margine"} ${signed(raw)}`}</title>
-                  </path>
-                );
-              })}
-              <text x={x0 + (series.length * (bw + 2)) / 2} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--chart-axis)">
-                {r.year}
-              </text>
-              <rect className="chart-col" x={pad.l + i * gw} y={pad.t} width={gw} height={H - pad.b - pad.t} fill="transparent">
-                <title>{`${r.year}\nScostamento dalla baseline: ${signed(r.delta)}\nMargine sulla disponibilità: ${signed(r.margin)}\nBaseline: ${formatEuro(r.baseline)}\nPrevisione approvata: ${formatEuro(r.need)}\nDisponibilità: ${formatEuro(r.available)}`}</title>
-              </rect>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-/** Livelli assoluti per annualità: baseline, previsione, simulazione; disponibilità a gradino (usato quando c'è una simulazione). */
+/** Livelli per annualità: baseline, previsione approvata, eventuale simulazione, con la disponibilità a gradino. */
 function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears: number[]; aria: string }) {
-  const series = [
+  const ALL_SERIES = [
     { key: "baseline", label: "Baseline", color: "var(--chart-baseline-fill)", stroke: "var(--chart-baseline-stroke)" },
     { key: "need", label: "Previsione approvata", color: "var(--chart-1)" },
     { key: "simulated", label: "Simulazione", color: "var(--chart-2)" },
   ] as const;
+  // Si tengono solo le serie che dicono qualcosa: la "Simulazione" e' vuota se non ce n'e'
+  // una in corso, e la "Baseline" coincide con la previsione finche' nessuno ha
+  // riprogrammato — due barre identiche affiancate per ogni anno non aggiungono nulla.
+  const series = ALL_SERIES.filter((x) => {
+    const values = rows.map((r) => toUnits(r[x.key as keyof Row] as string | null));
+    if (values.every((v) => v === 0)) return false;
+    if (x.key === "baseline") return rows.some((r) => toUnits(r.baseline) !== toUnits(r.need));
+    return true;
+  });
   const maxRaw = Math.max(1, ...rows.flatMap((r) => [toUnits(r.need), toUnits(r.available), toUnits(r.baseline), toUnits(r.simulated)]));
   const step = niceStep(maxRaw, 4);
   const max = Math.ceil(maxRaw / step) * step;
-  const W = 560;
-  const H = 220;
-  const pad = { l: 56, b: 28, t: 10 };
+  const W = 1040;
+  const H = 260;
+  const pad = { l: 64, b: 28, t: 10 };
   const gw = (W - pad.l - 10) / rows.length;
-  const bw = Math.min(24, (gw - 16) / series.length);
+  const bw = Math.min(34, (gw - 20) / series.length);
   const y = (v: number) => H - pad.b - (v / max) * (H - pad.b - pad.t);
   const ticks: number[] = [];
   for (let t = 0; t <= max + step / 2; t += step) ticks.push(Math.round(t * 100) / 100);

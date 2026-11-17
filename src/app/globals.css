@@ -128,11 +128,6 @@ main { padding: var(--space-6) var(--layout-page-padding-x) calc(var(--space-6) 
 /* Quando una sola annualita porta un dato il numero sostituisce il grafico (DEC-124). */
 /* Cifra al posto del grafico: a tutta larghezza le figure stanno in riga e la nota
    a fianco, non sotto, altrimenti la tab sfora l altezza della finestra (DEC-126). */
-.chart-stat { display: flex; flex-flow: row wrap; align-items: baseline; gap: var(--space-3) var(--space-8); padding: var(--space-1) 0; }
-.chart-stat-label { margin: 0; font-size: var(--ds-text-sm); color: var(--ds-color-text-muted); }
-.chart-stat-value { margin: var(--space-1) 0 0; font-size: var(--ds-text-3xl); line-height: var(--ds-leading-3xl); font-weight: 600; color: var(--brand-navy); font-variant-numeric: tabular-nums; }
-.chart-stat-note { flex: 1 1 22ch; margin: 0; max-width: 46ch; font-size: var(--ds-text-xs); line-height: var(--ds-leading-xs); }
-@media (max-width: 1100px) { .chart-stat { flex-direction: column; } }
 .kpi-health { margin-top: var(--space-1); }
 .kpi-health .kpi-split { margin-top: 2px; justify-content: space-between; gap: var(--space-2); }
 @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -148,54 +143,70 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: inset 0 0 0 1px 
 .kpi-card > :last-child { margin-top: auto; }
 .kpi-split { display: flex; gap: var(--space-3); font-size: var(--ds-text-xs); margin-top: var(--space-2); }
 
-/* ---------- Descrizione dell'indicatore su hover e focus (DEC-123) ---------- */
-/* La card KPI e' gia' un link, quindi e' gia' focalizzabile: il pannello si apre
-   sull'hover e sul focus da tastiera della card stessa, senza elementi interattivi
-   annidati (che axe segnalerebbe) e senza JavaScript lato client. */
+/* ---------- Descrizione dell'indicatore (DEC-123, rivista dal DEC-128) ---------- */
+/* Il pannello esce dalla «i» in alto a destra della card, non dal fondo: cosi' si capisce
+   da cosa viene e non copre il valore della card sotto. Tutto in CSS, senza JavaScript e
+   senza elementi interattivi annidati (che axe segnalerebbe dentro il link della card). */
 .kpi-card { position: relative; }
 .kpi-label { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
-.kpi-info { flex: none; color: var(--ds-color-text-muted); opacity: 0.65; }
-.kpi-card:hover .kpi-info, .kpi-card:focus-visible .kpi-info { color: var(--brand-blue); opacity: 1; }
-/* Ponte invisibile fra la card e il pannello: senza, il puntatore perde :hover nello
-   stacco e il pannello sparisce mentre ci si sta andando (WCAG 1.4.13 Hoverable).
-   Alto 8px, meno dello spazio fra le card, quindi non ruba l'hover a quella sotto. */
-.kpi-card[data-tip]::before, .info-chip[data-tip]::before {
-  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 8px; z-index: 39;
+.kpi-info { position: relative; display: inline-flex; flex: none; color: var(--ds-color-text-muted); }
+.kpi-card:hover .kpi-info, .kpi-card:focus-visible .kpi-info, .kpi-info:hover { color: var(--brand-blue); }
+
+/* Punta del pannello. Serve anche da ponte: il suo riquadro copre lo stacco, cosi' il
+   puntatore passa dalla «i» al pannello senza perdere :hover (WCAG 1.4.13 Hoverable).
+   Resta sensibile al puntatore anche da invisibile, perche' usa opacity e non visibility. */
+.kpi-info[data-tip]::before, .info-chip[data-tip]::before {
+  content: ""; position: absolute; top: 100%; right: 0; z-index: 41;
+  border: 7px solid transparent; border-bottom-color: var(--ds-color-bg-surface);
+  filter: drop-shadow(0 -1px 0 var(--ds-color-border));
+  opacity: 0; transition: opacity var(--duration-base) var(--easing-standard);
 }
-.kpi-card[data-tip]::after, .info-chip[data-tip]::after {
+
+.kpi-info[data-tip]::after, .info-chip[data-tip]::after {
   content: attr(data-tip);
-  position: absolute; left: 0; top: calc(100% + 8px); z-index: 40;
-  min-width: 100%; width: max-content;
-  /* Popover chiaro con bordo sottile e ombra media, come prescrive il documento di
-     design per dropdown, popover e toast: il blocco navy pieno copriva la card sotto
-     e pesava piu' del contenuto che spiega. */
-  background: var(--ds-color-bg-surface); color: var(--ds-color-text-secondary);
-  border: 1px solid var(--ds-color-border); box-shadow: var(--ds-shadow-md);
-  font-size: 13px; font-weight: 400; line-height: 1.45; text-align: left;
-  padding: var(--space-2) var(--space-3); border-radius: var(--ds-radius);
-  opacity: 0; visibility: hidden;
-  transition: opacity var(--duration-base) var(--easing-standard), visibility 0s linear var(--duration-base);
+  position: absolute; top: calc(100% + 14px); right: -8px; z-index: 40;
+  width: max-content; max-width: 300px;
+  /* Popover chiaro con bordo e ombra, come il documento di design prescrive per
+     dropdown, popover e toast: il blocco navy pieno di prima copriva la card sotto. */
+  background: var(--ds-color-bg-surface); color: var(--ds-color-text);
+  border: 1px solid var(--ds-color-border-strong); box-shadow: var(--ds-shadow-lg);
+  font-size: 13px; font-weight: 400; line-height: 1.5; text-align: left;
+  padding: var(--space-3); border-radius: var(--ds-radius);
+  /* `display: none` da chiuso, non `visibility: hidden`: un pannello nascosto ma presente
+     nel flusso allunga comunque la pagina (la sua altezza entra nell'area di scorrimento).
+     `allow-discrete` + `@starting-style` conservano la dissolvenza; dove non è supportato
+     il pannello compare di colpo, che è un degrado accettabile. */
+  display: none; opacity: 0;
+  transition: opacity var(--duration-base) var(--easing-standard), display var(--duration-base) allow-discrete;
 }
-/* La card limita il pannello alla propria larghezza, cosi' non sborda dalla pagina. */
-.kpi-card[data-tip]::after { max-width: 100%; }
-/* La pastiglia dei grafici e' ancorata all'intestazione della scheda, larga quanto la scheda:
-   senza un limite proprio il pannello diventava una riga unica lunga tutta la pagina. */
-.info-chip[data-tip]::after { min-width: 0; max-width: min(46ch, 100%); }
-/* Ritardo in apertura: passando sopra le card in diagonale non si apre un pannello a ogni card. */
-.kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
-.info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after {
-  opacity: 1; visibility: visible;
-  transition-delay: 220ms, 220ms;
+/* Si apre passando sopra la «i» e, da tastiera, quando la card prende il focus. */
+.kpi-info[data-tip]:hover::before, .kpi-info[data-tip]:hover::after,
+.kpi-card:focus-visible .kpi-info[data-tip]::before, .kpi-card:focus-visible .kpi-info[data-tip]::after,
+.info-chip[data-tip]:hover::before, .info-chip[data-tip]:hover::after,
+.info-chip[data-tip]:focus-visible::before, .info-chip[data-tip]:focus-visible::after {
+  display: block; opacity: 1; transition-delay: 120ms;
 }
+@starting-style {
+  .kpi-info[data-tip]:hover::after,
+  .kpi-card:focus-visible .kpi-info[data-tip]::after,
+  .info-chip[data-tip]:hover::after,
+  .info-chip[data-tip]:focus-visible::after { opacity: 0; }
+}
+/* La pastiglia dei grafici sta a sinistra, accanto al titolo: il pannello si apre verso destra. */
+.info-chip[data-tip]::before { right: auto; left: 5px; }
+/* Niente `100%` nel limite: l'ancora e' la pastiglia, larga 24px, quindi il pannello
+   si sarebbe ridotto a una colonna di testo alta 400px — e un pannello nascosto
+   occupa comunque spazio, allungando la pagina. */
+.info-chip[data-tip]::after { right: auto; left: -8px; max-width: 380px; }
 @media (prefers-reduced-motion: reduce) {
-  .kpi-card[data-tip]::after, .info-chip[data-tip]::after { transition: none; }
-  .kpi-card[data-tip]:hover::after, .kpi-card[data-tip]:focus-visible::after,
-  .info-chip[data-tip]:hover::after, .info-chip[data-tip]:focus-visible::after { transition-delay: 0s; }
+  .kpi-info[data-tip]::before, .kpi-info[data-tip]::after,
+  .info-chip[data-tip]::before, .info-chip[data-tip]::after { transition: none; }
 }
 /* Pastiglia "i" accanto al titolo di un grafico */
-.card-head { position: relative; display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.card-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
 .card-head h3 { margin: 0; font-size: var(--ds-text-lg, 1.125rem); font-weight: 600; color: var(--brand-navy); }
 .info-chip {
+  position: relative;
   display: inline-flex; align-items: center; justify-content: center;
   width: 24px; height: 24px; flex: none; border-radius: 50%;
   color: var(--ds-color-text-muted); background: var(--ds-color-bg-subtle); cursor: help;
@@ -283,17 +294,25 @@ table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity
 .pager { display: flex; justify-content: space-between; align-items: center; padding: var(--space-3) var(--space-4); font-size: var(--ds-text-sm); }
 
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
-.hbar-chart { list-style: none; margin: 0; padding: 0; max-width: 1100px; }
-.hbar-chart li + li { margin-top: var(--space-2); }
-.hbar-chart a, .hbar-chart .hbar-row { display: grid; grid-template-columns: minmax(9rem, 16rem) 1fr 2.5rem; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; color: inherit; text-decoration: none; border-radius: var(--ds-radius-sm); }
-.hbar-chart a:hover, .hbar-chart a:focus-visible { background: var(--ds-color-bg-subtle); }
-.hbar-label { font-size: var(--ds-text-sm); color: var(--ds-color-text); }
-.hbar-track { height: 20px; background: var(--chart-grid); border-radius: var(--ds-radius-sm); overflow: hidden; }
-.hbar-fill { display: block; height: 100%; background: var(--chart-1); border-radius: var(--ds-radius-sm); }
-.hbar-value { font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-color-text); text-align: right; }
-.hbar-dim .hbar-fill { background: var(--primary-300); }
-.hbar-dim .hbar-label, .hbar-dim .hbar-value { color: var(--ds-color-text-muted); font-weight: 400; }
-.hbar-dim a:hover, .hbar-dim a:focus-visible { background: var(--ds-color-bg-subtle); }
+/* ---------- Grafico a barre orizzontali (07 6.7) ---------- */
+/* Orizzontale e non a colonne: le etichette sono frasi italiane lunghe, che sotto una
+   colonna andrebbero ruotate. Un solo colore, griglia e assi in secondo piano. */
+.bar-chart { display: block; max-width: 1100px; }
+.bar-chart .bar-grid { stroke: var(--chart-grid); stroke-width: 1; }
+.bar-chart .bar-axis { stroke: var(--ds-color-border-strong); stroke-width: 1; }
+.bar-chart .bar-label { font-size: 14px; fill: var(--ds-color-text); }
+.bar-chart .bar-value { font-size: 14px; font-weight: 600; fill: var(--ds-color-text); }
+.bar-chart .bar-tick { font-size: 12px; fill: var(--ds-color-text-muted); }
+.bar-chart .bar-fill { fill: var(--chart-1); }
+/* Bersaglio dell'intera riga, non della sola barra: invisibile ma cliccabile. */
+.bar-chart .bar-hit { fill: transparent; }
+.bar-chart a { cursor: pointer; }
+.bar-chart a:hover .bar-hit, .bar-chart a:focus-visible .bar-hit { fill: var(--ds-color-bg-subtle); }
+.bar-chart a:focus-visible { outline: 2px solid var(--ds-color-focus); outline-offset: -2px; }
+/* Filtro attivo: le altre barre restano visibili ma attenuate, cosi' si vede sia il
+   totale sia quale riga e' filtrata (invece di far sparire le altre). */
+.bar-chart .is-dim .bar-fill { fill: var(--primary-300); }
+.bar-chart .is-dim .bar-label, .bar-chart .is-dim .bar-value { fill: var(--ds-color-text-muted); font-weight: 400; }
 
 /* ---------- Filtri e form ---------- */
 .filters { background: var(--ds-color-bg-subtle); border: 1px solid var(--brand-tint-border); border-radius: var(--ds-radius); padding: var(--space-2) var(--space-3); display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: flex-end; margin-bottom: var(--space-3); }

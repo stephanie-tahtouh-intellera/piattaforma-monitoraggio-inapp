@@ -9,7 +9,7 @@ import { AutoSubmitSelect } from "@/ui/auto-submit";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { KPI_HELP } from "@/ui/kpi-help";
 import { HEALTH_LABEL, OWNER_LABEL, STATUS_LABEL, TYPE_LABEL } from "@/ui/labels";
-import { BarList } from "@/ui/bar-list";
+import { BarChart } from "@/ui/bar-chart";
 import { TypeChart } from "@/ui/type-chart";
 
 export const metadata = { title: "Dashboard" };
@@ -41,10 +41,18 @@ function Kpi({ label, value, sub, href, extra, aria, help }: { label: string; va
     // La definizione sta in `data-tip` e non nel DOM: il pannello e' generato in CSS, cosi' il
     // testo d'aiuto non entra nel contenuto testuale della card (che i test e2e cercano per
     // sottostringa) e non viene annunciato due volte, essendo gia' nell'aria-label.
-    <Link className="kpi-card" href={href} aria-label={help ? `${aria}. ${help}` : aria} data-tip={help}>
+    <Link className="kpi-card" href={href} aria-label={help ? `${aria}. ${help}` : aria}>
       <div className="kpi-label">
         {label}
-        {help ? <Info className="kpi-info" size={13} aria-hidden /> : null}
+        {/* La definizione esce dalla «i» in alto a destra, non dal fondo della card (DEC-128).
+            Sta in `data-tip` e non nel DOM: cosi' non entra nel contenuto testuale della card
+            (che i test e2e cercano per sottostringa) e non viene letta due volte, essendo gia'
+            nell'aria-label del link. */}
+        {help ? (
+          <span className="kpi-info" data-tip={help}>
+            <Info size={15} aria-hidden />
+          </span>
+        ) : null}
       </div>
       <div className="kpi-value">{value}</div>
       <div className="kpi-sub">{sub}</div>
@@ -221,7 +229,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             } />
             <Kpi label="In ritardo" value={k.proceduresLate} sub={`su ${k.proceduresTotal} · ${module2 ? "milestone o SAL scaduti" : "passi scaduti"}`} href={qs({ health: "RED" })} aria={`Procedure in ritardo: ${k.proceduresLate} su ${k.proceduresTotal}`} help={KPI_HELP.proceduresLate} />
             <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} help={KPI_HELP.toReschedule} />
-            <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}${criticalOwners ? `, da prendere in carico: ${criticalOwners}` : ""}`} help={KPI_HELP.criticalAlerts} extra={criticalOwners ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> {criticalOwners}</div> : null} />
+            <Kpi label="Alert critici" value={k.criticalAlerts} sub={`aperti al ${ref}`} href="/alert?view=critical" aria={`Alert critici: ${k.criticalAlerts}${criticalOwners ? `, da prendere in carico: ${criticalOwners}` : ""}`} help={KPI_HELP.criticalAlerts} extra={criticalOwners ? <div className="kpi-sub" style={{ color: "var(--health-red-fg)" }}><OctagonAlert size={14} aria-hidden /> da prendere in carico: {criticalOwners}</div> : null} />
             <Kpi label="Procedure attive" value={k.proceduresActive} sub="non in bozza, chiuse o annullate" href={qs()} aria={`Procedure attive: ${k.proceduresActive}`} help={KPI_HELP.proceduresActive} />
             <Kpi label="Procedure da avviare" value={k.proceduresToStart} sub="ancora in bozza" href={qs({ status: "DRAFT" })} aria={`Procedure da avviare: ${k.proceduresToStart}`} help={KPI_HELP.proceduresToStart} />
             <Kpi label="Richieste di riprogrammazione" value={k.reprogramRequests} sub="versioni approvate oltre la baseline" href={qs()} aria={`Richieste di riprogrammazione: ${k.reprogramRequests}`} help={KPI_HELP.reprogramRequests} />
@@ -232,7 +240,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <h3>Alert aperti per chi deve agire</h3>
               <InfoChip text={KPI_HELP.alertsByOwner} />
             </div>
-            <BarList
+            <BarChart
               aria={alertsOwnerAria}
               emptyText="Nessun alert aperto nel perimetro filtrato."
               rows={data.alertsByOwner.map((a) => ({
@@ -302,7 +310,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             </div>
             {/* Ordine di processo, non per quantità: le fasi sono una sequenza e riordinarle
                 per numero nasconderebbe proprio dove si accumulano le procedure. */}
-            <BarList
+            <BarChart
               keepOrder
               aria={statusAria}
               emptyText="Nessuna procedura nel perimetro filtrato."
