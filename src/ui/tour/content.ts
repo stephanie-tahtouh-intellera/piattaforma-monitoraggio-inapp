@@ -213,7 +213,7 @@ const ROLE_TOURS: Tour[] = [
       { path: "/procedure/CD-01?tab=iter", expect: "MEMORY_SUBMISSION", target: PASSO, title: "Memoria in scadenza", body: "CD-01 ha la memoria prevista per il 07/10/2026: mancano meno di 10 giorni, la procedura è gialla e hai ricevuto il reminder. Il passo è nella tua corsia.", tryIt: "Registra la consegna della memoria al 01/10/2026: il reminder si chiude e la pratica passa all'Ufficio Gare." },
       { path: "/procedure/CD-01?tab=documents", target: "[data-tour='upload']", title: "Fascicolo documentale", body: "Carica memoria e documento tecnico (PDF, Office o ZIP, controllati per tipo e contenuto). Il testo è estratto, anche con OCR, e i dati riconosciuti vanno in validazione.", can: ["Caricare documenti e archivi ZIP", "Aprire i documenti"] },
       { path: "/procedure/CD-07?tab=iter", target: ".iter-board", title: "Seguire una pratica fino alla stipula", body: "CD-07 è quasi alla fine del Modulo 1: aggiudicata, garanzia acquisita, ora tocca al fornitore controfirmare. La vista a corsie mostra chi ha fatto cosa e quando.", can: ["Consultare l'avanzamento senza poter registrare i passi delle altre corsie"] },
-      { path: "/alert?view=mine", target: "nav.tabs", title: "Le tue notifiche", body: "La campanella e la vista «Miei» raccolgono gli alert della tua corsia. Prenderli in carico o risolverli non modifica date o importi.", can: ["Prendere in carico e risolvere alert"] },
+      { path: "/alert?view=mine", target: "nav.tabs", title: "Le tue notifiche", body: "La campanella e la vista «Notificati a me» raccolgono gli alert per cui hai ricevuto una notifica. Prenderli in carico o risolverli non modifica date o importi.", can: ["Prendere in carico e risolvere alert"] },
       { path: "/assistente", target: "main", title: "Assistente", body: "Risponde sui dati del tuo perimetro citando le fonti, senza IA generativa.", tryIt: "Chiedi «Memorie in scadenza nei prossimi 30 giorni»." },
     ],
   },
@@ -462,7 +462,7 @@ const HELP: Record<string, PageHelp> = {
   alerts: {
     title: "Centro alert",
     summary: "Coda unica di alert e anomalie del tuo ambito.",
-    sections: [["Viste", "Tutti, Miei, Critici, Da riprogrammare, Finanziari."], ["Filtri", "Tipo (alert/anomalia) e stato (da gestire/chiusi)."]],
+    sections: [["Viste", "Tutti, Notificati a me, Critici, Da riprogrammare, Finanziari."], ["Filtri", "Tipo (alert/anomalia) e stato (da gestire/chiusi)."]],
     actions: {
       ALL: ["Esportare in CSV"],
       STRUCTURE_USER: ["Prendere in carico e risolvere"],

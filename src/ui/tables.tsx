@@ -3,7 +3,7 @@ import Link from "next/link";
 import { formatDateTimeIt } from "@/contracts/format";
 import { ActionForm } from "./action-form";
 import { DateIt, SeverityBadge } from "./badges";
-import { ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE_LABEL, humanize } from "./labels";
+import { ALERT_LEVEL_LABEL, ALERT_STATUS_LABEL, AUDIT_ACTION_LABEL, ENTITY_LABEL, OWNER_LABEL, RULE_LABEL, humanize } from "./labels";
 
 export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = false }: { alerts: any[]; canHandle: boolean; canSuspend: boolean; showProcedure?: boolean }) {
   // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" invece di una colonna vuota.
@@ -16,7 +16,7 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
           {showProcedure ? <col className="c-proc" /> : null}
           <col className="c-kind" /><col className="c-rule" /><col className="c-sev" /><col className="c-level" /><col className="c-due" /><col className="c-state" /><col className="c-owner" />{showActions ? <col className="c-actions" /> : null}
         </colgroup>
-        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Livello</th><th>Scadenza</th><th>Stato</th><th>Owner</th>{showActions ? <th>Azioni</th> : null}</tr></thead>
+        <thead><tr>{showProcedure ? <th>Procedura</th> : null}<th>Tipo</th><th>Regola</th><th>Severità</th><th>Quando è scattato</th><th>Scadenza</th><th>Stato</th><th>Chi deve agire</th>{showActions ? <th>Azioni</th> : null}</tr></thead>
         <tbody>
           {alerts.map((a) => (
             <tr key={a.id}>
@@ -24,7 +24,9 @@ export function AlertTable({ alerts, canHandle, canSuspend, showProcedure = fals
               <td>{a.kind === "ANOMALY" ? "Anomalia" : "Alert"}</td>
               <td>{RULE_LABEL[a.rule] ?? humanize(a.rule)}<div className="small muted">{a.title}{a.message && a.message !== a.title ? ` — ${a.message}` : ""}</div></td>
               <td><SeverityBadge value={a.severity} /></td>
-              <td>{a.current_level ?? "—"}</td>
+              {/* Il codice resta nel `title`: chi conosce la policy lo cerca, agli altri
+                  «T+1» non diceva niente. */}
+              <td title={a.current_level ?? undefined}>{a.current_level ? (ALERT_LEVEL_LABEL[a.current_level] ?? a.current_level) : "—"}</td>
               <td><DateIt v={a.due_date} /></td>
               <td>{ALERT_STATUS_LABEL[a.status] ?? a.status}{a.acknowledged_by ? <div className="small muted">in carico a {a.acknowledged_by}</div> : null}{a.resolution_note ? <div className="small muted">«{a.resolution_note}»</div> : null}</td>
               <td>{OWNER_LABEL[a.owner] ?? a.owner ?? "—"}</td>

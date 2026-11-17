@@ -7,7 +7,9 @@ import { AlertTable } from "@/ui/tables";
 import { ActionForm } from "@/ui/action-form";
 
 export const metadata = { title: "Centro alert" };
-const VIEWS = [["", "Tutti"], ["mine", "Miei"], ["critical", "Critici"], ["reschedule", "Da riprogrammare"], ["finance", "Finanziari"]] as const;
+// «Notificati a me» e non «Miei»: la vista filtra gli alert per cui questo utente ha
+// ricevuto una notifica, non quelli di cui e' responsabile (quello e' «Chi deve agire»).
+const VIEWS = [["", "Tutti"], ["mine", "Notificati a me"], ["critical", "Critici"], ["reschedule", "Da riprogrammare"], ["finance", "Finanziari"]] as const;
 
 export default async function AlertsPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const actor = await pageActor();
@@ -29,7 +31,7 @@ export default async function AlertsPage({ searchParams }: { searchParams: Promi
       <div className="page-head">
         <div>
           <h1>Centro alert</h1>
-          <div className="page-meta">Coda unica di alert temporali e anomalie di dato (US-042). Le anomalie non correggono mai i dati.</div>
+          <div className="page-meta">Coda unica di alert temporali e anomalie di dato. Le anomalie non correggono mai i dati. «Quando è scattato» dice a che punto dell&apos;escalation si trova l&apos;alert rispetto alla scadenza; «Chi deve agire» la corsia che deve prenderlo in carico.</div>
         </div>
         <div className="actions">
           {view === "mine" ? <ActionForm endpoint="/api/notifications/read" submitLabel="Segna notifiche come lette" inline variant="secondary" /> : null}

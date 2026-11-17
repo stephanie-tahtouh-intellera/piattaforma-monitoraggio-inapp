@@ -147,6 +147,24 @@ export const CRITICALITY_LABEL: Record<string, string> = {
 export const OUTBOX_LABEL: Record<string, string> = { PENDING: "in coda", SENT: "inviate", FAILED: "non riuscite" };
 export const OWNER_LABEL: Record<string, string> = { STRUCTURE: "Struttura", PROCUREMENT: "Ufficio Gare", FINANCE: "Amministrazione", SUPPLIER: "Fornitore" };
 
+/**
+ * Livello di escalation di un alert, in parole (DEC-134). I codici `T-10`, `T-5`, `T0`,
+ * `T+1` sono relativi a T, cioè la data di scadenza: dicono quanti giorni prima o dopo
+ * la segnalazione è scattata. `FLAG` non dipende da una scadenza: è una condizione che
+ * resta finché non viene risolta (riprogrammazione necessaria, sforamento di budget).
+ * Le anomalie di dato non hanno livello.
+ */
+export const ALERT_LEVEL_LABEL: Record<string, string> = {
+  "T-2M": "2 mesi prima",
+  "T-1M": "1 mese prima",
+  "T-10": "10 giorni prima",
+  "T-5": "5 giorni prima",
+  "T-2": "2 giorni prima",
+  T0: "il giorno della scadenza",
+  "T+1": "scadenza superata",
+  FLAG: "non legato a una scadenza",
+};
+
 /** Fasi e corsie dello schema di processo INAPP (DEC-107). */
 export const STAGES: { n: number; title: string; sub: string; module: 1 | 2 }[] = [
   { n: 0, title: "Piano", sub: "Programmazione", module: 1 },
