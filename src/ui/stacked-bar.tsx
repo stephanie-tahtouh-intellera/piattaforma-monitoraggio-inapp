@@ -21,30 +21,37 @@ export interface StackRow {
  * I segmenti sotto una certa quota restano visibili con una larghezza minima: un
  * segmento da 0,2 % sarebbe largo meno di un pixel e sparirebbe.
  */
+/** Sotto il mezzo punto l'arrotondamento darebbe «0 %», che per un importo presente è falso. */
+const share = (v: number) => (v < 0.5 ? "<1%" : `${Math.round(v)}%`);
+
 export function StackedBar({ rows, aria, totalLabel, total }: { rows: StackRow[]; aria: string; totalLabel: string; total: string | null }) {
   const data = rows.filter((r) => r.share > 0);
   if (data.length === 0) return <p className="muted">Nessun importo nel perimetro filtrato.</p>;
   return (
     <div>
-      <p className="stack-total">
-        <span className="stack-total-label">{totalLabel}</span>
-        <span className="stack-total-value">{formatEuroCompact(total)}</span>
+      <p className="splitbar-total">
+        <span className="splitbar-total-label">{totalLabel}</span>
+        <span className="splitbar-total-value">{formatEuroCompact(total)}</span>
       </p>
-      <div className="stack" role="img" aria-label={aria}>
+      <div className="splitbar" role="img" aria-label={aria}>
         {data.map((r) => (
-          <i key={r.key} style={{ flexGrow: r.share, background: r.color }} />
+          // `title`: al passaggio del mouse sul segmento si legge fase, importo e quota.
+          // La stessa informazione e' nella legenda sotto, che e' il canale testuale.
+          <i
+            key={r.key}
+            style={{ flexGrow: r.share, background: r.color }}
+            title={`${r.label} — ${formatEuro(r.amount)} (${share(r.share)})`}
+          />
         ))}
       </div>
-      <ul className="stack-legend">
+      <ul className="splitbar-legend">
         {data.map((r) => (
           <li key={r.key}>
             <Link href={r.href}>
               <i style={{ background: r.color }} aria-hidden />
-              <span className="stack-legend-label">{r.label}</span>
-              <span className="stack-legend-value">{formatEuro(r.amount)}</span>
-              {/* Sotto il mezzo punto l'arrotondamento darebbe «0 %», che per un importo
-                  presente e' falso: si scrive «<1 %». */}
-              <span className="stack-legend-share">{r.share < 0.5 ? "<1%" : `${Math.round(r.share)}%`}</span>
+              <span className="splitbar-legend-label">{r.label}</span>
+              <span className="splitbar-legend-value">{formatEuro(r.amount)}</span>
+              <span className="splitbar-legend-share">{share(r.share)}</span>
             </Link>
           </li>
         ))}

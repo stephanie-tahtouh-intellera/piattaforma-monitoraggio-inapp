@@ -139,6 +139,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const statusAria = `Procedure per fase, in ordine di avanzamento nel tempo. ${byStatusOrdered.filter((x) => x.status !== "CANCELLED").map((x) => `${STATUS_LABEL[x.status] ?? x.status}: ${x.n}${x.late ? ` di cui ${x.late} in ritardo` : ""}`).join(", ")}.`;
   // La tabella parla solo delle fasi dove un ritardo c'e' davvero: altrove sarebbero righe di trattini.
   const lateByPhase = byStatusOrdered.filter((x) => x.late > 0);
+  // Scadenze attorno alla data di riferimento (DEC-132): a sinistra l'arretrato, piu'
+  // profondo man mano che si va indietro, a destra quello che sta per arrivare.
+  const dl = data.deadlines;
+  const deadlineBuckets = [
+    { status: "late180", label: "oltre 180 gg", n: dl.late180, late: dl.late180 },
+    { status: "late91", label: "91–180 gg", n: dl.late91, late: dl.late91 },
+    { status: "late31", label: "31–90 gg", n: dl.late31, late: dl.late31 },
+    { status: "late1", label: "fino a 30 gg", n: dl.late1, late: dl.late1 },
+    { status: "next7", label: "entro 7 gg", n: dl.next7, late: 0 },
+    { status: "next30", label: "8–30 gg", n: dl.next30, late: 0 },
+    { status: "nextOver", label: "oltre 30 gg", n: dl.nextOver, late: 0 },
+  ];
+  const deadlineAria = `Scadenze per distanza dalla data di riferimento. In ritardo: ${dl.late180 + dl.late91 + dl.late31 + dl.late1} procedure. In arrivo: ${dl.next7 + dl.next30 + dl.nextOver}. Senza una prossima scadenza: ${dl.none}.`;
   // Le annullate escono dall'asse del tempo: non sono una fase del percorso, e metterle in
   // fondo direbbe che vengono dopo la stipula. Si contano a parte, sotto il grafico.
   const phaseRows = byStatusOrdered.filter((x) => x.status !== "CANCELLED");
@@ -427,6 +440,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
             <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} help={KPI_HELP.toReschedule} />
             {riskKpi}
             <Kpi label="Anomalie di dato" value={k.openAnomalies} sub="aperte, non correggono i dati" href="/alert?kind=ANOMALY" aria={`Anomalie di dato aperte: ${k.openAnomalies}`} help={KPI_HELP.anomalies} />
+          </div>
+          <div className="card dash-below">
+            <div className="card-head">
+              <h3>Quanto è profondo l&apos;arretrato</h3>
+              <InfoChip text={KPI_HELP.deadlines} />
+            </div>
+            <div className="legend" aria-hidden>
+              <span><i style={{ background: "var(--health-red-solid)" }} />Scadenze già passate</span>
+              <span><i style={{ background: "var(--chart-1)" }} />Ancora da scadere</span>
+            </div>
+            <PhaseChart rows={deadlineBuckets} aria={deadlineAria} axisLabel="← in ritardo · data di riferimento · in arrivo →" />
+            {dl.none > 0 ? (
+              <p className="chart-note muted">
+                Restano fuori <Link href={qs({ status: "EXECUTION,CLOSING,CLOSED" })}>{dl.none} procedure senza una prossima scadenza obbligatoria</Link>, quasi tutte con il contratto già stipulato.
+              </p>
+            ) : null}
           </div>
           <div className="card dash-below">
             <div className="card-head">

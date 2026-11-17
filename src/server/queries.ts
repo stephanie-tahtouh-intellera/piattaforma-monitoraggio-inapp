@@ -239,6 +239,24 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
     .prepare(`SELECT p.procedure_type AS type, COUNT(*) AS n FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${wNoType} GROUP BY p.procedure_type`)
     .all(...paramsNoType)) as { type: string; n: number }[];
   const byType = byTypeRows.sort((a, b) => PROCEDURE_TYPE_ORDER.indexOf(a.type) - PROCEDURE_TYPE_ORDER.indexOf(b.type));
+  // Distribuzione delle scadenze attorno alla data di riferimento (DEC-132): quanto e'
+  // profondo l'arretrato e quanto sta per arrivare. Le procedure senza una prossima
+  // scadenza (contratti in esecuzione) restano fuori e si dichiarano a parte.
+  const deadlines = (await db
+    .prepare(
+      `SELECT
+         SUM(CASE WHEN s.late = 1 AND -s.days_until > 180 THEN 1 ELSE 0 END) AS late_180,
+         SUM(CASE WHEN s.late = 1 AND -s.days_until BETWEEN 91 AND 180 THEN 1 ELSE 0 END) AS late_91,
+         SUM(CASE WHEN s.late = 1 AND -s.days_until BETWEEN 31 AND 90 THEN 1 ELSE 0 END) AS late_31,
+         SUM(CASE WHEN s.late = 1 AND -s.days_until BETWEEN 0 AND 30 THEN 1 ELSE 0 END) AS late_1,
+         SUM(CASE WHEN s.late = 0 AND s.days_until BETWEEN 0 AND 7 THEN 1 ELSE 0 END) AS next_7,
+         SUM(CASE WHEN s.late = 0 AND s.days_until BETWEEN 8 AND 30 THEN 1 ELSE 0 END) AS next_30,
+         SUM(CASE WHEN s.late = 0 AND s.days_until > 30 THEN 1 ELSE 0 END) AS next_over,
+         SUM(CASE WHEN s.days_until IS NULL THEN 1 ELSE 0 END) AS none
+       FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id
+       WHERE ${w} AND s.status <> 'CANCELLED'`,
+    )
+    .get(...params)) as Record<string, number | null>;
   // Chi deve agire sugli alert aperti (DEC-127): `alerts.owner` è il destinatario logico
   // risolto dalla policy (guida §8.3), cioè la corsia che deve prendere in carico.
   const alertsByOwner = (await db
@@ -279,6 +297,16 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
       health: { GREEN: k.green ?? 0, AMBER: k.amber ?? 0, RED: k.red ?? 0, NEUTRAL: k.neutral ?? 0 },
     },
     byType,
+    deadlines: {
+      late180: Number(deadlines.late_180 ?? 0),
+      late91: Number(deadlines.late_91 ?? 0),
+      late31: Number(deadlines.late_31 ?? 0),
+      late1: Number(deadlines.late_1 ?? 0),
+      next7: Number(deadlines.next_7 ?? 0),
+      next30: Number(deadlines.next_30 ?? 0),
+      nextOver: Number(deadlines.next_over ?? 0),
+      none: Number(deadlines.none ?? 0),
+    },
     alertsByOwner: alertsByOwner
       .map((r) => ({ owner: r.owner, n: Number(r.n), critical: Number(r.critical) }))
       .sort((a, b) => b.n - a.n),

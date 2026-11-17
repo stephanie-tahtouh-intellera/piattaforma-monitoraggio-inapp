@@ -5,7 +5,8 @@ export interface PhaseRow {
   label: string;
   n: number;
   late: number;
-  href: string;
+  /** Senza indirizzo la colonna non è cliccabile. */
+  href?: string;
 }
 
 const W = 1040;
@@ -40,7 +41,7 @@ function wrap(label: string, maxChars: number) {
  * il suo significato; la legenda e la tabella sotto lo dicono anche a parole, perché il
  * colore da solo non può portare un'informazione.
  */
-export function PhaseChart({ rows, aria }: { rows: PhaseRow[]; aria: string }) {
+export function PhaseChart({ rows, aria, axisLabel = "avanzamento nel tempo" }: { rows: PhaseRow[]; aria: string; axisLabel?: string }) {
   const data = rows.filter((r) => r.n > 0);
   if (data.length === 0) return <p className="muted">Nessuna procedura nel perimetro filtrato.</p>;
 
@@ -71,8 +72,9 @@ export function PhaseChart({ rows, aria }: { rows: PhaseRow[]; aria: string }) {
         const hTot = baseY - y(r.n);
         const hLate = baseY - y(r.late);
         const lines = wrap(r.label, maxChars);
-        return (
-          <a key={r.status} href={r.href} className="ph-col" aria-label={`${r.label}: ${r.n} procedure${r.late ? `, di cui ${r.late} in ritardo` : ""}. Apri il portafoglio filtrato`}>
+        const name = `${r.label}: ${r.n} procedure${r.late ? `, di cui ${r.late} in ritardo` : ""}`;
+        const body = (
+          <>
             <rect x={PAD.l + i * slot} y={PAD.t} width={slot} height={plotH + 4} className="ph-hit" />
             {/* In cima il totale della fase, sotto la quota in ritardo: due rettangoli
                 impilati, non sovrapposti, così le altezze si sommano davvero. */}
@@ -86,7 +88,18 @@ export function PhaseChart({ rows, aria }: { rows: PhaseRow[]; aria: string }) {
                 {line}
               </text>
             ))}
+          </>
+        );
+        // Senza indirizzo la colonna resta un gruppo: un link che non porta da nessuna
+        // parte sarebbe un bersaglio inutile per chi naviga da tastiera.
+        return r.href ? (
+          <a key={r.status} href={r.href} className="ph-col" aria-label={`${name}. Apri il portafoglio filtrato`}>
+            {body}
           </a>
+        ) : (
+          <g key={r.status} className="ph-col" role="presentation">
+            {body}
+          </g>
         );
       })}
       {/* La freccia dichiara che l'asse è il tempo, non un semplice elenco di categorie */}
@@ -97,7 +110,7 @@ export function PhaseChart({ rows, aria }: { rows: PhaseRow[]; aria: string }) {
       </defs>
       <line x1={PAD.l} y1={H - 12} x2={W - PAD.r - 2} y2={H - 12} className="ph-arrow" markerEnd="url(#ph-arrow)" />
       <text x={PAD.l} y={H - 18} className="ph-arrow-label">
-        avanzamento nel tempo
+        {axisLabel}
       </text>
     </svg>
   );

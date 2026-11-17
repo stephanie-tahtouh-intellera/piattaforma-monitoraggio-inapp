@@ -35,6 +35,7 @@ export const KPI_HELP = {
   // Avanzamento e attenzione
   byStatus: "Quante procedure si trovano in ciascuna fase del processo, dalla bozza alla chiusura. Le fasi restano in ordine di processo, non per quantità: così si vede dove si accumulano le procedure.",
   alertsByOwner: "Alert ancora aperti divisi per la corsia che deve prenderli in carico. Apri una barra per vedere l'elenco nel centro alert.",
+  deadlines: "Quante procedure hanno la prossima scadenza obbligatoria già passata, divise per quanto sono indietro, e quante ce l'hanno davanti. Le procedure senza una scadenza aperta non compaiono.",
   overdue: "Procedure la cui prima scadenza obbligatoria è già passata alla data di riferimento. Non è il numero di alert: una stessa procedura può averne più d'uno.",
   dueSoon: "Procedure con la prossima scadenza obbligatoria entro una settimana. Sono quelle su cui si può ancora intervenire prima che diventino un ritardo.",
   red: "Procedure in stato Rosso: scadenza superata o conflitto finanziario critico. Accanto, quanto valgono sul programmato.",

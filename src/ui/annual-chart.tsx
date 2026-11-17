@@ -1,3 +1,4 @@
+import { CircleCheck, CircleMinus, OctagonAlert } from "lucide-react";
 import { formatEuro } from "@/contracts/format";
 import { niceStep } from "@/ui/chart-scale";
 
@@ -44,20 +45,38 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
   const marginParts = rows
     .filter((r) => r.margin && toUnits(r.margin) !== 0)
     .map((r) => `${r.year} ${signed(r.margin)}`);
-  const note = [
-    movedParts.length ? `Scostamento dalla baseline: ${movedParts.join(", ")}.` : "Nessuno scostamento dalla baseline.",
-    overflowYears.length
-      ? `Oltre la disponibilità nel ${overflowYears.join(", ")}.`
-      : marginParts.length
-        ? `Margine sulla disponibilità: ${marginParts.join(", ")}.`
-        : "Nessuna annualità oltre la disponibilità.",
-  ].join(" ");
+  // Il margine in cifre non sta nel grafico: su un asse da 15 milioni, 16.000 € sono una
+  // frazione di pixel. Si mostra come pastiglia accanto al titolo, che e' l'unico modo
+  // perche' si veda (DEC-132). Verde = margine residuo, rosso = oltre la disponibilita'.
+  const marginBadges = rows
+    .filter((r) => r.available && toUnits(r.available) !== toUnits(r.need))
+    .map((r) => ({
+      year: r.year,
+      over: overflowYears.includes(r.year),
+      text: signed(r.margin),
+    }));
+  const note = movedParts.length ? `Scostamento dalla baseline: ${movedParts.join(", ")}.` : "Nessuno scostamento dalla baseline.";
   return (
     <div>
       {/* Sempre i livelli, anche senza simulazione (DEC-128): il grafico degli scostamenti
           restava vuoto quando non c'erano scostamenti, e il cliente a schermo vedeva un
           numero al posto di un grafico. */}
-      <p className="chart-note muted">{note}</p>
+      <p className="chart-note">
+        <span className="muted">{note}</span>
+        {marginBadges.length ? (
+          marginBadges.map((m) => (
+            <span key={m.year} className={`badge ${m.over ? "badge-RED" : "badge-GREEN"}`}>
+              {m.over ? <OctagonAlert size={14} aria-hidden /> : <CircleCheck size={14} aria-hidden />}
+              {m.year}: {m.over ? "oltre la disponibilità" : "margine"} {m.text}
+            </span>
+          ))
+        ) : (
+          <span className="badge badge-NEUTRAL">
+            <CircleMinus size={14} aria-hidden />
+            Nessun margine né sforamento sulla disponibilità
+          </span>
+        )}
+      </p>
       <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} />
       <details>
         <summary>Tabella dei dati</summary>
