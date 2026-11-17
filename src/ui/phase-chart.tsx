@@ -47,11 +47,14 @@ export function PhaseChart({
   rows,
   aria,
   axisLabel = "avanzamento nel tempo",
+  axisLabelRight,
   divider,
 }: {
   rows: PhaseRow[];
   aria: string;
   axisLabel?: string;
+  /** Seconda etichetta d'asse, ancorata a destra: le due metà di un asse con un confine. */
+  axisLabelRight?: string;
   /** Riga verticale fra due colonne, con etichetta: segna un confine sull'asse del tempo. */
   divider?: { afterKey: string; label: string };
 }) {
@@ -138,6 +141,11 @@ export function PhaseChart({
       <text x={PAD.l} y={H - 18} className="ph-arrow-label">
         {axisLabel}
       </text>
+      {axisLabelRight ? (
+        <text x={W - PAD.r - 2} y={H - 18} textAnchor="end" className="ph-arrow-label">
+          {axisLabelRight}
+        </text>
+      ) : null}
     </svg>
   );
 }

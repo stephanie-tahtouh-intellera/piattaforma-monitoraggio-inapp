@@ -461,7 +461,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span><i style={{ background: "var(--health-red-solid)" }} />Scadenze già passate</span>
               <span><i style={{ background: "var(--chart-1)" }} />Ancora da scadere</span>
             </div>
-            <PhaseChart rows={deadlineBuckets} aria={deadlineAria} axisLabel="← in ritardo · in arrivo →" divider={{ afterKey: "late1", label: ref }} />
+            <PhaseChart rows={deadlineBuckets} aria={deadlineAria} axisLabel="← in ritardo" axisLabelRight="in arrivo →" divider={{ afterKey: "late1", label: ref }} />
             {dl.none > 0 ? (
               <p className="chart-note muted">
                 Restano fuori <Link href={qs({ status: "EXECUTION,CLOSING,CLOSED" })}>{dl.none} procedure senza una prossima scadenza obbligatoria</Link>, quasi tutte con il contratto già stipulato.
