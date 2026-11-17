@@ -428,3 +428,12 @@ Formato:
 - Verifica dei conteggi: 1+2+16+10 = 29, cioe' la scheda «Scadenze gia' passate»; 7+2+5 = 14 in arrivo; 29+14+48 = 91, cioe' le procedure non annullate.
 - Controlli: typecheck, guards, 67 test unitari, `axe` su 14 pagine senza violazioni serie o critiche.
 - Stato: attiva.
+
+### DEC-133 — Vista «solo il margine» con asse proprio, data di riferimento sull'asse dell'arretrato
+- Data: 2026-11-17 · Autore: agente, su richiesta del cliente («metti un filtro nel grafico, dove si puo scegliere di vedere solo il margine, e nel caso la scala dell'asse y si adatta al nuovo range»; «aggiungi la data di riferimento al centro dell'asse x con una tratta verticale»)
+- **Commutatore di vista sul «Fabbisogno per annualita'»**: due pastiglie, «Previsione per annualita'» e «Solo il margine». La scelta sta nell'indirizzo (`?annual=margine`), come tutti gli altri filtri: sopravvive al ricaricamento, si puo' mandare a qualcuno, e non serve JavaScript lato client.
+- La vista «solo il margine» ha **un asse calcolato sui soli margini**, non sui livelli: cio' che sul grafico della spesa era una frazione di pixel (16.000 € su un asse da 15 milioni) qui riempie tre quarti dell'altezza. L'asse e' divergente attorno allo zero, cosi' le annualita' oltre la disponibilita' scendono sotto la linea e si distinguono anche per colore (`--chart-overflow`) oltre che per verso. Quando nessuna annualita' ha margine ne' sforamento, al posto di un grafico vuoto compare la frase che lo dice.
+- **Data di riferimento sull'asse dell'arretrato**: riga verticale tratteggiata fra «fino a 30 gg» e «entro 7 gg», con la data sopra. Cade **fra** due colonne e non su una, perche' separa due intervalli: a sinistra cio' che e' gia' scaduto, a destra cio' che deve ancora scadere. `PhaseChart` accetta ora un `divider` e si allarga in alto quando c'e', per non tagliare l'etichetta.
+- Difetto minore corretto: `.chip` e' usata anche su `Link`, e senza `text-decoration: none` le pastiglie di filtro uscivano sottolineate.
+- Controlli: typecheck, guards, 67 test unitari, `axe` su 14 pagine senza violazioni serie o critiche.
+- Stato: attiva.

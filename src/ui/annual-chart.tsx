@@ -1,4 +1,5 @@
 import { CircleCheck, CircleMinus, OctagonAlert } from "lucide-react";
+import Link from "next/link";
 import { formatEuro } from "@/contracts/format";
 import { niceStep } from "@/ui/chart-scale";
 
@@ -13,6 +14,8 @@ interface Row {
   /** disponibilità − previsione, calcolato dal server */
   margin?: string | null;
 }
+
+export type AnnualView = "livelli" | "margine";
 
 // Solo geometria del grafico: la conversione in numero non entra in nessun calcolo d'importo (eccezione guards).
 const toUnits = (s: string | null | undefined) => (s ? Number.parseInt(s.split(".")[0] ?? "0", 10) : 0);
@@ -31,7 +34,19 @@ function barPath(x: number, y: number, w: number, h: number, roundTop: boolean) 
 }
 
 /** Scostamento dalla baseline e margine sulla disponibilità, per annualità (07 §6.7). */
-export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { rows: Row[]; title?: string }) {
+export function AnnualChart({
+  rows,
+  title = "Fabbisogno per annualità",
+  view = "livelli",
+  viewHref,
+}: {
+  rows: Row[];
+  title?: string;
+  /** Quale serie si guarda: i livelli di spesa o il solo margine sulla disponibilità. */
+  view?: AnnualView;
+  /** Indirizzo per cambiare vista, se la pagina ospite la vuole commutabile. */
+  viewHref?: (v: AnnualView) => string;
+}) {
   if (rows.length === 0) return <p className="muted">Dati non disponibili.</p>;
   const hasSimulation = rows.some((r) => r.simulated);
   const overflowYears = rows.filter((r) => r.available && toUnits(r.need) > toUnits(r.available)).map((r) => r.year);
@@ -56,6 +71,9 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
       text: signed(r.margin),
     }));
   const note = movedParts.length ? `Scostamento dalla baseline: ${movedParts.join(", ")}.` : "Nessuno scostamento dalla baseline.";
+  const marginAria = `Margine sulla disponibilità per annualità, cioè disponibilità meno previsione. ${
+    marginParts.length ? marginParts.join(", ") : "Nessun margine in nessuna annualità"
+  }. Dati in tabella sotto il grafico.`;
   return (
     <div>
       {/* Sempre i livelli, anche senza simulazione (DEC-128): il grafico degli scostamenti
@@ -77,7 +95,22 @@ export function AnnualChart({ rows, title = "Fabbisogno per annualità" }: { row
           </span>
         )}
       </p>
-      <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} />
+      {viewHref ? (
+        // Commutatore di vista (DEC-133): il margine su un asse da 15 milioni e'
+        // invisibile, su un asse suo si legge. Lo stato sta nell'indirizzo, come i filtri.
+        <div className="actions chart-views" role="group" aria-label="Cosa mostrare nel grafico">
+          {(["livelli", "margine"] as const).map((v) => (
+            <Link key={v} className={`chip ${view === v ? "chip-filter" : ""}`} href={viewHref(v)} aria-current={view === v ? "true" : undefined}>
+              {v === "livelli" ? "Previsione per annualità" : "Solo il margine"}
+            </Link>
+          ))}
+        </div>
+      ) : null}
+      {view === "margine" ? (
+        <MarginChart rows={rows} overflowYears={overflowYears} aria={marginAria} />
+      ) : (
+        <LevelsChart rows={rows} overflowYears={overflowYears} aria={aria} />
+      )}
       <details>
         <summary>Tabella dei dati</summary>
         <div className="table-wrap" style={{ marginTop: "var(--space-2)" }}>
@@ -226,6 +259,75 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
                 </text>
               ) : null}
               <text x={x0 + (series.length * (bw + 2)) / 2} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--chart-axis)">
+                {r.year}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
+
+/**
+ * Solo il margine sulla disponibilità (disponibilità − previsione), per annualità
+ * (DEC-133). Ha un asse proprio, calcolato sui soli margini: sul grafico dei livelli
+ * 16.000 € su 15 milioni sono una frazione di pixel, qui riempiono mezza altezza.
+ * Le barre scendono sotto lo zero quando la previsione supera la disponibilità.
+ */
+function MarginChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears: number[]; aria: string }) {
+  const vals = rows.map((r) => toUnits(r.margin));
+  const top = Math.max(0, ...vals);
+  const bottom = Math.min(0, ...vals);
+  if (top === 0 && bottom === 0) {
+    return <p className="muted">Nessuna annualità ha margine o sforamento sulla disponibilità: la previsione coincide con quanto è disponibile.</p>;
+  }
+  const step = niceStep(top - bottom, 4);
+  const hi = Math.ceil(top / step) * step;
+  const lo = Math.floor(bottom / step) * step;
+  const ticks: number[] = [];
+  for (let t = lo; t <= hi + step / 2; t += step) ticks.push(Math.round(t * 100) / 100);
+  const W = 1040;
+  const H = 260;
+  const pad = { l: 64, r: 12, b: 28, t: 10 };
+  const gw = (W - pad.l - pad.r) / rows.length;
+  const bw = Math.min(48, gw - 24);
+  const span = Math.max(hi - lo, 1);
+  const y = (v: number) => pad.t + ((hi - v) / span) * (H - pad.b - pad.t);
+  return (
+    <div>
+      <div className="legend" aria-hidden>
+        <span><i style={{ background: "var(--chart-7)" }} />Margine sulla disponibilità</span>
+        {overflowYears.length ? <span><i style={{ background: "var(--chart-overflow)" }} />Oltre la disponibilità</span> : null}
+      </div>
+      <p className="muted" style={{ margin: "4px 0", fontSize: 12 }}>Valori in €</p>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={aria} style={{ width: "100%", height: "auto", maxWidth: W }}>
+        {ticks.map((t) => (
+          <g key={t}>
+            <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--ds-color-border-strong)" : "var(--chart-grid)"} />
+            <text x={pad.l - 6} y={y(t) + 4} textAnchor="end" fontSize="12" fill="var(--chart-axis)">
+              {thousands.format(t)}
+            </text>
+          </g>
+        ))}
+        {rows.map((r, i) => {
+          const v = toUnits(r.margin);
+          const cx = pad.l + i * gw + gw / 2;
+          const over = overflowYears.includes(r.year);
+          const h = Math.abs(y(v) - y(0));
+          return (
+            <g key={r.year}>
+              {v !== 0 ? (
+                <path d={barPath(cx - bw / 2, v > 0 ? y(v) : y(0), bw, h, v > 0)} fill={over ? "var(--chart-overflow)" : "var(--chart-7)"}>
+                  <title>{`${r.year} — Margine ${signed(r.margin)} · Disponibilità ${formatEuro(r.available)} · Previsione ${formatEuro(r.need)}`}</title>
+                </path>
+              ) : null}
+              {v !== 0 ? (
+                <text x={cx} y={v > 0 ? y(v) - 6 : y(v) + 14} textAnchor="middle" fontSize="11" fill="var(--chart-axis)">
+                  {signed(r.margin)}
+                </text>
+              ) : null}
+              <text x={cx} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--chart-axis)">
                 {r.year}
               </text>
             </g>

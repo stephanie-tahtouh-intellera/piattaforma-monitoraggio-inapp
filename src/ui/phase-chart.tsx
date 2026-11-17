@@ -12,6 +12,8 @@ export interface PhaseRow {
 const W = 1040;
 const H = 300;
 const PAD = { l: 44, r: 12, t: 22, b: 76 };
+// Con il confine c'è un'etichetta sopra il grafico: serve aria per non tagliarla.
+const PAD_TOP_DIVIDER = 32;
 const LINE_H = 13;
 
 /** Spezza l'etichetta in righe che stiano nello spazio della colonna. */
@@ -41,18 +43,32 @@ function wrap(label: string, maxChars: number) {
  * il suo significato; la legenda e la tabella sotto lo dicono anche a parole, perché il
  * colore da solo non può portare un'informazione.
  */
-export function PhaseChart({ rows, aria, axisLabel = "avanzamento nel tempo" }: { rows: PhaseRow[]; aria: string; axisLabel?: string }) {
+export function PhaseChart({
+  rows,
+  aria,
+  axisLabel = "avanzamento nel tempo",
+  divider,
+}: {
+  rows: PhaseRow[];
+  aria: string;
+  axisLabel?: string;
+  /** Riga verticale fra due colonne, con etichetta: segna un confine sull'asse del tempo. */
+  divider?: { afterKey: string; label: string };
+}) {
   const data = rows.filter((r) => r.n > 0);
   if (data.length === 0) return <p className="muted">Nessuna procedura nel perimetro filtrato.</p>;
 
   const { ticks, hi } = ticksTo(Math.max(...data.map((r) => r.n)), 4);
+  const padTop = divider ? PAD_TOP_DIVIDER : PAD.t;
   const plotW = W - PAD.l - PAD.r;
-  const plotH = H - PAD.t - PAD.b;
-  const baseY = PAD.t + plotH;
+  const plotH = H - padTop - PAD.b;
+  const baseY = padTop + plotH;
   const slot = plotW / data.length;
   const bw = Math.min(64, slot - 22);
   const y = (v: number) => baseY - (v / hi) * plotH;
   const maxChars = Math.max(8, Math.floor(slot / 6.2));
+  const dividerIndex = divider ? data.findIndex((r) => r.status === divider.afterKey) : -1;
+  const dividerX = dividerIndex >= 0 && dividerIndex < data.length - 1 ? PAD.l + (dividerIndex + 1) * slot : null;
 
   return (
     // Niente role="img": le colonne sono link, e un contenitore dichiarato immagine
@@ -75,7 +91,7 @@ export function PhaseChart({ rows, aria, axisLabel = "avanzamento nel tempo" }: 
         const name = `${r.label}: ${r.n} procedure${r.late ? `, di cui ${r.late} in ritardo` : ""}`;
         const body = (
           <>
-            <rect x={PAD.l + i * slot} y={PAD.t} width={slot} height={plotH + 4} className="ph-hit" />
+            <rect x={PAD.l + i * slot} y={padTop} width={slot} height={plotH + 4} className="ph-hit" />
             {/* In cima il totale della fase, sotto la quota in ritardo: due rettangoli
                 impilati, non sovrapposti, così le altezze si sommano davvero. */}
             <rect x={x0} y={y(r.n)} width={bw} height={Math.max(hTot - hLate, 0)} rx={2} className="ph-fill" />
@@ -102,6 +118,16 @@ export function PhaseChart({ rows, aria, axisLabel = "avanzamento nel tempo" }: 
           </g>
         );
       })}
+      {/* Confine sull'asse: la data di riferimento fra il passato e il futuro (DEC-133).
+          Cade fra due colonne, non su una, perché separa due intervalli. */}
+      {dividerX !== null ? (
+        <g>
+          <line x1={dividerX} x2={dividerX} y1={padTop - 16} y2={baseY + 4} className="ph-divider" />
+          <text x={dividerX} y={padTop - 20} textAnchor="middle" className="ph-divider-label">
+            {divider!.label}
+          </text>
+        </g>
+      ) : null}
       {/* La freccia dichiara che l'asse è il tempo, non un semplice elenco di categorie */}
       <defs>
         <marker id="ph-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">

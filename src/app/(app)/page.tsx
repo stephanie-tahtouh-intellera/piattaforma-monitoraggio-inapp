@@ -4,7 +4,7 @@ import { executionModuleEnabled } from "@/application/modules";
 import { formatDateIt, formatDateTimeIt, formatEuro, formatEuroCompact, formatPercentIt } from "@/contracts/format";
 import { dashboard, financialKpiByType, garaKpiList } from "@/server/queries";
 import { db, pageActor, sp } from "@/server/page";
-import { AnnualChart } from "@/ui/annual-chart";
+import { AnnualChart, type AnnualView } from "@/ui/annual-chart";
 import { AutoSubmitSelect } from "@/ui/auto-submit";
 import { Deadline, Euro, HealthBadge, StatusChip } from "@/ui/badges";
 import { KPI_HELP } from "@/ui/kpi-help";
@@ -106,6 +106,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     if (tab !== "panoramica") u.set("tab", tab);
     for (const [key, v] of Object.entries(extra)) if (v) u.set(key, v);
     return `/portafoglio?${u.toString()}`;
+  };
+  // Vista del grafico del fabbisogno (DEC-133): livelli o solo margine. Sta nell'indirizzo
+  // come gli altri filtri, cosi' sopravvive al ricaricamento e si puo' condividere.
+  const annualView: AnnualView = sp(q.annual) === "margine" ? "margine" : "livelli";
+  const annualHref = (v: AnnualView) => {
+    const u = new URLSearchParams();
+    if (type) u.set("type", type);
+    if (structure) u.set("structure", structure);
+    u.set("tab", "finanza");
+    if (v !== "livelli") u.set("annual", v);
+    return `/?${u.toString()}`;
   };
   /** Link a una sezione della dashboard, conservando i filtri attivi. */
   const tabHref = (key: TabKey, keepFilters = true) => {
@@ -320,7 +331,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <h3>Fabbisogno per annualità</h3>
               <InfoChip text={KPI_HELP.annual} />
             </div>
-            <AnnualChart rows={data.annual} />
+            <AnnualChart rows={data.annual} view={annualView} viewHref={annualHref} />
           </div>
         </section>
       ) : null}
@@ -450,7 +461,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               <span><i style={{ background: "var(--health-red-solid)" }} />Scadenze già passate</span>
               <span><i style={{ background: "var(--chart-1)" }} />Ancora da scadere</span>
             </div>
-            <PhaseChart rows={deadlineBuckets} aria={deadlineAria} axisLabel="← in ritardo · data di riferimento · in arrivo →" />
+            <PhaseChart rows={deadlineBuckets} aria={deadlineAria} axisLabel="← in ritardo · in arrivo →" divider={{ afterKey: "late1", label: ref }} />
             {dl.none > 0 ? (
               <p className="chart-note muted">
                 Restano fuori <Link href={qs({ status: "EXECUTION,CLOSING,CLOSED" })}>{dl.none} procedure senza una prossima scadenza obbligatoria</Link>, quasi tutte con il contratto già stipulato.

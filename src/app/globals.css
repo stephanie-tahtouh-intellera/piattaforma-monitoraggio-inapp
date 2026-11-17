@@ -224,6 +224,8 @@ a.kpi-card:hover { border-color: var(--brand-blue); box-shadow: inset 0 0 0 1px 
 .sev-MEDIUM { color: var(--severity-medium-fg); background: var(--severity-medium-bg); border-color: var(--health-amber-border); }
 .sev-HIGH { color: var(--severity-high-fg); background: var(--severity-high-bg); border-color: var(--severity-high-border); }
 .sev-CRITICAL { color: var(--severity-critical-fg); background: var(--severity-critical-bg); border-color: var(--severity-critical-bg); }
+/* Usata anche su `Link`: senza questo i chip di filtro escono sottolineati. */
+a.chip { text-decoration: none; }
 .chip { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 2px 8px; border-radius: var(--ds-radius); background: var(--ds-color-bg-muted); color: var(--neutral-800); font-size: 13px; white-space: nowrap; }
 .chip-filter { border-radius: var(--ds-radius-full); background: var(--ds-color-bg-selected); color: var(--brand-navy); }
 .drivers { margin: var(--space-1) 0 0; padding-left: var(--space-4); font-size: 13px; color: var(--ds-color-text-secondary); }
@@ -295,6 +297,8 @@ table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity
 
 /* ---------- Istogramma a barre orizzontali (gare per tipo, DEC-121) ---------- */
 /* Riga di testo sopra un grafico: dice cio' che in scala sarebbe invisibile (DEC-129). */
+/* Commutatore di vista sopra un grafico (DEC-133). */
+.chart-views { margin-bottom: var(--space-3); }
 .chart-note { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0 0 var(--space-3); font-size: var(--ds-text-sm); }
 .card > .chart-note:last-child { margin: var(--space-2) 0 0; }
 
@@ -335,6 +339,8 @@ table.data td.empty svg { display: block; margin: 0 auto var(--space-2); opacity
 .phase-chart .ph-arrow { stroke: var(--ds-color-text-muted); stroke-width: 1; }
 .phase-chart .ph-arrowhead { fill: var(--ds-color-text-muted); }
 .phase-chart .ph-arrow-label { font-size: 11px; fill: var(--ds-color-text-muted); }
+.phase-chart .ph-divider { stroke: var(--ds-color-text-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.phase-chart .ph-divider-label { font-size: 11px; font-weight: 600; fill: var(--ds-color-text-secondary); }
 
 /* ---------- Grafico a barre orizzontali (07 6.7) ---------- */
 /* Orizzontale e non a colonne: le etichette sono frasi italiane lunghe, che sotto una
