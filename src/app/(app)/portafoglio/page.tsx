@@ -32,9 +32,19 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   const structures = (await d.prepare("SELECT DISTINCT s.code, s.name FROM structures s JOIN procedures p ON p.structure_code = s.code ORDER BY s.name").all()) as { code: string; name: string }[];
   const projects = (await d.prepare("SELECT code, name FROM projects ORDER BY code").all()) as { code: string; name: string }[];
   const years = ((await d.prepare("SELECT DISTINCT year FROM procedure_snapshot_year ORDER BY year").all()) as { year: number }[]).map((x) => x.year);
+  // Sezione della dashboard da cui si arriva (DEC-131): si conserva nei link di
+  // ordinamento e paginazione, cosi' «Torna alla dashboard» riporta dov'era l'utente
+  // anche dopo aver girato per il portafoglio. Le esportazioni la ignorano.
+  const fromTab = sp(q.tab);
+  const backToDashboard = `/?${new URLSearchParams({
+    ...(f.type ? { type: f.type } : {}),
+    ...(f.structure ? { structure: f.structure } : {}),
+    ...(fromTab ? { tab: fromTab } : {}),
+  }).toString()}`;
   const qs = (patch: Record<string, string | undefined>) => {
     const u = new URLSearchParams();
     for (const [k, v] of Object.entries({ ...f, ...patch })) if (v !== undefined && v !== "" && !(k === "page" && v === 1)) u.set(k, String(v));
+    if (fromTab) u.set("tab", fromTab);
     return `/portafoglio?${u.toString()}`;
   };
   const active = (["health", "status", "structure", "type", "project", "year", "reschedule", "alerts", "q"] as const).filter((k) => f[k]);
@@ -76,7 +86,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <nav className="breadcrumb" aria-label="Percorso">
-        <Link href="/">Dashboard</Link> › <span aria-current="page">Portafoglio</span>
+        <Link href={backToDashboard}>Dashboard</Link> › <span aria-current="page">Portafoglio</span>
       </nav>
       <div className="page-head">
         <div>
@@ -84,10 +94,7 @@ export default async function PortfolioPage({ searchParams }: { searchParams: Pr
           <div className="page-meta">Filtri e ordinamento lato server; lo stato dei filtri è nell'indirizzo della pagina.</div>
         </div>
         <div className="actions">
-          <Link
-            className="btn btn-secondary btn-sm"
-            href={`/?${new URLSearchParams({ ...(f.type ? { type: f.type } : {}), ...(f.structure ? { structure: f.structure } : {}) }).toString()}`}
-          >
+          <Link className="btn btn-secondary btn-sm" href={backToDashboard}>
             ← Torna alla dashboard
           </Link>
           {can(actor, "export") || actor.role === "STRUCTURE_USER" ? (

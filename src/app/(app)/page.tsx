@@ -101,6 +101,9 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     const u = new URLSearchParams();
     if (type) u.set("type", type);
     if (structure) u.set("structure", structure);
+    // Da quale sezione si e' usciti (DEC-131): il portafoglio la rimanda indietro con
+    // «Torna alla dashboard», che altrimenti riportava sempre a Panoramica.
+    if (tab !== "panoramica") u.set("tab", tab);
     for (const [key, v] of Object.entries(extra)) if (v) u.set(key, v);
     return `/portafoglio?${u.toString()}`;
   };
@@ -399,7 +402,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <div className="page-head" style={{ marginBottom: 8 }}>
             <div>
               <h2 id="h-attenzione">Richiede attenzione</h2>
-              <p className="page-meta">{KPI_HELP.attention}</p>
+              {/* Dice in che cosa questa sezione differisce dal Centro alert (DEC-131):
+                  li' si lavorano gli alert uno per uno, qui si guardano le procedure. */}
+              <p className="page-meta">
+                Quanto il portafoglio è fuori tempo e quanto vale. Il <Link href="/alert">Centro alert</Link> elenca i singoli alert da prendere in carico; qui si guardano le procedure.
+              </p>
             </div>
             <div className="actions">
               <Link className="btn btn-secondary btn-sm" href={qs({ health: "RED" })}>
@@ -413,7 +420,19 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               </Link>
             </div>
           </div>
-          <div className="card">
+          <div className="grid kpi-grid" style={{ marginTop: 8 }}>
+            <Kpi label="Scadenze già passate" value={k.proceduresLate} sub={k.maxLateDays === null ? "nessun ritardo" : `la più indietro di ${k.maxLateDays} giorni`} href={qs({ sort: "deadline", dir: "asc" })} aria={`Scadenze già passate: ${k.proceduresLate}`} help={KPI_HELP.overdue} />
+            <Kpi label="In scadenza entro 7 giorni" value={k.dueIn7} sub={`${k.dueIn30} entro 30 giorni`} href={qs({ sort: "deadline", dir: "asc" })} aria={`In scadenza entro 7 giorni: ${k.dueIn7}`} help={KPI_HELP.dueSoon} />
+            <Kpi label="Procedure rosse" value={health.RED} sub={`${formatEuroCompact(k.redProgrammed)} programmati`} href={qs({ health: "RED" })} aria={`Procedure rosse: ${health.RED}, ${formatEuro(k.redProgrammed)} programmati`} help={KPI_HELP.red} />
+            <Kpi label="Da riprogrammare" value={k.toReschedule} sub="milestone bloccante oltre T+1" href={qs({ reschedule: "1" })} aria={`Procedure da riprogrammare: ${k.toReschedule}`} help={KPI_HELP.toReschedule} />
+            {riskKpi}
+            <Kpi label="Anomalie di dato" value={k.openAnomalies} sub="aperte, non correggono i dati" href="/alert?kind=ANOMALY" aria={`Anomalie di dato aperte: ${k.openAnomalies}`} help={KPI_HELP.anomalies} />
+          </div>
+          <div className="card dash-below">
+            <div className="card-head">
+              <h3>Le cinque più urgenti</h3>
+              <InfoChip text={KPI_HELP.attention} />
+            </div>
             <div className="table-wrap">
               <table className="data compact">
                 <caption className="sr-only">Procedure rosse e gialle ordinate per severità</caption>
@@ -424,7 +443,6 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                     <th scope="col">Fase</th>
                     <th scope="col">Health</th>
                     <th scope="col">Prossima scadenza</th>
-                    <th scope="col" className="num">Programmato</th>
                     <th scope="col" className="num">A rischio</th>
                   </tr>
                 </thead>
@@ -440,12 +458,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
                       <td><StatusChip value={p.status} /></td>
                       <td><HealthBadge value={p.health} drivers={p.healthDrivers} /></td>
                       <td><Deadline d={p.nextDeadline} compact /></td>
-                      <td className="num"><Euro v={p.programmed} /></td>
                       <td className="num"><Euro v={p.atRisk} /></td>
                     </tr>
                   ))}
                   {data.attention.length === 0 ? (
-                    <tr><td colSpan={7} className="empty"><Inbox size={24} aria-hidden />Nessuna procedura richiede attenzione.</td></tr>
+                    <tr><td colSpan={6} className="empty"><Inbox size={24} aria-hidden />Nessuna procedura richiede attenzione.</td></tr>
                   ) : null}
                 </tbody>
               </table>

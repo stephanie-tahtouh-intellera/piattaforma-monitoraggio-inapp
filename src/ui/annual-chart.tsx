@@ -176,9 +176,35 @@ function LevelsChart({ rows, overflowYears, aria }: { rows: Row[]; overflowYears
                   tratteggiata appoggiata sulla cima della barra in ogni anno faceva leggere
                   al grafico un'unica informazione, «sono uguali», che sta gia' nella nota. */}
               {r.available && toUnits(r.available) !== toUnits(r.need) ? (
-                <line x1={x0 - 4} x2={x0 + series.length * (bw + 2) + 2} y1={y(toUnits(r.available))} y2={y(toUnits(r.available))} stroke={overflowYears.includes(r.year) ? "var(--chart-overflow)" : "var(--chart-availability)"} strokeWidth="2" strokeDasharray="5 3">
-                  <title>{`${r.year} — Disponibilità ${formatEuro(r.available)}`}</title>
-                </line>
+                <g>
+                  {/* Bersaglio invisibile alto 14px: la linea e' spessa 3px e da sola
+                      sarebbe quasi impossibile da centrare con il puntatore. */}
+                  <line
+                    x1={x0 - 10}
+                    x2={x0 + series.length * (bw + 2) + 8}
+                    y1={y(toUnits(r.available))}
+                    y2={y(toUnits(r.available))}
+                    stroke="transparent"
+                    strokeWidth="14"
+                  >
+                    <title>{`${r.year} — Disponibilità ${formatEuro(r.available)} · Previsione ${formatEuro(r.need)} · Margine ${signed(r.margin)}`}</title>
+                  </line>
+                  <line
+                    x1={x0 - 6}
+                    x2={x0 + series.length * (bw + 2) + 4}
+                    y1={y(toUnits(r.available))}
+                    y2={y(toUnits(r.available))}
+                    stroke={overflowYears.includes(r.year) ? "var(--chart-overflow)" : "var(--chart-availability)"}
+                    strokeWidth="3"
+                    strokeDasharray="6 3"
+                    pointerEvents="none"
+                  />
+                </g>
+              ) : null}
+              {r.margin && toUnits(r.margin) !== 0 ? (
+                <text x={x0 + series.length * (bw + 2) + 10} y={y(toUnits(r.available)) - 6} fontSize="11" fill="var(--chart-axis)">
+                  {signed(r.margin)}
+                </text>
               ) : null}
               <text x={x0 + (series.length * (bw + 2)) / 2} y={H - 8} textAnchor="middle" fontSize="12" fill="var(--chart-axis)">
                 {r.year}

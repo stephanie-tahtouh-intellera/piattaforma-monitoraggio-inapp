@@ -158,7 +158,12 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
          SUM(s.at_risk_cents) AS at_risk, SUM(s.uncovered_cents) AS uncovered, SUM(s.slipping_cents) AS slipping,
          SUM(CASE WHEN s.health='GREEN' THEN 1 ELSE 0 END) AS green, SUM(CASE WHEN s.health='AMBER' THEN 1 ELSE 0 END) AS amber,
          SUM(CASE WHEN s.health='RED' THEN 1 ELSE 0 END) AS red, SUM(CASE WHEN s.health='NEUTRAL' THEN 1 ELSE 0 END) AS neutral,
-         SUM(s.open_anomalies) AS anomalies, MAX(s.updated_at) AS updated_at, MAX(s.reference_date) AS reference_date
+         SUM(s.open_anomalies) AS anomalies, MAX(s.updated_at) AS updated_at, MAX(s.reference_date) AS reference_date,
+         -- Scadenze in arrivo e ritardo massimo, per la sezione «Richiede attenzione» (DEC-131).
+         SUM(CASE WHEN s.late = 0 AND s.days_until BETWEEN 0 AND 7 THEN 1 ELSE 0 END) AS due_7,
+         SUM(CASE WHEN s.late = 0 AND s.days_until BETWEEN 0 AND 30 THEN 1 ELSE 0 END) AS due_30,
+         MAX(CASE WHEN s.late = 1 THEN -s.days_until END) AS max_late_days,
+         SUM(CASE WHEN s.health = 'RED' THEN s.programmed_cents ELSE 0 END) AS red_programmed
        FROM procedures p JOIN procedure_snapshot s ON s.procedure_id = p.id WHERE ${w}`,
     )
     .get(...params)) as Record<string, any>;
@@ -262,6 +267,10 @@ export async function dashboard(db: Db, actor: Actor, f: { structure?: string; y
       toReschedule: k.to_reschedule ?? 0,
       criticalAlerts: k.critical_alerts ?? 0,
       openAnomalies: k.anomalies ?? 0,
+      dueIn7: k.due_7 ?? 0,
+      dueIn30: k.due_30 ?? 0,
+      maxLateDays: k.max_late_days === null || k.max_late_days === undefined ? null : Number(k.max_late_days),
+      redProgrammed: money(k.red_programmed ?? 0),
       reprogramRequests,
       programmed: money(k.programmed ?? 0),
       contracted: money(k.contracted ?? 0),
