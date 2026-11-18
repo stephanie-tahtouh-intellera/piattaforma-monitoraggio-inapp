@@ -111,7 +111,7 @@ const PROCESS: Tour = {
       title: "2 · Il fornitore carica i documenti",
       expect: "OPERATOR_DOCUMENTS",
       body: "Il fornitore vede solo le pratiche in cui è operatore e solo i passi della propria corsia. Nel passo in corso, nello stesso riquadro, carica i documenti per la verifica dei requisiti (DGUE, DURC, dichiarazioni): PDF o ZIP, controllati per tipo, firma del contenuto e dimensione.",
-      tryIt: "Scegli un PDF qualsiasi e premi il pulsante di caricamento: il documento compare nel fascicolo e nell'elenco dei documenti attesi.",
+      tryIt: "Per BZ-001 i documenti dell'operatore sono già nel fascicolo: il riquadro lo dice accanto al tipo atteso, e il collegamento porta al fascicolo. Se vuoi provare il caricamento scegli un PDF qualsiasi e premi il pulsante: il nuovo documento si aggiunge agli altri.",
     },
     {
       path: ITER, target: PASSO, role: "SUPPLIER", stage: 2,

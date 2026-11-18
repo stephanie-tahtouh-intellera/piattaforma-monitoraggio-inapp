@@ -492,3 +492,13 @@ Formato:
 - E' l'unico punto del codice con questo schema: nessun altro componente dell'interfaccia lancia chiamate in un effetto con attesa.
 - Controlli: typecheck, guards, 72 test unitari, riproduzione in browser prima e dopo.
 - Stato: attiva.
+
+### DEC-140 — Il passo in corso dice quali documenti attesi sono già nel fascicolo
+- Data: 2026-11-18 · Autore: agente, su richiesta del cliente («a questo punto qua voglio che ci siano documenti già caricati, come nel step 2»)
+- **I documenti c'erano già, ma il riquadro non li guardava.** BZ-001 ha nel fascicolo, dal seed dei casi dimostrativi (DEC-105), anche i «Documenti dell'operatore» caricati da `fornitore.alfa`. Il pannello del passo in corso elencava però solo i *tipi* attesi («Documenti attesi: Documenti dell'operatore») senza mai confrontarli con il fascicolo: al passo del fornitore sembrava che non ci fosse niente.
+- **Correzione**: il riquadro mostra ora ogni documento atteso con il suo stato — «già nel fascicolo» o «da caricare» — come fa da sempre la consegna della memoria, più il collegamento al fascicolo quando qualcosa c'è. Il titolo del riquadro diventa «Documenti attesi» quando sono tutti presenti, perché «Carica i documenti» contraddirebbe l'elenco sotto. Il caricamento resta disponibile in ogni caso.
+- Vale per tutti i passi con documenti attesi e per tutte le corsie, non solo per il fornitore.
+- Aggiornata la prova guidata del passo 7, che invitava a caricare un PDF «per vederlo comparire»: ora dice che per BZ-001 i documenti ci sono già e che il caricamento serve ad aggiungerne altri.
+- Verificato in browser come fornitore su due procedure allo stesso passo: BZ-001, che il documento ce l'ha, e CD-04, che non ce l'ha.
+- Controlli: typecheck, guards, 72 test unitari, `axe` su 14 pagine.
+- Stato: attiva.

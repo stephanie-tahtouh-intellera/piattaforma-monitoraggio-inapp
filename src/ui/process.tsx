@@ -216,6 +216,9 @@ export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boo
   if (!s) {
     return <div className="step-panel done" data-tour="passo" data-step-code="DONE" data-step-label="Contratto stipulato">Tutti i passi del Modulo 1 sono completati: il contratto è stipulato.</div>;
   }
+  const presenti = new Set((d.documents as { doc_type: string | null }[]).map((x) => x.doc_type).filter((t): t is string => !!t));
+  const attesiPresenti = s.expectedDocuments.some((x) => presenti.has(x.type));
+  const tuttiPresenti = s.expectedDocuments.length > 0 && s.expectedDocuments.every((x) => presenti.has(x.type));
   return (
     <div className="step-panel" id="passo" data-tour="passo" data-step-code={s.code} data-step-label={s.label}>
       <h3>
@@ -228,9 +231,26 @@ export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boo
       </p>
       {s.canComplete && canUpload && s.expectedDocuments.length ? (
         <div className="step-upload" data-tour="upload-passo">
-          <h4>1. Carica i documenti</h4>
+          {/* Con tutto gia' nel fascicolo «Carica i documenti» contraddirebbe l'elenco sotto. */}
+          <h4>{tuttiPresenti ? "1. Documenti attesi" : "1. Carica i documenti"}</h4>
+          {/* Come nella consegna della memoria (DEC-140): ogni documento atteso dice se
+              e' gia' nel fascicolo o se manca. Prima il riquadro elencava i tipi attesi
+              senza mai guardare il fascicolo, e un documento gia' caricato non si vedeva. */}
+          <ul>
+            {s.expectedDocuments.map((x) => (
+              <li key={x.type}>
+                {DOC_TYPE_LABEL[x.type] ?? humanize(x.type)}:{" "}
+                {presenti.has(x.type) ? <span className="badge badge-GREEN">già nel fascicolo</span> : <span className="badge badge-AMBER">da caricare</span>}
+              </li>
+            ))}
+          </ul>
           <p className="small muted">
-            Documenti attesi: {s.expectedDocuments.map((x) => DOC_TYPE_LABEL[x.type] ?? humanize(x.type)).join(", ")}. I file sono controllati per tipo, firma del contenuto e dimensione.
+            {attesiPresenti ? (
+              <>
+                <Link href={`/procedure/${d.procedure.code}?tab=documents`}>Vedi i documenti nel fascicolo</Link>. Puoi caricarne altri.{" "}
+              </>
+            ) : null}
+            I file sono controllati per tipo, firma del contenuto e dimensione.
           </p>
           <UploadForm key={s.code} code={d.procedure.code} />
         </div>
