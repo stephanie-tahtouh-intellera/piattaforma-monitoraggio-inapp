@@ -58,7 +58,13 @@ function needsReturningId(sql: string): boolean {
  * come parametro) in placeholder posizionali Postgres (`$1, $2, ...`), ignorando i `?`/`@` dentro
  * stringhe letterali (DEC-115). Non tocca i call site esistenti in `src/`.
  */
-function toPgSql(sql: string, params: unknown[]): { text: string; values: unknown[] } {
+/**
+ * Converte i segnaposto `?`/`@nome` in `$n`. Salta le stringhe letterali e **anche i
+ * commenti** (DEC-136): un apostrofo dentro un commento — «l'importo» — faceva credere
+ * al convertitore di essere dentro una stringa, e da li' in poi i `?` restavano `?`,
+ * con un errore di sintassi di Postgres a distanza di righe dalla causa.
+ */
+export function toPgSql(sql: string, params: unknown[]): { text: string; values: unknown[] } {
   const named = params.length === 1 && params[0] !== null && typeof params[0] === "object" && !Array.isArray(params[0]);
   const obj = named ? (params[0] as Record<string, unknown>) : undefined;
   const values: unknown[] = [];
@@ -67,6 +73,20 @@ function toPgSql(sql: string, params: unknown[]): { text: string; values: unknow
   let i = 0;
   while (i < sql.length) {
     const ch = sql[i]!;
+    if (!inString && ch === "-" && sql[i + 1] === "-") {
+      const end = sql.indexOf("\n", i);
+      const stop = end === -1 ? sql.length : end;
+      out += sql.slice(i, stop);
+      i = stop;
+      continue;
+    }
+    if (!inString && ch === "/" && sql[i + 1] === "*") {
+      const end = sql.indexOf("*/", i + 2);
+      const stop = end === -1 ? sql.length : end + 2;
+      out += sql.slice(i, stop);
+      i = stop;
+      continue;
+    }
     if (ch === "'") {
       inString = !inString;
       out += ch;

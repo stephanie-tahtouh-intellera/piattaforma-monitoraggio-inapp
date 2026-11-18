@@ -456,3 +456,13 @@ Formato:
 - **Correzione a DEC-134**: gli alert notificati al Direttore Generale sono sei, non dodici (il conteggio corretto e' `COUNT(DISTINCT alert_id)` su `alert_notifications` per quell'utente).
 - Controlli: typecheck, guards, 67 test unitari, `axe` su 14 pagine senza violazioni serie o critiche.
 - Stato: attiva.
+
+### DEC-136 — Un apostrofo dentro un commento SQL spegneva i filtri della dashboard
+- Data: 2026-11-18 · Autore: agente, su segnalazione del cliente (`syntax error at or near "GROUP"`)
+- **Sintomo**: la dashboard con un filtro per struttura o per tipologia rispondeva 500; senza filtri funzionava. Il messaggio di Postgres indicava una `GROUP BY` lontana dalla causa vera.
+- **Causa**: `toPgSql` (`src/infrastructure/db/connection.ts`) converte i segnaposto `?` in `$n` saltando le stringhe letterali, e riconosceva le stringhe contando gli apici. Non sapeva nulla dei commenti SQL. Il commento aggiunto in DEC-132 alla query `byStatus` conteneva la parola «l'importo»: quell'apostrofo apriva una stringa che non esisteva, e da li' in poi i `?` non venivano piu' convertiti. Senza filtri la clausola di perimetro non ha segnaposto, quindi il difetto non si vedeva.
+- **Correzione**: `toPgSql` salta ora i commenti di riga (`--`) e a blocco (`/* */`) prima di valutare gli apici. La funzione e' esportata e coperta da cinque test unitari, fra cui proprio il commento con l'apostrofo.
+- **Portata**: introdotto il 2026-11-17 con DEC-132, quindi presente anche sull'ambiente pubblicato per sei commit. Riguardava solo i filtri della dashboard (`?structure=`, `?type=`): le altre pagine non hanno commenti SQL con apostrofi.
+- **Lezione**: il difetto e' passato perche' nessun test automatico apre la dashboard con un filtro, e il server di sviluppo in locale era fermo da due giorni e serviva codice vecchio. Vale la pena una verifica end-to-end che percorra la dashboard filtrata.
+- Controlli: typecheck, guards, 72 test unitari, le diciassette pagine filtrate tornano 200.
+- Stato: attiva.
