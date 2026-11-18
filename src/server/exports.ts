@@ -113,7 +113,7 @@ export async function procedurePdf(db: Db, actor: Actor, code: string) {
     if (cur) flush();
   };
   page.drawRectangle({ x: 0, y: 812, width: 595, height: 30, color: rgb(1, 0.827, 0.38) });
-  page.drawText("AMBIENTE DEMO - prototipo dimostrativo, non e' un documento ufficiale INAPP", { x: 48, y: 823, size: 9, font: bold });
+  page.drawText("AMBIENTE DEMO - prototipo dimostrativo, non è un documento ufficiale INAPP", { x: 48, y: 823, size: 9, font: bold });
   y = 790;
   line(`${d.procedure.code} - ${d.procedure.title}`, { size: 14, b: true, color: navy });
   line(`Report generato da ${actor.login} - dati al ${formatDateIt(d.referenceDate)}`, { size: 9 });
@@ -135,7 +135,7 @@ export async function procedurePdf(db: Db, actor: Actor, code: string) {
   line("Cronoprogramma (baseline / previsione / effettivo)", { b: true, color: navy });
   for (const m of d.timeline) line(`${m.label}: ${formatDateIt(m.baseline)} / ${formatDateIt(m.forecast)} / ${m.actual ? formatDateIt(m.actual) : "-"}  [${m.state}]`, { size: 9 });
   y -= 6;
-  line("Annualita (fabbisogno / disponibilita)", { b: true, color: navy });
+  line("Annualità (fabbisogno / disponibilità)", { b: true, color: navy });
   for (const yy of ev.years) line(`${yy.year}: ${formatEuro(yy.need)} / ${yy.available === null ? "n.d." : formatEuro(yy.available)}`, { size: 9 });
   if (d.sals.length) {
     y -= 6;
