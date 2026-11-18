@@ -482,3 +482,13 @@ Formato:
 - **Causa**: negli script e nei commenti scrivo gli accenti come apostrofi per evitare problemi di codifica sul terminale Windows; due volte quella forma e' finita in stringhe che si leggono a schermo. Il guard toglie di mezzo la disciplina personale.
 - Controlli: typecheck, guards, 72 test unitari, generazione del PDF.
 - Stato: attiva.
+
+### DEC-139 — L'anteprima del quadro economico mostrava un valore gia' superato
+- Data: 2026-11-18 · Autore: agente, su segnalazione del cliente («nella sezione a destra in alto l'importo non è quello inserito nel campo»)
+- **Sintomo**: nel modulo «Nuova procedura in bozza» il campo «Base di gara» diceva 70.000,00 € e il riquadro «Importo a disposizione della struttura» 70,00 €, con IVA e totale coerenti con il valore sbagliato.
+- **Causa**: una corsa fra le chiamate. L'anteprima e' calcolata dal server a ogni modifica del campo, con 250 ms di attesa; l'attesa annullava il *timer* ma non la chiamata gia' partita, e nessuno controllava se la risposta fosse ancora attuale. Con la rete lenta la risposta di un valore intermedio («7», «70») poteva arrivare **dopo** quella del valore finale e restare a schermo. Non era un errore di calcolo ne' di conversione dell'importo: il server aveva risposto correttamente a ogni singola domanda.
+- **Correzione**: la funzione di pulizia dell'effetto marca la chiamata come superata, e la risposta che torna per un valore non piu' attuale viene scartata.
+- **Verificato in entrambi i versi** con un test che ritarda di tre secondi le risposte dei valori intermedi e lascia passare subito quella finale: senza la correzione il riquadro mostra 7.000,00 € mentre il campo dice 70.000,00 €; con la correzione i due coincidono.
+- E' l'unico punto del codice con questo schema: nessun altro componente dell'interfaccia lancia chiamate in un effetto con attesa.
+- Controlli: typecheck, guards, 72 test unitari, riproduzione in browser prima e dopo.
+- Stato: attiva.

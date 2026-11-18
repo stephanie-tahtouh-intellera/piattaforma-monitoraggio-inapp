@@ -39,6 +39,11 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
       setFrameErr(null);
       return;
     }
+    // La risposta vale solo se i dati non sono cambiati nel frattempo (DEC-139): il
+    // ritardo di rete non e' uguale per tutte le chiamate, e senza questa guardia la
+    // risposta di un valore intermedio («70») poteva arrivare dopo quella del valore
+    // finale («70.000,00») e restare a schermo.
+    let superata = false;
     const t = setTimeout(async () => {
       try {
         const r = await api<Frame>("/api/procedures/economic-frame", "POST", {
@@ -48,14 +53,19 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
           incentives_decision: f.incentivesDecision,
           ...(f.incentivesDecision === "YES" && validPct ? { incentive_pct: f.incentivePct.replace(",", ".") } : {}),
         });
+        if (superata) return;
         setFrame(r);
         setFrameErr(null);
       } catch (e) {
+        if (superata) return;
         setFrame(null);
         setFrameErr(e instanceof Error ? e.message : "Errore");
       }
     }, 250);
-    return () => clearTimeout(t);
+    return () => {
+      superata = true;
+      clearTimeout(t);
+    };
   }, [f.base, f.vat, f.anac, f.incentivesDecision, f.incentivePct]);
 
   async function submit(e: React.FormEvent) {
