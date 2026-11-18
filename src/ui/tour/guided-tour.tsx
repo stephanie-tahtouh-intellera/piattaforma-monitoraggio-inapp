@@ -90,6 +90,14 @@ export function GuidedTour({ role, roleLabel, roleLabels }: { role: Role; roleLa
     return () => window.clearInterval(t);
   }, [step, here, pathname, params]);
 
+  // Il pannello e' fisso in basso a destra e copriva il riquadro riepilogativo delle
+  // pagine che ne hanno uno (DEC-137). Con la guida aperta la pagina gli lascia posto.
+  useEffect(() => {
+    const open = ready && st.mode !== "closed";
+    document.body.classList.toggle("tour-open", open);
+    return () => document.body.classList.remove("tour-open");
+  }, [ready, st.mode]);
+
   useEffect(() => {
     if (focusNext.current) headRef.current?.focus({ preventScroll: true });
     focusNext.current = false;

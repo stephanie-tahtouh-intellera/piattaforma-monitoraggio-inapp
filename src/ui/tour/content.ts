@@ -70,13 +70,13 @@ const PROCESS: Tour = {
       path: "/procedure/nuova", target: "main section.card", role: "STRUCTURE_USER", stage: 0,
       title: "0 · Piano: creazione della bozza",
       body: "Si parte dalla bozza: la Struttura inserisce oggetto, tipologia, data obiettivo della memoria e quadro economico (base di gara, IVA, tassa gara e riparto per annualità). Sotto «Tassa gara» indica se sono previsti incentivi per funzioni tecniche: Sì, No o Da verificare; con Sì inserisce la percentuale, mentre l'importo è calcolato sulla base di gara al netto dell'IVA. Il riparto deve coincidere con l'importo a disposizione della struttura. La baseline si congela solo alla consegna della memoria.",
-      tryIt: "Scegli il progetto (Operazione / Attività), compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, incentivi «Da verificare», riparto 2026/2027) e crea la bozza. Poi prosegui con la bozza BZ-001 già presente nel piano.",
+      tryIt: "Scegli il progetto (Operazione / Attività), compila il modulo (es. «Rinnovo licenze e supporto della piattaforma di business intelligence», base di gara 70.000,00 € + IVA 22%, incentivi «Da verificare», riparto 25.620,00 € sul 2026 e 59.780,00 € sul 2027) e crea la bozza. Le due quote insieme fanno 85.400,00 €, cioe' l'importo a disposizione della struttura calcolato nel riquadro accanto: se non coincidono il modulo non accetta la bozza. Per metterlo tutto su un anno solo c'e' «Assegna tutto il totale a». Poi prosegui con la bozza BZ-001 già presente nel piano.",
       can: ["Creare altre bozze con «Nuova procedura in bozza» (in alto a destra, anche da Dashboard e Portafoglio)"],
     },
     {
       path: "/procedure/BZ-001", target: ".phase-bar", role: "STRUCTURE_USER", stage: 0,
       title: "0 · La bozza nel piano di programmazione",
-      body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto 2026/2027 e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
+      body: "BZ-001 è nel piano della Struttura Sistemi informativi come bozza: oggetto, importo previsto (85.400,00 € IVA inclusa), riparto su due annualita' (25.620,00 € nel 2026 e 59.780,00 € nel 2027) e data obiettivo della memoria. La barra in alto mostra le fasi del Modulo 1; qui siamo alla fase 0.",
     },
     {
       path: "/procedure/BZ-001", target: "[data-tour='memoria']", role: "STRUCTURE_USER", stage: 1,

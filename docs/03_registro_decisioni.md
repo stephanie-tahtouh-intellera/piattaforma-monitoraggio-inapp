@@ -466,3 +466,10 @@ Formato:
 - **Lezione**: il difetto e' passato perche' nessun test automatico apre la dashboard con un filtro, e il server di sviluppo in locale era fermo da due giorni e serviva codice vecchio. Vale la pena una verifica end-to-end che percorra la dashboard filtrata.
 - Controlli: typecheck, guards, 72 test unitari, le diciassette pagine filtrate tornano 200.
 - Stato: attiva.
+
+### DEC-137 — La guida non copre piu' la pagina, e il riparto della prova e' in cifre
+- Data: 2026-11-18 · Autore: agente, su riscontro del cliente («la card demo nasconde la card Importo a disposizione della struttura»; «la demo dice riparto 2026/2027 ma questa cosa non e' chiara»)
+- **Il pannello della guida copriva il riquadro riepilogativo.** E' fisso in basso a destra e largo 400px, e nelle pagine con una colonna di riepilogo — «Nuova procedura in bozza», il quadro economico — ci finiva sopra. Con la guida aperta la pagina gli lascia posto: `body.tour-open main` guadagna un `padding-right` pari alla larghezza del pannello, sopra i 1200px di viewport (sotto, il pannello e' quasi a tutta larghezza e la pagina ci scorre sotto come prima). Misurato con Playwright a 1366, 1920, 2200 e 2560px: senza la correzione il riquadro e il pannello si sovrappongono in orizzontale a 1366 e 1920; con la correzione non si sovrappongono a nessuna larghezza, e non compare scorrimento orizzontale.
+- **«Riparto 2026/2027» non diceva cosa scrivere.** Il modulo chiede due importi e rifiuta la bozza se la loro somma non coincide con l'importo a disposizione, ma la guida non diceva ne' le cifre ne' il vincolo. Ora indica le due quote di BZ-001 — 25.620,00 € sul 2026 e 59.780,00 € sul 2027 — dice che insieme fanno gli 85.400,00 € del riquadro accanto, e segnala la scorciatoia «Assegna tutto il totale a» per chi vuole una sola annualita'. Stessa precisazione nel passo successivo, che descriveva BZ-001 con la stessa formula.
+- Controlli: typecheck, guards, 72 test unitari, prova in browser a quattro larghezze.
+- Stato: attiva.

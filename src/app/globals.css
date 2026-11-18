@@ -527,6 +527,12 @@ pre.iter { white-space: pre-wrap; background: var(--neutral-25); border: 1px sol
 .tour-sections dt { font-weight: var(--ds-font-weight-semibold); }
 .tour-sections dd { margin: 0; color: var(--ds-color-text-secondary); }
 .tour-nav { display: flex; gap: 8px; justify-content: space-between; padding: 10px 16px; border-top: 1px solid var(--ds-color-border); }
+/* Con la guida aperta la pagina si restringe di quanto occupa il pannello (DEC-137):
+   prima il riquadro riepilogativo delle pagine finiva sotto al pannello e non si leggeva.
+   Sotto i 1200px il pannello e' quasi a tutta larghezza e la pagina ci scorre sotto. */
+@media (min-width: 1200px) {
+  body.tour-open main { padding-right: calc(var(--layout-page-padding-x) + 420px); }
+}
 .tour-target { outline: 3px solid var(--brand-blue) !important; outline-offset: 4px; border-radius: var(--ds-radius); box-shadow: 0 0 0 8px color-mix(in srgb, var(--brand-blue) 18%, transparent); scroll-margin: 120px; transition: box-shadow var(--duration-base) var(--easing-standard); }
 @media (prefers-reduced-motion: reduce) { .tour-progress span, .tour-target { transition: none; } }
 .guide-flow li + li { margin-top: 4px; }
