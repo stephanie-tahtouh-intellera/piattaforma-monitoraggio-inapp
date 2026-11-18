@@ -183,7 +183,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
 
       {!p.cancelledAt ? <PhaseBar stage={d.process.stage} module2={module2} signed={!!d.contract?.signed} /> : null}
 
-      <nav className="tabs" aria-label="Sezioni della procedura">
+      <nav className="tabs tabs-sticky" aria-label="Sezioni della procedura">
         {tabs.map(([k, l]) => (
           <Link key={k} href={`/procedure/${p.code}?tab=${k}`} aria-current={tab === k ? "page" : undefined}>
             {l}

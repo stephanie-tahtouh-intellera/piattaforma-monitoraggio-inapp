@@ -502,3 +502,11 @@ Formato:
 - Verificato in browser come fornitore su due procedure allo stesso passo: BZ-001, che il documento ce l'ha, e CD-04, che non ce l'ha.
 - Controlli: typecheck, guards, 72 test unitari, `axe` su 14 pagine.
 - Stato: attiva.
+
+### DEC-141 — I tab della scheda procedura restano in alto mentre si scorre
+- Data: 2026-11-18 · Autore: agente, su richiesta del cliente («metti anche un tab documenti/documentale come nella fase 2»)
+- **Il tab c'era già.** «Iter» e «Documenti» ci sono per tutti i ruoli, Fornitore compreso, e il fascicolo di BZ-001 mostra i tre documenti. Verificato in locale e sull'ambiente pubblicato. Il problema e' che stanno in cima alla scheda: scorrendo fino al passo in corso, che e' in fondo, spariscono dalla vista, e da li' il fascicolo sembra irraggiungibile.
+- **Correzione scelta dal cliente**: la barra dei tab resta visibile mentre si scorre, ancorata sotto la fascia DEMO e la testata, che sono gia' fisse. Vale solo per la scheda procedura (`.tabs-sticky`); i tab della dashboard e del Centro alert, che stanno sotto una testata corta, restano come prima.
+- Verificato con Playwright su due schede e due ruoli: dopo 1500-2100px di scorrimento i tab sono dentro la finestra, ancorati sotto la testata e non coperti da altro contenuto.
+- Controlli: typecheck, guards, 72 test unitari, `axe` su 14 pagine.
+- Stato: attiva.

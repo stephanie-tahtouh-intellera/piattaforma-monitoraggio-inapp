@@ -421,6 +421,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--p
 /* Tab centrate: solo sulla dashboard, dove sono la navigazione della pagina intera.
    Nella scheda procedura restano a sinistra, allineate alla testata del record. */
 .tabs-center { justify-content: center; }
+/* Scheda procedura (DEC-141): i tab restano in alto mentre si scorre, sotto la fascia
+   demo e la testata, che sono gia' fisse. Servono a tornare al fascicolo dal passo in
+   corso, che sta in fondo alla pagina. Fondo pieno: sotto ci passa il contenuto. */
+.tabs-sticky { position: sticky; top: calc(var(--layout-demo-banner-h) + var(--layout-header-h)); z-index: var(--z-sticky); background: var(--ds-color-bg-page); margin-top: 0; padding-top: var(--space-3); }
 .tabs a { padding: var(--space-2) var(--space-4); text-decoration: none; color: var(--ds-color-text-secondary); border-bottom: 3px solid transparent; font-weight: 600; white-space: nowrap; }
 .tabs a[aria-current="page"] { color: var(--brand-navy); border-bottom-color: var(--brand-blue); }
 .proc-head { background: var(--ds-color-bg-surface); border: 1px solid var(--ds-color-border); border-radius: var(--ds-radius); padding: var(--space-5); display: grid; grid-template-columns: 1fr auto; gap: var(--space-6); }
