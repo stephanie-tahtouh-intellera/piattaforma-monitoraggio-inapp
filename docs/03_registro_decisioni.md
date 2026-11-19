@@ -533,3 +533,13 @@ Formato:
 - Controlli: typecheck, guards.
 - Stato: attiva.
 
+### DEC-144 — Il pannello del passo dice qual è l'ultimo passo registrato
+- Data: 2026-11-19 · Autore: agente, su segnalazione del cliente («ho fatto il passo ma ho ancora il pulsante "Registra il passo"»)
+- **Non era un difetto di registrazione**: su BZ-001 il passo «Acquisizione CIG e predisposizione della procedura» risulta registrato dall'Ufficio Gare con nota «TD MePA n. 5512345», e il pulsante visibile era quello del passo **successivo** («Verifica dei requisiti, istruttoria e proposta di aggiudicazione»).
+- **Perché confonde**: registrato il passo, la pagina si ricarica e il pannello mostra il passo successivo nella stessa posizione, con lo stesso modulo e la stessa data predefinita. Il messaggio «Passo registrato» spariva perché il modulo viene rimontato (la sua chiave è il codice del passo), quindi non restava alcun segno dell'operazione appena fatta.
+- **Correzione**: il pannello apre con una riga verde che dice quale passo è stato registrato, in che data, da quale corsia e con quale nota. Viene dai dati del server (l'ultimo passo con data effettiva prima di quello in corso), quindi resta dopo ogni ricaricamento e dopo un cambio di utente. Il messaggio di esito del modulo resta com'era.
+- Verificato sull'ambiente pubblicato su due procedure: BZ-001 («✓ Registrato: Acquisizione CIG… · 01/10/2026 · Ufficio Gare · «TD MePA n. 5512345»») e CD-02, dove l'ultimo passo è la consegna della memoria da parte della Struttura.
+- Colori dai token della palette (verde di stato, 6,25:1 sul proprio fondo) e significato sempre scritto, mai affidato al solo colore.
+- Controlli: typecheck, guards.
+- Stato: attiva.
+
