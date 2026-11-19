@@ -11,8 +11,9 @@ export interface OcrPage {
 /**
  * OCR locale (DEC-099): rendering della pagina con pdf.js + @napi-rs/canvas e riconoscimento
  * con tesseract.js e dati `ita` versionati in vendor/tessdata (nessuna CDN). Errore recuperabile.
+ * Con `deadline` l'elaborazione si ferma fra una pagina e l'altra e restituisce quelle già lette.
  */
-export async function ocrPdfPages(file: string | Buffer, pages: number[], scale = 2.5): Promise<OcrPage[]> {
+export async function ocrPdfPages(file: string | Buffer, pages: number[], scale = 2.5, deadline?: number): Promise<OcrPage[]> {
   if (process.env.OCR_ENABLED === "false") throw new Error("OCR disattivato (OCR_ENABLED=false)");
   const { renderPageAsImage, getDocumentProxy } = await import("unpdf");
   const { createWorker } = await import("tesseract.js");
@@ -28,6 +29,8 @@ export async function ocrPdfPages(file: string | Buffer, pages: number[], scale 
   const out: OcrPage[] = [];
   try {
     for (const n of pages) {
+      // Oltre la scadenza si restituiscono le pagine già lette: il chiamante riprende dalle altre (DEC-143)
+      if (deadline !== undefined && Date.now() > deadline) break;
       const img = await renderPageAsImage(pdf, n, { canvasImport: () => import("@napi-rs/canvas"), scale });
       const r = await worker.recognize(Buffer.from(img));
       out.push({ page: n, text: r.data.text.trim(), confidence: (r.data.confidence / 100).toFixed(2) });

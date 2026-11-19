@@ -246,8 +246,18 @@ export async function tryReadStoredFile(filePath: string): Promise<Buffer | null
   }
 }
 
-/** Elaborazione del documento: testo → OCR di fallback → estrazione → coda di validazione (nessun overwrite, BR-015). */
-export async function processDocument(db: Db, docId: number, actor = "worker"): Promise<{ pages: number; ocrPages: number; fields: number; state: string }> {
+/** Budget di tempo di un'elaborazione: oltre questo limite l'OCR si ferma e riprende alla chiamata successiva (DEC-143). */
+export function processingBudgetMs(): number {
+  const v = Number(process.env.DOCUMENT_PROCESSING_BUDGET_MS);
+  return Number.isFinite(v) && v > 0 ? v : 45_000;
+}
+
+/**
+ * Elaborazione del documento: testo → OCR di fallback → estrazione → coda di validazione (nessun overwrite, BR-015).
+ * L'OCR procede una pagina alla volta e si ferma alla scadenza `deadline`: le pagine già lette restano,
+ * il documento resta in OCR_PENDING e una nuova chiamata riparte dalle pagine mancanti (DEC-143).
+ */
+export async function processDocument(db: Db, docId: number, actor = "worker", deadline = Date.now() + processingBudgetMs()): Promise<{ pages: number; ocrPages: number; fields: number; state: string }> {
   const doc = (await db.prepare("SELECT d.*, p.code, p.cig AS proc_cig FROM documents d JOIN procedures p ON p.id = d.procedure_id WHERE d.id = ?").get(docId)) as
     | Record<string, any>
     | undefined;
@@ -256,19 +266,26 @@ export async function processDocument(db: Db, docId: number, actor = "worker"): 
   if (!buf) return { pages: 0, ocrPages: 0, fields: 0, state: doc.processing_state };
   const { pages, totalPages } = await extractPdfText(buf);
   const missing = pages.filter((p) => p.method === "NONE").map((p) => p.page);
-  let ocr: Awaited<ReturnType<typeof ocrPdfPages>> = [];
+  // Pagine già lette con OCR in un'elaborazione precedente: si conservano e non si ripetono
+  const done = new Map(
+    ((await db.prepare("SELECT page_no, text, confidence FROM document_pages WHERE document_id = ? AND method = 'OCR'").all(docId)) as { page_no: number; text: string; confidence: string | null }[]).map(
+      (r) => [r.page_no, { page: r.page_no, text: r.text, confidence: r.confidence ?? "0.00" }],
+    ),
+  );
+  const ocr: Awaited<ReturnType<typeof ocrPdfPages>> = [...done.values()].filter((p) => missing.includes(p.page));
+  const todo = missing.filter((n) => !done.has(n));
   let state = missing.length ? "OCR_PENDING" : "TEXT_EXTRACTED";
-  if (missing.length) {
+  if (todo.length && Date.now() < deadline) {
     try {
-      ocr = await ocrPdfPages(buf, missing);
-      state = "OCR_DONE";
+      ocr.push(...(await ocrPdfPages(buf, todo, 2.5, deadline)));
     } catch (e) {
       state = "OCR_FAILED";
       console.warn(`[OCR] ${doc.file_name}: ${e instanceof Error ? e.message : e}`);
     }
   }
+  if (missing.length && state !== "OCR_FAILED") state = ocr.length >= missing.length ? "OCR_DONE" : "OCR_PENDING";
   const all = pages.map((p) => {
-    const o = ocr.find((x) => x.page === p.page);
+    const o = ocr.find((x) => x.page === p.page && x.text);
     return o ? { page: p.page, text: o.text, method: "OCR", confidence: o.confidence } : { page: p.page, text: p.text, method: p.method, confidence: p.method === "TEXT_LAYER" ? "1.00" : null };
   });
   const fields = extractFields(all.filter((p) => p.text));
@@ -325,13 +342,19 @@ export async function processDocument(db: Db, docId: number, actor = "worker"): 
  * Elabora i documenti ancora in attesa. Con `procedureId` si limita a una sola procedura
  * (DEC-143): è quello che serve al pulsante del fascicolo, mentre il worker elabora tutto.
  */
-export async function processPendingDocuments(db: Db, actor = "worker", procedureId?: number): Promise<{ processed: number }> {
+export async function processPendingDocuments(db: Db, actor = "worker", procedureId?: number): Promise<{ processed: number; pending: number }> {
   const sql = "SELECT id FROM documents WHERE processing_state IN ('STORED','OCR_PENDING')";
   const rows = (procedureId === undefined
     ? await db.prepare(`${sql} ORDER BY id`).all()
     : await db.prepare(`${sql} AND procedure_id = ? ORDER BY id`).all(procedureId)) as { id: number }[];
-  for (const r of rows) await processDocument(db, r.id, actor);
-  return { processed: rows.length };
+  const deadline = Date.now() + processingBudgetMs();
+  let processed = 0;
+  for (const r of rows) {
+    if (Date.now() > deadline) break;
+    const out = await processDocument(db, r.id, actor, deadline);
+    if (out.state !== "OCR_PENDING") processed += 1;
+  }
+  return { processed, pending: rows.length - processed };
 }
 
 /** Legge i byte di un documento; lancia se assente (uso: route di download, dove l'assenza è un errore). */
