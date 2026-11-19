@@ -93,7 +93,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
       <h2>Fascicolo documentale</h2>
       {!p.cancelledAt && (actor.role === "SUPPLIER" || actor.role === "STRUCTURE_USER" || actor.role === "PROCUREMENT_OFFICER" || can(actor, "documents.import")) ? <div data-tour="upload"><UploadForm code={p.code} /></div> : null}
       {(d.documents as any[]).some((x) => x.processing_state === "OCR_PENDING" || x.processing_state === "STORED") && can(actor, "documents.import") ? (
-        <ActionForm endpoint="/api/documents/process" submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
+        <ActionForm endpoint={`/api/procedures/${p.code}/documents/process`} submitLabel="Elabora i documenti in attesa (testo + OCR)" variant="secondary" successMessage="Documenti elaborati: le proposte sono nella coda di validazione." />
       ) : null}
       <div className="table-wrap">
         <table className="data">

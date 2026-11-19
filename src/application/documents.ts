@@ -321,10 +321,17 @@ export async function processDocument(db: Db, docId: number, actor = "worker"): 
   return { pages: totalPages, ocrPages: ocr.length, fields: fields.length, state };
 }
 
-export async function processPendingDocuments(db: Db, actor = "worker"): Promise<{ processed: number }> {
-  const ids = ((await db.prepare("SELECT id FROM documents WHERE processing_state IN ('STORED','OCR_PENDING') ORDER BY id").all()) as { id: number }[]).map((r) => r.id);
-  for (const id of ids) await processDocument(db, id, actor);
-  return { processed: ids.length };
+/**
+ * Elabora i documenti ancora in attesa. Con `procedureId` si limita a una sola procedura
+ * (DEC-143): è quello che serve al pulsante del fascicolo, mentre il worker elabora tutto.
+ */
+export async function processPendingDocuments(db: Db, actor = "worker", procedureId?: number): Promise<{ processed: number }> {
+  const sql = "SELECT id FROM documents WHERE processing_state IN ('STORED','OCR_PENDING')";
+  const rows = (procedureId === undefined
+    ? await db.prepare(`${sql} ORDER BY id`).all()
+    : await db.prepare(`${sql} AND procedure_id = ? ORDER BY id`).all(procedureId)) as { id: number }[];
+  for (const r of rows) await processDocument(db, r.id, actor);
+  return { processed: rows.length };
 }
 
 /** Legge i byte di un documento; lancia se assente (uso: route di download, dove l'assenza è un errore). */
