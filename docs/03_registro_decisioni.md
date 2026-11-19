@@ -522,3 +522,14 @@ Formato:
 - Verificato sull'ambiente pubblicato come Ufficio Gare: il riquadro del passo in corso dice «Documenti attesi · Determina di indizione: già nel fascicolo» e il PDF si scarica dal fascicolo.
 - Controlli: typecheck, guards.
 - Stato: attiva.
+
+### DEC-143 — Errore 504 sul fascicolo: l'elaborazione dei documenti è per procedura e ripartibile
+- Data: 2026-11-19 · Autore: agente, su segnalazione del cliente (schermata del fascicolo di BZ-001 con «Errore 504»)
+- **Due cause**, entrambe corrette.
+- **1. Ambito sbagliato.** Il pulsante «Elabora i documenti in attesa (testo + OCR)», che sta nel fascicolo di una procedura, chiamava `/api/documents/process`: elaborava i documenti in attesa dell'**intero portafoglio** (34 documenti, tre dei quali scansioni reali da sottoporre a OCR). Ora chiama `/api/procedures/[code]/documents/process`, che elabora solo quella procedura e applica il controllo di ambito object-level sulla procedura. La route globale resta per il worker e per l'uso amministrativo.
+- **2. OCR più lungo del limite della funzione.** L'OCR delle tre scansioni di OP04-S18 (12 pagine) richiede ~33 s in locale e supera i 60 s su Vercel, anche con `maxDuration = 60`. L'elaborazione ha ora un budget di tempo (`DOCUMENT_PROCESSING_BUDGET_MS`, 45 s per difetto): legge le pagine finché c'è tempo, salva quelle lette, lascia il documento in `OCR_PENDING` e riparte dalle pagine mancanti alla chiamata successiva. Le pagine già lette non si rileggono e non vengono sovrascritte da un'elaborazione parziale. Il messaggio di esito lo dice.
+- Sull'ambiente pubblicato i 30 documenti rimasti in attesa dal popolamento del 16/11 sono stati elaborati in locale, dove l'OCR non ha limiti di tempo: le tre scansioni di OP04-S18 risultano ora «OCR eseguito», come la guida della demo dichiara da sempre.
+- Verificato sull'ambiente pubblicato: prima della correzione il pulsante su OP04-S18 restituiva 504 dopo 60,5 s; su BZ-001 la route per procedura risponde 200 in 5,7 s con `{"processed":4}`; ora nessun fascicolo ha documenti in attesa e il pulsante non compare.
+- Controlli: typecheck, guards.
+- Stato: attiva.
+
