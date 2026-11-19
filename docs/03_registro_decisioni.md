@@ -518,5 +518,7 @@ Formato:
 - La prova guidata del passo 10 lo dice, come già fa quella del passo 7: la determina c'è, resta da registrare il passo.
 - Il contenuto riprende quello delle altre determine dei casi dimostrativi: indizione, CIG, nomina del RUP, impegno per annualità (25.620,00 € sul 2026, 59.780,00 € sul 2027) e incentivi «da verificare», coerenti con la memoria della bozza.
 - Rigenerando tutti i documenti dei casi dimostrativi nessun altro file è cambiato: la generazione è deterministica (date fisse), quindi gli hash esistenti restano identici.
-- Controlli: typecheck, guards. Il documento compare dopo un reset della demo dal pannello Amministratore (il seed non si riapplica da solo sui database già popolati).
+- Il seed non si riapplica da solo sui database già popolati: sull'ambiente pubblicato, popolato il 16/11/2026, il documento è stato aggiunto al fascicolo esistente con lo stesso inserimento del seed (nessun altro dato toccato). Dopo un reset arriva dal seed come gli altri.
+- Verificato sull'ambiente pubblicato come Ufficio Gare: il riquadro del passo in corso dice «Documenti attesi · Determina di indizione: già nel fascicolo» e il PDF si scarica dal fascicolo.
+- Controlli: typecheck, guards.
 - Stato: attiva.
