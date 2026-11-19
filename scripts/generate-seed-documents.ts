@@ -82,6 +82,18 @@ function casiDocs(): Doc[] {
   out.push({ file: "BZ-001/memoria.pdf", title: "MEMORIA PER IL DIRETTORE GENERALE", body: [bz, "5. Stima dei costi: € 70.000,00 oltre IVA (pari ad € 85.400,00 IVA inclusa).", "Annualità 2026 € 25.620,00; annualità 2027 € 59.780,00."] });
   out.push({ file: "BZ-001/documento_tecnico.pdf", title: "DOCUMENTO TECNICO", body: [bz, "Licenze per 12 mesi, supporto specialistico e aggiornamenti della piattaforma di business intelligence."] });
   out.push({ file: "BZ-001/documenti_operatore.pdf", title: "DOCUMENTI DELL'OPERATORE", body: [bz, "Operatore: Fornitore Demo Alfa S.r.l.", "DGUE, dichiarazioni sui requisiti generali e speciali, visura camerale, DURC."] });
+  out.push({
+    file: "BZ-001/determina_indizione.pdf",
+    title: "DETERMINA DEL DIRETTORE GENERALE",
+    segnatura: det("0000312", "01-10-2026"),
+    body: [
+      bz,
+      "VISTA la memoria della Struttura Sistemi informativi;",
+      "DETERMINA di indire la trattativa diretta su MePA, di acquisire il CIG e di nominare il RUP.",
+      "Impegno di spesa complessivo pari ad € 85.400,00 IVA inclusa: annualità 2026 € 25.620,00; annualità 2027 € 59.780,00.",
+      "Incentivi per funzioni tecniche: da verificare in sede di affidamento.",
+    ],
+  });
   return out;
 }
 

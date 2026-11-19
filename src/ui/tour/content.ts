@@ -132,7 +132,7 @@ const PROCESS: Tour = {
       title: "2 · Determina di indizione ◆",
       expect: "INDICTION",
       body: "È una data chiave: con la determina si indice la procedura, si acquisisce il CIG, si nomina il RUP e si autorizzano gli impegni. Il sistema controlla gli incentivi dichiarati nella memoria: se sono previsti, segnala il calcolo assente o l'incoerenza con prenotazione/impegno; se sono «Da verificare», mostra una segnalazione non bloccante. Una proposta estratta dalla determina riporta documento e pagina e va verificata. Le date chiave hanno alert e riprogrammazione dedicati.",
-      tryIt: "Registra la determina con nota «Det. n. 312 del 01/10/2026».",
+      tryIt: "Per BZ-001 la determina è già nel fascicolo (Det. n. 312 del 01/10/2026): il riquadro lo dice accanto al tipo atteso. Registra il passo con nota «Det. n. 312 del 01/10/2026».",
     },
     {
       path: ITER, target: PASSO, role: "FINANCE_OFFICER", stage: 2,

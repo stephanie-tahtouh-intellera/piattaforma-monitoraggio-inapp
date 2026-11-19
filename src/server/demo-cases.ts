@@ -39,13 +39,16 @@ export async function applyDemoActions(db: Db): Promise<void> {
     annual: { "2026": "25620.00", "2027": "59780.00" },
     memoryDue: "2026-10-16",
   });
-  // Procedura guida del percorso demo: fascicolo con memoria e documento tecnico, completezza documentale non tracciata
+  // Procedura guida del percorso demo: il fascicolo ha già i documenti attesi dai passi che il percorso
+  // attraversa (memoria, documento tecnico, documenti dell'operatore, determina di indizione: DEC-142),
+  // così ogni passo mostra «già nel fascicolo»; completezza documentale non tracciata
   await db.prepare("UPDATE procedures SET dataset = 'casi-demo', documents_tracked = 0 WHERE code = ?").run(draft.code);
   const pid = ((await db.prepare("SELECT id FROM procedures WHERE code = ?").get(draft.code)) as { id: number }).id;
   for (const [type, file, title, uploadedBy] of [
     ["MEMORIA", "memoria.pdf", "Memoria per il Direttore Generale – BZ-001", "struttura.si"],
     ["DOCUMENTO_TECNICO", "documento_tecnico.pdf", "Documento tecnico – BZ-001", "struttura.si"],
     ["DOCUMENTI_OPERATORE", "documenti_operatore.pdf", "Documenti dell'operatore – BZ-001", "fornitore.alfa"],
+    ["DETERMINA_INDIZIONE", "determina_indizione.pdf", "Determina di indizione – BZ-001", "gare"],
   ] as const) {
     const full = documentFile(`casi:BZ-001/${file}`);
     const buf = readFileSync(full);
