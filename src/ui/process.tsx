@@ -216,11 +216,24 @@ export function StepPanel({ d, canUpload = false }: { d: Detail; canUpload?: boo
   if (!s) {
     return <div className="step-panel done" data-tour="passo" data-step-code="DONE" data-step-label="Contratto stipulato">Tutti i passi del Modulo 1 sono completati: il contratto è stipulato.</div>;
   }
+  // Dopo la registrazione il pannello mostra gia' il passo successivo e il messaggio di esito
+  // sparisce con il remount del modulo: senza questa riga sembra che non sia successo nulla (DEC-144).
+  const fatto = d.timeline
+    .slice(0, d.timeline.indexOf(s))
+    .reverse()
+    .find((t) => t.actual);
   const presenti = new Set((d.documents as { doc_type: string | null }[]).map((x) => x.doc_type).filter((t): t is string => !!t));
   const attesiPresenti = s.expectedDocuments.some((x) => presenti.has(x.type));
   const tuttiPresenti = s.expectedDocuments.length > 0 && s.expectedDocuments.every((x) => presenti.has(x.type));
   return (
     <div className="step-panel" id="passo" data-tour="passo" data-step-code={s.code} data-step-label={s.label}>
+      {fatto ? (
+        <p className="small step-done">
+          ✓ Registrato: {fatto.label} · <DateIt v={fatto.actual} />
+          {fatto.owner ? <> · {OWNER_LABEL[fatto.owner] ?? fatto.owner}</> : null}
+          {fatto.note ? <> · «{fatto.note}»</> : null}
+        </p>
+      ) : null}
       <h3>
         Passo in corso: {s.label}
       </h3>
