@@ -510,3 +510,13 @@ Formato:
 - Verificato con Playwright su due schede e due ruoli: dopo 1500-2100px di scorrimento i tab sono dentro la finestra, ancorati sotto la testata e non coperti da altro contenuto.
 - Controlli: typecheck, guards, 72 test unitari, `axe` su 14 pagine.
 - Stato: attiva.
+
+### DEC-142 — La determina di indizione di BZ-001 è già nel fascicolo
+- Data: 2026-11-19 · Autore: agente, su richiesta del cliente («metti un documento precaricato come nel passo prima»)
+- Al passo 10 del percorso guidato (2 · Determina di indizione) il riquadro del passo in corso diceva «Determina di indizione: da caricare», mentre al passo precedente i documenti dell'operatore risultavano già presenti (DEC-105, DEC-140). La differenza non ha ragioni di processo: era solo un documento che il seed non creava.
+- **Correzione**: il fascicolo di BZ-001 contiene ora anche `BZ-001/determina_indizione.pdf` (Det. n. 312 del 01/10/2026, caricata da `gare`), generata come gli altri atti sintetici da `scripts/generate-seed-documents.ts casi` e registrata in `seed/inapp/casi-demo/SHA256SUMS`. Il riquadro mostra quindi «già nel fascicolo» e il titolo diventa «Documenti attesi».
+- La prova guidata del passo 10 lo dice, come già fa quella del passo 7: la determina c'è, resta da registrare il passo.
+- Il contenuto riprende quello delle altre determine dei casi dimostrativi: indizione, CIG, nomina del RUP, impegno per annualità (25.620,00 € sul 2026, 59.780,00 € sul 2027) e incentivi «da verificare», coerenti con la memoria della bozza.
+- Rigenerando tutti i documenti dei casi dimostrativi nessun altro file è cambiato: la generazione è deterministica (date fisse), quindi gli hash esistenti restano identici.
+- Controlli: typecheck, guards. Il documento compare dopo un reset della demo dal pannello Amministratore (il seed non si riapplica da solo sui database già popolati).
+- Stato: attiva.
