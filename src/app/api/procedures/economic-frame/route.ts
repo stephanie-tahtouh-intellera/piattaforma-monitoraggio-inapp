@@ -26,8 +26,10 @@ export const POST = route(async ({ db, actor, req }) => {
     const f = computeEconomicFrame({
       base: Money.parse(b.base),
       ...(b.vat_pct ? { vatPct: parsePct(b.vat_pct) } : {}),
-      anacFee: Money.parse(b.anac_fee ?? "0"),
+      // Senza importo la tassa ANAC è quella della tabella per fasce; senza percentuale gli incentivi seguono gli scaglioni INAPP (DEC-147)
+      anacFee: b.anac_fee ? Money.parse(b.anac_fee) : undefined,
       incentivesDecision: b.incentives_decision ?? "TO_VERIFY",
+      incentiveMethod: b.incentive_pct ? "FLAT_PCT" : "SCALED",
       ...(b.incentive_pct ? { incentivePct: parsePct(b.incentive_pct) } : {}),
       incentivesReduceAvailable: settings.incentivesReduceAvailable,
     });

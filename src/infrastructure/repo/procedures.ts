@@ -57,6 +57,7 @@ export interface ProcedureRow {
   incentive_cents: number;
   incentives_decision: "YES" | "NO" | "TO_VERIFY" | null;
   incentives_reduce_available: number;
+  incentive_method: string;
   documents_tracked: number;
   is_draft: number;
   cig: string | null;

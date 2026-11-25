@@ -2,16 +2,12 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { formatEuro } from "@/contracts/format";
-import { parsePct } from "@/domain/economic-frame";
 import { AmountInput } from "./amount-input";
+import { FrameCostRows, type FrameJson } from "./economic-frame-card";
 import { api } from "./api-client";
 import { DateInput } from "./date-input";
 
-interface Frame {
-  base: string; vat_pct: string; vat: string; gross: string; anac_fee: string;
-  incentives_decision: "YES" | "NO" | "TO_VERIFY"; incentive_pct: string; incentive: string;
-  incentives_reduce_available: boolean; incentive_over_cap: boolean; total: string;
-}
+type Frame = FrameJson;
 
 /** "47.600,00" → "47600.00"; solo formattazione del testo, nessun calcolo (i calcoli stanno nel dominio). */
 const normalize = (v: string) => v.replace(/\./g, "").replace(",", ".").replace(/\s|€/g, "");
@@ -21,7 +17,7 @@ const isAmount = (v: string) => /^\d+(\.\d{1,2})?$/.test(normalize(v));
 export function DraftForm({ types, referenceDate, projects = [] }: { types: { value: string; label: string }[]; referenceDate: string; projects?: { code: string; name: string }[] }) {
   const router = useRouter();
   const [f, setF] = useState({
-    title: "", project: "", type: types[0]?.value ?? "DIRECT_AWARD_MEPA", award: "", base: "", vat: "22,00", anac: "", incentivesDecision: "TO_VERIFY" as "YES" | "NO" | "TO_VERIFY", incentivePct: "",
+    title: "", project: "", type: types[0]?.value ?? "DIRECT_AWARD_MEPA", award: "", base: "", vat: "22,00", incentivesDecision: "TO_VERIFY" as "YES" | "NO" | "TO_VERIFY",
     y2026: "", y2027: "", y2028: "", y2029: "", due: referenceDate,
   });
   const [frame, setFrame] = useState<Frame | null>(null);
@@ -29,8 +25,6 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f, v: string) => setF((s) => ({ ...s, [k]: v }));
-  const validPct = /^\d+([.,]\d{1,2})?$/.test(f.incentivePct);
-  const incentiveOverCap = f.incentivesDecision === "YES" && validPct && parsePct(f.incentivePct) > 200n;
 
   // Anteprima: il server calcola IVA, incentivi e totale; qui si mostrano soltanto
   useEffect(() => {
@@ -49,9 +43,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
         const r = await api<Frame>("/api/procedures/economic-frame", "POST", {
           base: normalize(f.base),
           vat_pct: f.vat.replace(",", "."),
-          anac_fee: f.anac && isAmount(f.anac) ? normalize(f.anac) : "0",
           incentives_decision: f.incentivesDecision,
-          ...(f.incentivesDecision === "YES" && validPct ? { incentive_pct: f.incentivePct.replace(",", ".") } : {}),
         });
         if (superata) return;
         setFrame(r);
@@ -66,7 +58,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
       superata = true;
       clearTimeout(t);
     };
-  }, [f.base, f.vat, f.anac, f.incentivesDecision, f.incentivePct]);
+  }, [f.base, f.vat, f.incentivesDecision]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -77,9 +69,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
         title: f.title, type: f.type, ...(f.project ? { project: f.project } : {}), ...(f.award ? { award_criterion: f.award } : {}),
         base: normalize(f.base),
         vat_pct: f.vat.replace(",", "."),
-        anac_fee: f.anac ? normalize(f.anac) : "0",
         incentives_decision: f.incentivesDecision,
-        ...(f.incentivesDecision === "YES" ? { incentive_pct: f.incentivePct.replace(",", ".") } : {}),
         ...Object.fromEntries((["y2026", "y2027", "y2028", "y2029"] as const).filter((k) => f[k]).map((k) => [k, normalize(f[k])])),
         memory_due: f.due,
       });
@@ -123,7 +113,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
           <h2>Quadro economico</h2>
           <div className="field"><label htmlFor="d-base">Base di gara, IVA esclusa (obbligatorio)</label><AmountInput id="d-base" required value={f.base} onChange={(v) => set("base", v)} /></div>
           <div className="field"><label htmlFor="d-vat">Aliquota IVA %</label><input id="d-vat" type="text" inputMode="decimal" style={{ textAlign: "right", width: 100 }} value={f.vat} onChange={(e) => set("vat", e.target.value)} /><span className="help">22% come nel workbook INAPP (da validare).</span></div>
-          <div className="field"><label htmlFor="d-anac">Tassa gara (contributo ANAC)</label><AmountInput id="d-anac" value={f.anac} onChange={(v) => set("anac", v)} /><span className="help">Importo a carico della stazione appaltante; 0 se la procedura ne è esente.</span></div>
+          <p className="help">La tassa gara (contributo ANAC, quota a carico della stazione appaltante) è calcolata dalla tabella per fasce sulla base di gara: esente sotto 40.000 €.</p>
           <div className="field">
             <label htmlFor="d-incentives">Incentivi funzioni tecniche</label>
             <select id="d-incentives" value={f.incentivesDecision} onChange={(e) => set("incentivesDecision", e.target.value)}>
@@ -131,16 +121,8 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
               <option value="NO">No</option>
               <option value="TO_VERIFY">Da verificare</option>
             </select>
-            <span className="help">Scelta della Struttura richiedente; il criterio va validato con INAPP.</span>
+            <span className="help">Scelta della Struttura richiedente. Con «Sì» l'incentivo è calcolato a scaglioni sulla base di gara IVA esclusa (2% fino alla soglia comunitaria, poi 1,5%, 1,2% e 1,0%); il criterio va validato con INAPP.</span>
           </div>
-          {f.incentivesDecision === "YES" ? (
-            <div className="field">
-              <label htmlFor="d-inc">Percentuale incentivi sulla base di gara, IVA esclusa</label>
-              <input id="d-inc" type="text" inputMode="decimal" pattern="\\d+([.,]\\d{1,2})?" required style={{ textAlign: "right", width: 100 }} value={f.incentivePct} onChange={(e) => set("incentivePct", e.target.value)} />
-              <span className="help">Percentuale effettiva da indicare; il 2% è il tetto, non un valore predefinito.</span>
-              {incentiveOverCap ? <div className="alert-box warning" role="status">La percentuale supera il tetto del 2%: verifica il valore. La segnalazione non blocca il calcolo.</div> : null}
-            </div>
-          ) : null}
           <div className="frame-card narrow-only" aria-label="Quadro economico calcolato"><FramePreview frame={frame} frameErr={frameErr} /></div>
           <h2>Riparto per annualità</h2>
           {(["y2026", "y2027", "y2028", "y2029"] as const).map((k) => (
@@ -159,7 +141,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
         <aside className="frame-card wide-only" aria-label="Quadro economico calcolato"><FramePreview frame={frame} frameErr={frameErr} /></aside>
       </div>
       <div style={{ marginTop: 16 }}>
-        <button className="btn btn-primary" type="submit" disabled={busy || !frame || (f.incentivesDecision === "YES" && !validPct)} aria-busy={busy}>{busy ? "Salvataggio in corso…" : "Crea bozza"}</button>
+        <button className="btn btn-primary" type="submit" disabled={busy || !frame} aria-busy={busy}>{busy ? "Salvataggio in corso…" : "Crea bozza"}</button>
       </div>
     </form>
   );
@@ -176,8 +158,7 @@ function FramePreview({ frame, frameErr }: { frame: Frame | null; frameErr: stri
           <dt>Base di gara</dt><dd className="num">{formatEuro(frame.base)}</dd>
           <dt>IVA {frame.vat_pct}%</dt><dd className="num">{formatEuro(frame.vat)}</dd>
           <dt>Importo contrattuale (IVA inclusa)</dt><dd className="num">{formatEuro(frame.gross)}</dd>
-          <dt>Tassa gara</dt><dd className="num">{formatEuro(frame.anac_fee)}</dd>
-          <dt>Incentivi funzioni tecniche</dt><dd className="num">{frame.incentives_decision === "YES" ? `${frame.incentive_pct}% · ${formatEuro(frame.incentive)}` : frame.incentives_decision === "NO" ? "No" : "Da verificare"}</dd>
+          <FrameCostRows frame={frame} />
           <dt>Riduzione configurata</dt><dd>{frame.incentives_reduce_available ? "Sì" : "No (default)"}</dd>
           <dt className="total">Importo a disposizione della struttura</dt><dd className="num total">{formatEuro(frame.total)}</dd>
         </dl>

@@ -25,13 +25,10 @@ const Draft = z.object({
   vat_pct: z.string().regex(/^\d+([.,]\d{1,2})?$/, "Percentuale non valida").optional(),
   anac_fee: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
   incentives_decision: z.enum(["YES", "NO", "TO_VERIFY"]).default("TO_VERIFY"),
+  // Facoltativa: senza percentuale gli incentivi seguono gli scaglioni INAPP (DEC-147); con percentuale resta il calcolo a percentuale unica
   incentive_pct: z.string().regex(/^\d+([.,]\d{1,2})?$/, "Percentuale non valida").optional(),
   memory_due: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   y2026: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2027: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2028: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(), y2029: z.string().regex(/^\d+(\.\d{1,2})?$/, "Importo non valido").optional(),
-}).superRefine((b, ctx) => {
-  if (b.base && b.incentives_decision === "YES" && !b.incentive_pct) {
-    ctx.addIssue({ code: "custom", path: ["incentive_pct"], message: "Indica la percentuale degli incentivi per funzioni tecniche" });
-  }
 });
 /** US-013: creazione bozza (Struttura). */
 export const POST = route(async ({ db, actor, req }) => {

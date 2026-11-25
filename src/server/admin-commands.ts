@@ -52,16 +52,16 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     if (!(await db.prepare("SELECT code FROM projects WHERE code = ? AND active = 1").get(input.project))) throw new DomainError("VALIDATION_ERROR", "Progetto non valido", 422);
   } else if (projectCount > 0) throw new DomainError("VALIDATION_ERROR", "Indica il progetto a cui è collegata la gara", 422);
   if (!input.frame && !input.programmed) throw new DomainError("VALIDATION_ERROR", "Indica la base di gara o l'importo programmato", 422);
-  if (input.frame?.incentivesDecision === "YES" && input.frame.incentivePct === undefined) {
-    throw new DomainError("VALIDATION_ERROR", "Indica la percentuale degli incentivi per funzioni tecniche", 422);
-  }
   const economicConfig = await economicSettings(db);
   const frame = input.frame
     ? computeEconomicFrame({
         base: Money.parse(input.frame.base),
         vatPct: input.frame.vatPct ?? DEFAULT_VAT_PCT,
-        anacFee: Money.parse(input.frame.anacFee || "0"),
+        // Senza importo indicato la tassa è quella della tabella ANAC per fasce; con importo esplicito prevale (DEC-147)
+        anacFee: input.frame.anacFee ? Money.parse(input.frame.anacFee) : undefined,
         incentivesDecision: input.frame.incentivesDecision,
+        // Senza percentuale indicata gli incentivi seguono gli scaglioni INAPP; con percentuale resta la regola a percentuale unica
+        incentiveMethod: input.frame.incentivePct === undefined ? "SCALED" : "FLAT_PCT",
         incentivePct: input.frame.incentivePct,
         incentivesReduceAvailable: economicConfig.incentivesReduceAvailable,
       })
@@ -83,8 +83,8 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
     const insProc = await db
       .prepare(
         `INSERT INTO procedures (code, dataset, title, structure_code, procedure_type, award_criterion, instrument, template_code, programmed_cents, cig, cup, is_draft, created_by, created_at,
-             base_cents, vat_pct_hundredths, anac_fee_cents, incentive_pct_hundredths, incentive_cents, project_code, incentives_decision, incentives_reduce_available)
-           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             base_cents, vat_pct_hundredths, anac_fee_cents, incentive_pct_hundredths, incentive_cents, project_code, incentives_decision, incentives_reduce_available, incentive_method)
+           VALUES (?, 'user', ?, ?, ?, ?, ?, ?, ?, '', '', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         code,
@@ -105,6 +105,7 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
         input.project ?? null,
         frame?.incentivesDecision ?? null,
         frame?.incentivesReduceAvailable ? 1 : 0,
+        frame?.incentiveMethod ?? "FLAT_PCT",
       );
     const pid = Number(insProc.lastInsertRowid);
     const insVer = await db
@@ -149,6 +150,11 @@ export async function createDraft(db: Db, actor: Actor, input: DraftInput): Prom
           decision: frame.incentivesDecision,
           percentage: frame.incentivePct?.toString() ?? null,
           amount: frame.incentive.toString(),
+          method: frame.incentiveMethod,
+          total: frame.incentiveTotal.toString(),
+          personnel: frame.incentivePersonnel.toString(),
+          fund: frame.incentiveFund.toString(),
+          irap: frame.irap.toString(),
           reduceAvailable: frame.incentivesReduceAvailable,
         },
       });

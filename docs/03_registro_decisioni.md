@@ -555,3 +555,14 @@ Formato:
 - **Regola**: un documento è visibile se il passo che lo attende appartiene alla fase corrente o a una precedente, se quel passo è già registrato, o se il tipo non è atteso da nessun passo. In fase 1 restano memoria e documento tecnico; documenti dell'operatore e determina compaiono dalla fase 2.
 - Una riga sotto la tabella dice quanti documenti sono nascosti. I documenti restano nel database: cambia solo la visualizzazione.
 - Stato: attiva.
+
+### DEC-147 — Tassa ANAC e incentivi calcolati con le regole ricevute da INAPP (2026-11-25)
+- **Fonte**: risposta di INAPP alla mail del 25/11/2026: prospetto «Tasse Gare ANAC», scaglioni degli incentivi per funzioni tecniche, esempio di calcolo dell'Ufficio Bilancio, circolare del DG sui tempi procedimentali.
+- **Tassa gara**: calcolata dalla base di gara IVA esclusa, quota della stazione appaltante: sotto 40.000 € esente; 40.000–149.999,99 € 35 €; 150.000–499.999,99 € 250 €; 500.000–999.999,99 € 410 €; 1.000.000–4.999.999,99 € 660 €; da 5.000.000 € 880 €. Non si inserisce più a mano nel modulo; un importo esplicito (API, seed, test) prevale sul calcolo.
+- **Incentivi** (nuovo metodo `SCALED`, colonna `procedures.incentive_method`, migrazione 0008): scaglioni progressivi sulla base IVA esclusa: 2% fino alla soglia comunitaria, 1,5% fino a 500.000 €, 1,2% fino a 800.000 €, 1,0% oltre. L'incentivo complessivo si divide in 80% (art. 45 c.2, arrotondato per difetto) e 20% (art. 45 c.5, per differenza, al fondo). **Nell'importo a disposizione entrano l'80% e l'IRAP (8,5%) sull'80%**; il 20% resta fuori. La percentuale non si inserisce più: quella effettiva (circa 1,81% nell'esempio) è mostrata come risultato.
+- **Verifica**: l'esempio dell'Ufficio Bilancio (base 347.781,25 €) dà incentivo 6.286,72 €, 80% 5.029,37 €, 20% 1.257,35 €, IRAP 427,50 € e totale A+B+80%+IRAP 429.750,00 €: coincide al centesimo (test in `tests/unit/economic-frame.test.ts`).
+- **Compatibilità**: il metodo `FLAT_PCT` (percentuale unica indicata a mano) resta il default per seed, oracle e bozze già create, che non cambiano. Il metodo `SCALED` si usa quando la bozza non indica la percentuale.
+- **Da validare con INAPP (DA VALIDARE)**: soglia comunitaria usata negli scaglioni (214.000 € dedotta dall'esempio; la circolare cita 215.000 €, parametro `DEFAULT_EU_THRESHOLD`); arrotondamento dell'80%; validità della tabella ANAC e applicazione alla base IVA esclusa; se la tassa ANAC resta nell'importo a disposizione (l'esempio del Bilancio non la include: la manteniamo come prima); aliquota IRAP sempre all'8,5%.
+- Non fatto: calendario della memoria dalla circolare del DG (tempi per tipo e importo): resta come proposta separata.
+- Controlli: typecheck, guards, test unitari del dominio. I test con database (`tests/api`, `tests/integration`) non sono stati eseguiti perché svuotano il Postgres indicato da `POSTGRES_URL`, condiviso con l'ambiente pubblicato.
+- Stato: attiva.

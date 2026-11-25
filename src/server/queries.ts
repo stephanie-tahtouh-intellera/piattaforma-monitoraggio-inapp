@@ -508,6 +508,7 @@ export async function procedureDetail(db: Db, actor: Actor, code: string) {
               anacFee: Money.ofCents(BigInt(p.anac_fee_cents)),
               incentivesDecision: p.incentives_decision ?? "TO_VERIFY",
               incentivePct: p.incentives_decision === "YES" ? BigInt(p.incentive_pct_hundredths ?? 0) : null,
+              incentiveMethod: p.incentive_method === "SCALED" ? "SCALED" : "FLAT_PCT",
               incentivesReduceAvailable: p.incentives_reduce_available === 1,
             })),
     },
