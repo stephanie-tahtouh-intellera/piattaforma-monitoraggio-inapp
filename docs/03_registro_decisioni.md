@@ -543,3 +543,15 @@ Formato:
 - Controlli: typecheck, guards.
 - Stato: attiva.
 
+
+## DEC-145 — Il passo 0 della guida non fa creare una seconda bozza (2026-11-25)
+- **Segnalazione**: «ho fatto il reset, ma quando avvio la demo ho subito BZ-002».
+- **Causa**: il reset ricrea solo BZ-001, con i suoi quattro documenti. BZ-002 nasceva perché il passo 0 della guida invitava a compilare il modulo e premere «Crea bozza»; una bozza creata dalla UI parte vuota e il percorso continua su BZ-001.
+- **Correzione**: il testo del passo 0 dice che BZ-001 esiste già con quei dati, che non va ricreata e che una nuova bozza sarebbe vuota e fuori dal percorso.
+- Stato: attiva.
+
+## DEC-146 — Il fascicolo mostra i documenti fino alla fase corrente (2026-11-25)
+- **Richiesta**: nascondere in ogni fase i documenti non necessari.
+- **Regola**: un documento è visibile se il passo che lo attende appartiene alla fase corrente o a una precedente, se quel passo è già registrato, o se il tipo non è atteso da nessun passo. In fase 1 restano memoria e documento tecnico; documenti dell'operatore e determina compaiono dalla fase 2.
+- Una riga sotto la tabella dice quanti documenti sono nascosti. I documenti restano nel database: cambia solo la visualizzazione.
+- Stato: attiva.
