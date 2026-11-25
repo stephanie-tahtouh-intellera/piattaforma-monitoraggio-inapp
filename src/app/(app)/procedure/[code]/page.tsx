@@ -59,6 +59,17 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
   // Ruoli di sola consultazione (Direttore Generale, DEC-122): niente colonna "Azioni" se non c'è nulla da fare.
   const canDecideOrCreateSim = can(actor, "simulation.decide") || can(actor, "simulation.create");
   const assistantOn = (await memoryAssistantProvider(await db())) !== "disabled";
+  // Fascicolo: in ogni fase si vedono solo i documenti attesi fino a quella fase; quelli di un passo successivo
+  // (es. documenti dell'operatore, determina di indizione) compaiono quando il processo li raggiunge.
+  const tl = d.timeline as { stage: number | null; active: boolean; actual: string | null; expectedDocuments: { type: string }[] }[];
+  const fase = tl.find((t) => t.active)?.stage ?? null;
+  const docVisibile = (x: { doc_type: string | null }) => {
+    if (fase === null || !x.doc_type) return true;
+    const atteso = tl.find((t) => t.expectedDocuments.some((e) => e.type === x.doc_type));
+    return !atteso || atteso.stage === null || atteso.stage <= fase || atteso.actual !== null;
+  };
+  const documentiFascicolo = (d.documents as any[]).filter(docVisibile);
+  const nascosti = d.documents.length - documentiFascicolo.length;
   const hasDoc = (t: string) => (d.documents as { doc_type: string | null }[]).some((x) => x.doc_type === t);
   // La scheda mostra solo Iter, Documenti e Audit. Le altre sezioni restano nel codice e raggiungibili da `?tab=`
   // (collegamenti dell'assistente, della guida e delle simulazioni), ma non sono più nella barra.
@@ -99,7 +110,7 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
         <table className="data">
           <thead><tr><th>Documento</th><th>Pagine</th><th>Elaborazione</th><th>Associazione</th><th>Caricato</th><th></th></tr></thead>
           <tbody>
-            {(d.documents as any[]).map((x) => (
+            {documentiFascicolo.map((x) => (
               <tr key={x.id}>
                 <td>{x.title ?? x.file_name}</td>
                 <td className="num">{x.pages ?? "—"}</td>
@@ -109,10 +120,11 @@ export default async function ProcedurePage({ params, searchParams }: { params: 
                 <td>{x.size_bytes > 0 ? <a href={`/api/documents/${x.id}/content`} target="_blank" rel="noopener noreferrer">Apri</a> : <span className="muted small">file non disponibile</span>}</td>
               </tr>
             ))}
-            {d.documents.length === 0 ? <tr><td colSpan={6} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
+            {documentiFascicolo.length === 0 ? <tr><td colSpan={6} className="muted">Nessun documento nel fascicolo.</td></tr> : null}
           </tbody>
         </table>
       </div>
+      {nascosti > 0 ? <p className="small muted">{nascosti === 1 ? "Un altro documento del fascicolo è" : `Altri ${nascosti} documenti del fascicolo sono`} di una fase successiva e comparirà{nascosti === 1 ? "" : "nno"} quando il processo ci arriva.</p> : null}
       {can(actor, "document.classify") && !p.cancelledAt && d.documents.length ? (
         <div style={{ marginTop: 16 }} data-tour="classifica">
           <h3>Correggi la classificazione di un documento</h3>
