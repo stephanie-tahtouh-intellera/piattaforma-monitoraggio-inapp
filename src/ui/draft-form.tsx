@@ -112,7 +112,7 @@ export function DraftForm({ types, referenceDate, projects = [] }: { types: { va
           <div className="field"><label htmlFor="d-due">Data obiettivo della memoria (obbligatorio)</label><DateInput id="d-due" value={f.due} onChange={(v) => set("due", v)} min={referenceDate} required /></div>
           <h2>Quadro economico</h2>
           <div className="field"><label htmlFor="d-base">Base di gara, IVA esclusa (obbligatorio)</label><AmountInput id="d-base" required value={f.base} onChange={(v) => set("base", v)} /></div>
-          <div className="field"><label htmlFor="d-vat">Aliquota IVA %</label><input id="d-vat" type="text" inputMode="decimal" style={{ textAlign: "right", width: 100 }} value={f.vat} onChange={(e) => set("vat", e.target.value)} /><span className="help">22% come nel workbook INAPP (da validare).</span></div>
+          <div className="field"><label htmlFor="d-vat">Aliquota IVA %</label><input id="d-vat" type="text" inputMode="decimal" style={{ textAlign: "right", width: 100 }} value={f.vat} onChange={(e) => set("vat", e.target.value)} /></div>
           <p className="help">La tassa gara (contributo ANAC, quota a carico della stazione appaltante) è calcolata dalla tabella per fasce sulla base di gara: esente sotto 40.000 €.</p>
           <div className="field">
             <label htmlFor="d-incentives">Incentivi funzioni tecniche</label>
